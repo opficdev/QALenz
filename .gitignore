@@ -1,11 +1,11 @@
-# macOS 시스템 파일
+# macOS
 .DS_Store
 
-# Swift Package Manager 빌드 및 생성 파일
+# SPM
 .build/
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 
-# Xcode 빌드 및 사용자별 설정
+# Xcode
 DerivedData/
 *.xcuserstate
 xcuserdata/
