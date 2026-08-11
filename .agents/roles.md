@@ -165,7 +165,7 @@ Responsibilities:
 Must not:
 
 - Report a skipped check as passed.
-- Modify source or documentation; report required formatting changes to the Implementer.
+- Modify source or documentation; report required formatting changes to the assigned writing role.
 - Run an app or Simulator without permission in the current request.
 
 Output format:
