@@ -113,10 +113,11 @@ For documentation-only changes, record source builds as not run instead of runni
 Role order:
 
 1. Planner
-2. Architecture Watcher
+2. Architecture Watcher preflight
 3. Implementer
-4. Code Reviewer
-5. Verification Runner
+4. Architecture Watcher final review
+5. Code Reviewer
+6. Verification Runner
 
 Stop before implementation when the Architecture Watcher returns `Block` or `Needs Owner Decision`.
 
