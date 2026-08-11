@@ -26,10 +26,12 @@ Use `.agents/roles.md` for role permissions and output formats.
 - Sensitive-information exposure cannot be mitigated through redaction or output scoping.
 - A required tool or runtime is not available in the actual environment.
 
-## Review and verification completion gate
+## Architecture, review, and verification completion gate
 
-Apply this gate to every workflow that includes the Code Reviewer or Verification Runner.
+Apply this gate to every workflow that includes an Architecture Watcher final review, Code Reviewer, or Verification Runner.
 
+- Do not complete the workflow when the Architecture Watcher final review returns `Block`. Return required changes to the assigned writing role, then repeat final architecture review and downstream review and verification after modification.
+- Do not complete the workflow when the Architecture Watcher final review returns `Needs Owner Decision`. Stop until the user decides, then repeat final architecture review and downstream review and verification required by the workflow.
 - Do not complete the workflow when the Code Reviewer returns `Block` or `Needs Follow-up`. Return required changes to the assigned writing role, then repeat final review and related verification after modification.
 - Do not complete the workflow when the Verification Runner returns `Fail`. Return failure notes to the assigned writing role, then repeat final review and related verification after modification.
 - `Not Run` does not block completion when the workflow permits the omitted check and its reason is recorded.
