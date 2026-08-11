@@ -23,7 +23,7 @@ This document defines responsibilities, permissions, and handoff formats for non
 | Implementer | Apply approved code, test, and documentation changes | Inside the task scope |
 | Architecture Watcher | Review component ownership and dependency direction | None |
 | Code Reviewer | Review the final diff for defects and omissions | None |
-| Verification Runner | Run allowed checks and record evidence | Assigned formatting commands only |
+| Verification Runner | Run allowed checks and record evidence | None |
 | Documentation Writer | Write documentation aligned with actual behavior and diff | Assigned documents only |
 
 ## Task packet
@@ -159,13 +159,13 @@ Responsibilities:
 
 - Inspect the change scope and current Git state.
 - Check documentation structure and whitespace.
-- Run format, lint, build, and test commands defined by repository manifests.
+- Run formatting checks, lint, build, and test commands defined by repository manifests.
 - Record passed, failed, and not-run checks with reasons.
 
 Must not:
 
 - Report a skipped check as passed.
-- Edit source before identifying the cause of a failure.
+- Modify source or documentation; report required formatting changes to the Implementer.
 - Run an app or Simulator without permission in the current request.
 
 Output format:
