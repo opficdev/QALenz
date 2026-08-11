@@ -23,8 +23,8 @@
 
 - Assign only one writing role to a file at a time.
 - Read-only roles must not change files, Git state, or GitHub state.
-- Documentation changes must describe only the document's actual responsibility and current behavior.
-- Do not write placeholders, unverified commands, or nonexistent paths.
+- Documentation changes must distinguish current behavior from approved future design and must not present unimplemented behavior as current.
+- Do not leave unresolved placeholders in completed documents or present unverified commands or nonexistent paths as current interfaces; label approved future contracts explicitly.
 - Get user approval before adding dependencies, performing external writes, or deleting data.
 
 ## Sensitive information

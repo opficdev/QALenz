@@ -3,7 +3,8 @@
 ## Sources of truth
 
 - Treat `AGENTS.md` and routed `.agents/` documents as repository instructions.
-- Treat `README.md`, manifests, source, tests, and `.github/pull_request_template.md` as sources of actual behavior.
+- Treat manifests, source, tests, and actually installed tools as sources of actual behavior.
+- Treat `README.md` as documented behavior and `.github/pull_request_template.md` as PR structure; verify their claims against actual behavior sources.
 - Prefer the current repository when it conflicts with external records.
 
 ## Before working
