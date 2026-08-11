@@ -7,7 +7,8 @@
 - Before working, inspect `git status --short`, related files, the current diff, and recent commits.
 - Do not include cleanup, renaming, or structural changes outside the approved scope.
 - Reuse existing behavior whenever possible.
-- Change logic only when the replacement produces exactly the same result and strictly improves time or space complexity.
+- When refactoring existing logic, replace it only if the new approach produces exactly the same results and strictly improves time or space complexity.
+- Keep behavior changes for approved features or bug fixes within the requested scope.
 
 ## Project basis
 
