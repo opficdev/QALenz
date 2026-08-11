@@ -37,6 +37,13 @@ Use `.agents/roles.md` for role permissions and output formats.
 | QA that uses an app or Simulator | QA execution |
 | Review-feedback changes | Review follow-up |
 
+Selection rules:
+
+- Select workflows based on the responsibility or contract being changed, not only the file type.
+- When multiple workflows match, use the workflow with the strictest role and stop-condition requirements as the primary workflow, then add any roles and verification requirements from the other matching workflows.
+- Use Documentation-only change only when the document does not change architecture, QA contracts, execution permissions, or product behavior.
+- Review follow-up controls feedback scope but does not replace the workflow required by the accepted change.
+
 ## Scoped implementation
 
 Role order:
