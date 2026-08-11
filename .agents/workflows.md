@@ -108,6 +108,8 @@ Role order:
 4. Code Reviewer
 5. Verification Runner
 
+Stop before implementation when the Architecture Watcher returns `Block` or `Needs Owner Decision`.
+
 Required checks:
 
 - Input contracts for scenarios and execution matrices.
