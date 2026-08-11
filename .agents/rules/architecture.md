@@ -93,7 +93,7 @@ IOSQATestSupport
 
 ## Testing boundaries
 
-- Use Swift Testing for parsing, execution matrices, verdict rules, reports, and configuration validation that require no screen interaction.
+- Use the testing framework defined by the selected manifest for parsing, execution matrices, verdict rules, reports, and configuration validation that require no screen interaction; use Swift Testing when the selected implementation language is Swift.
 - Use XCUITest or XcodeBuildMCP UI automation for real navigation and interaction.
 - Keep video and image analysis independently testable with stored evidence.
 - Unit tests must run without launching an app or Simulator.
