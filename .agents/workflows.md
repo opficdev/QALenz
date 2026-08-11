@@ -143,7 +143,7 @@ Confirm before execution:
 
 - Target project, scheme, device, OS, language, and display mode.
 - Explicit permission in the current request to run the app and Simulator.
-- Whether data reset or deletion is required.
+- Test-data setup and cleanup, including creation, modification, reset, and deletion of app-local or external data, with explicit permission for each required side effect.
 - Result output path.
 
 Do not expand execution to unrequested devices, OS versions, scenarios, or data changes.
