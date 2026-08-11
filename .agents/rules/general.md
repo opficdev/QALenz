@@ -29,7 +29,8 @@
 
 ## Sensitive information
 
-- Remove tokens, certificates, private keys, environment-variable values, and user data from output and results.
+- Remove tokens, certificates, private keys, environment-variable values, and sensitive or production user data from output and results.
+- Use controlled test data for screenshots, video, logs, and UI hierarchy; redact sensitive fields without removing evidence required for reproduction or verdicts.
 - Do not copy complete raw logs into reports when they may contain sensitive information.
 - Never use a user home directory or an entire repository as a broad deletion target.
 

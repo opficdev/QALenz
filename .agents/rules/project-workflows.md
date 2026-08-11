@@ -40,7 +40,7 @@
 - Do not modify the target project from its default state.
 - Store QA results in a user-selected output path or a task-specific temporary directory.
 - Do not stage screenshots, video, logs, UI hierarchy, or reports with source changes.
-- Do not attach raw logs containing credentials or user data to documentation or PRs.
+- Do not attach raw logs containing credentials or sensitive or production user data to documentation or PRs.
 - Before cleaning artifacts, resolve the exact target path and prefer recoverable operations.
 
 ## Git

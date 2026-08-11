@@ -74,7 +74,7 @@ IOSQATestSupport
 
 - Aggregate targets, step results, verdict evidence, evidence paths, and errors.
 - Keep human-readable and machine-readable outputs consistent.
-- Include only redacted evidence.
+- Include evidence only after required sensitive-information redaction.
 
 ### IOSQATestSupport
 
