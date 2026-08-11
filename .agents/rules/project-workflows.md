@@ -19,8 +19,9 @@
 - Build-only verification is allowed.
 - Do not run, launch, install, boot, or open an app or Simulator unless the user explicitly requests it in the current turn.
 - Do not substitute a build-and-run command for build-only verification.
-- Keep `ios-qa doctor`, `discover`, `list`, `inspect`, and `report` read-only; they must not run an app or Simulator or install tools.
-- Treat an explicit user request to execute `ios-qa run` as permission to run the app and Simulator only for the specified scenario.
+- Treat `ios-qa` command semantics as future design until the CLI is implemented and available in the actual environment; do not invoke `ios-qa` before then.
+- After the CLI is implemented and available, keep `ios-qa doctor`, `discover`, `list`, `inspect`, and `report` read-only; they must not run an app or Simulator or install tools.
+- After the CLI is implemented and available, treat an explicit user request to execute `ios-qa run` as permission to run the app and Simulator only for the specified scenario.
 - Never reset a Simulator, delete data, or delete a device without a separate request and approval.
 - Do not expand execution to unrequested devices, OS versions, languages, or display modes.
 
