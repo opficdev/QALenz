@@ -23,7 +23,7 @@ Use `.agents/roles.md` for role permissions and output formats.
 - Simulator reset or data deletion is required.
 - QALenz implementation would overlap XcodeBuildMCP responsibility.
 - Progress requires placing app-specific conditions in shared implementation.
-- Sensitive-information exposure is possible.
+- Sensitive-information exposure cannot be mitigated through redaction or output scoping.
 - A required tool or runtime is not available in the actual environment.
 
 ## Workflow selection
