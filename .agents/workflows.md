@@ -20,7 +20,7 @@ Use `.agents/roles.md` for role permissions and output formats.
 
 - A user decision would change the implementation scope.
 - App or Simulator execution is required but not permitted.
-- Simulator reset or data deletion is required.
+- Simulator reset or data deletion is required but has not been separately requested and approved for the resolved target.
 - QALenz implementation would overlap XcodeBuildMCP responsibility.
 - Progress requires placing app-specific conditions in shared implementation.
 - Sensitive-information exposure cannot be mitigated through redaction or output scoping.
