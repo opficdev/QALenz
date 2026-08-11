@@ -51,7 +51,7 @@ IOSQATestSupport
 ### XcodeBuildMCP adapter
 
 - Encapsulate the call contract of the installed XcodeBuildMCP version.
-- Delegate build, test, app execution, UI interaction, screenshots, video, logs, and debugging.
+- Delegate build, test, app execution, UI interaction, UI hierarchy collection, screenshots, video, logs, and debugging.
 - Normalize tool-specific responses into QALenz execution results.
 - Do not add controllers that duplicate existing tool capabilities.
 
