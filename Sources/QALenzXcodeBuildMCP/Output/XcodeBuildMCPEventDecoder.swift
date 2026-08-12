@@ -74,7 +74,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 
 		return .init(
 			operation: operation,
-			kind: kind(for: event.event),
+			kind: kind(for: event.event, status: event.status),
 			message: normalizedStatus(event.status)
 		)
 	}
@@ -90,7 +90,10 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 	}
 
 	// XcodeBuildMCP 사건 이름을 공통 진행 단계로 변환합니다.
-	private func kind(for name: String) -> XcodeBuildMCPEvent.Kind {
+	private func kind(
+		for name: String,
+		status: String?
+	) -> XcodeBuildMCPEvent.Kind {
 		guard let component = name.split(separator: ".").last else {
 			return .progress
 		}
@@ -99,6 +102,10 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 			return .started
 		}
 		if component.hasSuffix("summary") {
+			if status == "FAILED" {
+				return .failed
+			}
+
 			return .completed
 		}
 

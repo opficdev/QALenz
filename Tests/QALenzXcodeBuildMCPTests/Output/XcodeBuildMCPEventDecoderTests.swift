@@ -64,8 +64,21 @@ struct XcodeBuildMCPEventDecoderTests {
 		let final = try decoder.finish(operation: operation)
 
 		#expect(pending.isEmpty)
-		#expect(final.map(\.kind) == [.completed])
+		#expect(final.map(\.kind) == [.failed])
 		#expect(final.map(\.message) == ["FAILED"])
+	}
+
+	@Test
+	func 실패_summary가_실패_사건으로_변환된다() throws {
+		var decoder = XcodeBuildMCPEventDecoder()
+		let json = """
+		{"event":"build-result.build-summary","status":"FAILED"}
+
+		"""
+
+		let events = try decoder.decode(Data(json.utf8), operation: operation)
+
+		#expect(events.map(\.kind) == [.failed])
 	}
 
 	@Test

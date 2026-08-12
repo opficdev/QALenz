@@ -24,10 +24,11 @@ package struct XcodeBuildMCPEvent: Sendable, Equatable {
 }
 
 extension XcodeBuildMCPEvent {
-	// XcodeBuildMCP 실행의 시작, 진행, 완료 단계를 구분합니다.
+	// XcodeBuildMCP 실행의 시작, 진행, 완료 및 실패 단계를 구분합니다.
 	package enum Kind: Sendable, Equatable {
 		case started
 		case progress
 		case completed
+		case failed
 	}
 }
