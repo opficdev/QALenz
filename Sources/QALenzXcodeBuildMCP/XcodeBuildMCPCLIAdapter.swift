@@ -209,7 +209,10 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 			workingDirectoryURL: configuration.workingDirectoryURL,
 			environment: configuration.environment,
 			timeout: configuration.timeout,
-			terminationGracePeriod: configuration.terminationGracePeriod
+			terminationGracePeriod: configuration.terminationGracePeriod,
+			maximumStandardOutputByteCount: output == .json
+				? configuration.maximumJSONByteCount
+				: nil
 		)
 	}
 
@@ -245,6 +248,12 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 				operation: operation,
 				code: "execution.xcodebuildmcp.cancelled",
 				kind: .execution
+			)
+		case .standardOutputLimitExceeded:
+			return runError(
+				operation: operation,
+				code: "adapter.xcodebuildmcp.output.too-large",
+				kind: .adapter
 			)
 		case .launchFailed, .none:
 			return runError(
@@ -291,6 +300,7 @@ extension XcodeBuildMCPCLIAdapter {
 		package let environment: [String: String]
 		package let timeout: Duration
 		package let terminationGracePeriod: Duration
+		package let maximumJSONByteCount: Int
 
 		// 환경 변수 허용 목록과 작업 경로를 적용해 실행 설정을 구성합니다.
 		package init(
@@ -298,8 +308,10 @@ extension XcodeBuildMCPCLIAdapter {
 			workingDirectoryURL: URL,
 			environment: [String: String],
 			timeout: Duration,
-			terminationGracePeriod: Duration
+			terminationGracePeriod: Duration,
+			maximumJSONByteCount: Int = 1_048_576
 		) {
+			precondition(0 < maximumJSONByteCount)
 			self.executableURL = executableURL
 			self.workingDirectoryURL = workingDirectoryURL
 			var environment = XcodeBuildMCPEnvironmentFilter().apply(
@@ -309,6 +321,7 @@ extension XcodeBuildMCPCLIAdapter {
 			self.environment = environment
 			self.timeout = timeout
 			self.terminationGracePeriod = terminationGracePeriod
+			self.maximumJSONByteCount = maximumJSONByteCount
 		}
 	}
 }

@@ -32,6 +32,11 @@ case "$tool" in
 		trap '' TERM
 		while :; do :; done
 		;;
+	"excessive-stdout")
+		printf '%064d' 0
+		trap 'exit 0' TERM
+		while :; do :; done
+		;;
 	"child-tree")
 		pid_path="$3"
 		trap '' TERM

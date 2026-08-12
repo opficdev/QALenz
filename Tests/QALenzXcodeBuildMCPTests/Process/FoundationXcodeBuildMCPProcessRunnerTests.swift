@@ -99,6 +99,29 @@ struct FoundationProcessRunnerTests {
 	}
 
 	@Test
+	func 최대_크기를_초과한_stdout이_process를_종료한다() async {
+		let request = XcodeBuildMCPProcessRequest(
+			executableURL: fakeExecutableURL,
+			arguments: ["fixture", "excessive-stdout"],
+			workingDirectoryURL: FileManager.default.temporaryDirectory,
+			environment: [:],
+			timeout: .seconds(5),
+			terminationGracePeriod: .milliseconds(50),
+			maximumStandardOutputByteCount: 32
+		)
+		let clock = ContinuousClock()
+		let start = clock.now
+
+		await #expect(
+			throws: XcodeBuildMCPProcessError.standardOutputLimitExceeded
+		) {
+			try await FoundationXcodeBuildMCPProcessRunner().run(request)
+		}
+
+		#expect(start.duration(to: clock.now) < .milliseconds(500))
+	}
+
+	@Test
 	func 시간_초과가_전체_하위_프로세스_트리를_종료한다() async throws {
 		let directory = FileManager.default.temporaryDirectory
 			.appending(path: UUID().uuidString, directoryHint: .isDirectory)

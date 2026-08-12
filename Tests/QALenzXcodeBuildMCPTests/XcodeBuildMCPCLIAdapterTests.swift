@@ -85,6 +85,29 @@ struct XcodeBuildMCPCLIAdapterTests {
 	}
 
 	@Test
+	func 최대_크기를_초과한_JSON_stdout이_구조화된_오류로_변환된다() async throws {
+		let operation = XcodeBuildMCPOperation(rawValue: "fixture.success")
+		let runner = XcodeBuildMCPProcessRunnerSpy(
+			recorder: .init(),
+			response: .init(
+				standardOutput: Data(repeating: 0x61, count: 33),
+				terminationStatus: 0
+			)
+		)
+		let adapter = makeAdapter(
+			operation: operation,
+			tool: "success",
+			runner: runner,
+			maximumJSONByteCount: 32
+		)
+
+		let result = await adapter.execute(.init(operation: operation))
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.too-large")
+	}
+
+	@Test
 	func 실패한_프로세스의_표준_오류가_결과에_노출되지_않는다() async throws {
 		let operation = XcodeBuildMCPOperation(rawValue: "fixture.failure")
 		let adapter = makeAdapter(
@@ -145,10 +168,14 @@ struct XcodeBuildMCPCLIAdapterTests {
 		operation: XcodeBuildMCPOperation,
 		tool: String,
 		runner: any XcodeBuildMCPProcessRunner,
-		environment: [String: String] = [:]
+		environment: [String: String] = [:],
+		maximumJSONByteCount: Int = 1_048_576
 	) -> XcodeBuildMCPCLIAdapter {
 		.init(
-			configuration: makeConfiguration(environment: environment),
+			configuration: makeConfiguration(
+				environment: environment,
+				maximumJSONByteCount: maximumJSONByteCount
+			),
 			contracts: .init(
 				commandDescriptors: [
 					operation: .init(workflow: "fixture", tool: tool)
@@ -176,14 +203,16 @@ struct XcodeBuildMCPCLIAdapterTests {
 	}
 
 	private func makeConfiguration(
-		environment: [String: String] = [:]
+		environment: [String: String] = [:],
+		maximumJSONByteCount: Int = 1_048_576
 	) -> XcodeBuildMCPCLIAdapter.Configuration {
 		.init(
 			executableURL: fakeExecutableURL,
 			workingDirectoryURL: FileManager.default.temporaryDirectory,
 			environment: environment,
 			timeout: .seconds(1),
-			terminationGracePeriod: .milliseconds(50)
+			terminationGracePeriod: .milliseconds(50),
+			maximumJSONByteCount: maximumJSONByteCount
 		)
 	}
 

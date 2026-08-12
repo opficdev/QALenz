@@ -26,6 +26,14 @@ extension XcodeBuildMCPProcessRunner {
 		for try await event in events(for: request) {
 			switch event {
 			case let .standardOutput(data):
+				if let maximumByteCount = request.maximumStandardOutputByteCount {
+					guard
+						standardOutput.count <= maximumByteCount,
+						data.count <= maximumByteCount - standardOutput.count
+					else {
+						throw XcodeBuildMCPProcessError.standardOutputLimitExceeded
+					}
+				}
 				standardOutput.append(data)
 			case let .terminated(status):
 				terminationStatus = status
@@ -61,6 +69,7 @@ package struct XcodeBuildMCPProcessRequest: Sendable, Equatable {
 	package let environment: [String: String]
 	package let timeout: Duration
 	package let terminationGracePeriod: Duration
+	package let maximumStandardOutputByteCount: Int?
 
 	// 실행 파일, argument, 환경 및 종료 정책으로 요청을 구성합니다.
 	package init(
@@ -69,14 +78,19 @@ package struct XcodeBuildMCPProcessRequest: Sendable, Equatable {
 		workingDirectoryURL: URL,
 		environment: [String: String],
 		timeout: Duration,
-		terminationGracePeriod: Duration
+		terminationGracePeriod: Duration,
+		maximumStandardOutputByteCount: Int? = nil
 	) {
+		if let maximumStandardOutputByteCount {
+			precondition(0 < maximumStandardOutputByteCount)
+		}
 		self.executableURL = executableURL
 		self.arguments = arguments
 		self.workingDirectoryURL = workingDirectoryURL
 		self.environment = environment
 		self.timeout = timeout
 		self.terminationGracePeriod = terminationGracePeriod
+		self.maximumStandardOutputByteCount = maximumStandardOutputByteCount
 	}
 }
 
@@ -97,4 +111,5 @@ package enum XcodeBuildMCPProcessError: Error, Sendable, Equatable {
 	case launchFailed
 	case timedOut
 	case cancelled
+	case standardOutputLimitExceeded
 }

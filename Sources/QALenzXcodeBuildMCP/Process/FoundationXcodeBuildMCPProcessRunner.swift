@@ -10,6 +10,11 @@ import Foundation
 
 // Foundation Process로 XcodeBuildMCP를 실행하고 사건을 전달합니다.
 package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner {
+	private typealias ProcessContinuation = AsyncThrowingStream<
+		XcodeBuildMCPProcessEvent,
+		any Error
+	>.Continuation
+
 	// Foundation 기반 process runner를 구성합니다.
 	package init() {}
 
@@ -31,10 +36,7 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 	// 자식 process의 실행부터 종료까지 관리하고 continuation을 마무리합니다.
 	private func run(
 		_ request: XcodeBuildMCPProcessRequest,
-		continuation: AsyncThrowingStream<
-			XcodeBuildMCPProcessEvent,
-			any Error
-		>.Continuation
+		continuation: ProcessContinuation
 	) async {
 		let process = RunningProcess(request: request)
 
@@ -53,14 +55,12 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 			return
 		}
 
-		let standardOutputTask = Task.detached {
-			await process.readStandardOutput { data in
-				continuation.yield(.standardOutput(data))
-			}
-		}
-		let standardErrorTask = Task.detached {
-			await process.discardStandardError()
-		}
+		let standardOutputTask = makeStandardOutputTask(
+			process: process,
+			request: request,
+			continuation: continuation
+		)
+		let standardErrorTask = Task.detached { await process.discardStandardError() }
 
 		do {
 			let status = try await withTaskCancellationHandler {
@@ -73,8 +73,11 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 				throw XcodeBuildMCPProcessError.cancelled
 			}
 
-			_ = await standardOutputTask.value
+			let standardOutputError = await standardOutputTask.value
 			_ = await standardErrorTask.value
+			if let standardOutputError {
+				throw standardOutputError
+			}
 			continuation.yield(.terminated(status))
 			continuation.finish()
 		} catch is CancellationError {
@@ -88,6 +91,31 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 			_ = await standardOutputTask.value
 			_ = await standardErrorTask.value
 			continuation.finish(throwing: error)
+		}
+	}
+
+	// stdout을 제한 내에서 전달하는 reader task를 생성합니다.
+	private func makeStandardOutputTask(
+		process: RunningProcess,
+		request: XcodeBuildMCPProcessRequest,
+		continuation: ProcessContinuation
+	) -> Task<XcodeBuildMCPProcessError?, Never> {
+		Task.detached {
+			do {
+				try await process.readStandardOutput(
+					maximumByteCount: request.maximumStandardOutputByteCount
+				) { data in
+					continuation.yield(.standardOutput(data))
+				}
+
+				return nil
+			} catch let error as XcodeBuildMCPProcessError {
+				process.stop(after: request.terminationGracePeriod)
+				return error
+			} catch {
+				process.stop(after: request.terminationGracePeriod)
+				return .launchFailed
+			}
 		}
 	}
 
@@ -190,16 +218,32 @@ private final class RunningProcess: @unchecked Sendable {
 
 	// stdout을 완료 전까지 읽어 각 data 조각을 전달합니다.
 	func readStandardOutput(
+		maximumByteCount: Int?,
 		_ yield: @escaping @Sendable (Data) -> Void
-	) async {
-		await withCheckedContinuation { continuation in
+	) async throws {
+		try await withCheckedThrowingContinuation { continuation in
 			blockingQueue.async {
+				var receivedByteCount = 0
+
 				while true {
 					let data = self.standardOutputPipe.fileHandleForReading.availableData
 
 					guard !data.isEmpty else {
 						continuation.resume()
 						return
+					}
+
+					if let maximumByteCount {
+						guard
+							receivedByteCount <= maximumByteCount,
+							data.count <= maximumByteCount - receivedByteCount
+						else {
+							continuation.resume(
+								throwing: XcodeBuildMCPProcessError.standardOutputLimitExceeded
+							)
+							return
+						}
+						receivedByteCount += data.count
 					}
 
 					yield(data)
@@ -212,8 +256,14 @@ private final class RunningProcess: @unchecked Sendable {
 	func discardStandardError() async {
 		await withCheckedContinuation { continuation in
 			blockingQueue.async {
-				_ = self.standardErrorPipe.fileHandleForReading.readDataToEndOfFile()
-				continuation.resume()
+				while true {
+					let data = self.standardErrorPipe.fileHandleForReading.availableData
+
+					guard !data.isEmpty else {
+						continuation.resume()
+						return
+					}
+				}
 			}
 		}
 	}
