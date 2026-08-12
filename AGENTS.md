@@ -30,6 +30,12 @@
 
 Write all code review findings and summaries in Korean. Keep implementation names, file paths, commands, API names, branch names, and commit hashes in their original form.
 
+### Keep review changes within the current issue scope
+
+- Before accepting review feedback, verify both its technical validity and whether it belongs to the current issue's purpose, work scope, completion conditions, and exclusions.
+- Do not implement feedback that is technically valid but outside the current issue scope. Report it as a follow-up issue candidate and explain why it is excluded from the current branch.
+- Treat a defect introduced by the current branch as in scope even when the exact case is not listed in the issue.
+
 ### Preserve the XcodeBuildMCP boundary
 
 - Flag changes that directly implement Simulator control, build or test execution, UI automation, screenshot or video capture, log collection, or debugging capabilities already provided by the supported XcodeBuildMCP contract.
