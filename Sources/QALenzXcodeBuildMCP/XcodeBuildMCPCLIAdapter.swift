@@ -75,7 +75,11 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 	package func events(
 		for request: XcodeBuildMCPRequest
 	) -> AsyncThrowingStream<XcodeBuildMCPEvent, any Error> {
-		AsyncThrowingStream { continuation in
+		AsyncThrowingStream(
+			bufferingPolicy: .bufferingNewest(
+				configuration.maximumBufferedEventCount
+			)
+		) { continuation in
 			let task = Task {
 				await stream(request, continuation: continuation)
 			}
@@ -301,6 +305,7 @@ extension XcodeBuildMCPCLIAdapter {
 		package let timeout: Duration
 		package let terminationGracePeriod: Duration
 		package let maximumJSONByteCount: Int
+		package let maximumBufferedEventCount: Int
 
 		// 환경 변수 허용 목록과 작업 경로를 적용해 실행 설정을 구성합니다.
 		package init(
@@ -309,9 +314,11 @@ extension XcodeBuildMCPCLIAdapter {
 			environment: [String: String],
 			timeout: Duration,
 			terminationGracePeriod: Duration,
-			maximumJSONByteCount: Int = 1_048_576
+			maximumJSONByteCount: Int = 1_048_576,
+			maximumBufferedEventCount: Int = 64
 		) {
 			precondition(0 < maximumJSONByteCount)
+			precondition(0 < maximumBufferedEventCount)
 			self.executableURL = executableURL
 			self.workingDirectoryURL = workingDirectoryURL
 			var environment = XcodeBuildMCPEnvironmentFilter().apply(
@@ -322,6 +329,7 @@ extension XcodeBuildMCPCLIAdapter {
 			self.timeout = timeout
 			self.terminationGracePeriod = terminationGracePeriod
 			self.maximumJSONByteCount = maximumJSONByteCount
+			self.maximumBufferedEventCount = maximumBufferedEventCount
 		}
 	}
 }

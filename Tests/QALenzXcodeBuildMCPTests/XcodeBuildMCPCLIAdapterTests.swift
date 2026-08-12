@@ -164,17 +164,59 @@ struct XcodeBuildMCPCLIAdapterTests {
 		}
 	}
 
+	@Test
+	func 느린_소비자에서도_이벤트_buffer가_제한되고_완료_이벤트가_유지된다() async throws {
+		let operation = XcodeBuildMCPOperation(rawValue: "fixture.events")
+		let progressRecords = (0..<5).map { index in
+			"""
+			{"event":"fixture.progress","operation":"FIXTURE","index":\(index)}
+			"""
+		}
+		let summaryRecord = """
+		{"event":"fixture.summary","operation":"FIXTURE","status":"SUCCEEDED"}
+		"""
+		let runner = XcodeBuildMCPProcessRunnerSpy(
+			recorder: .init(),
+			response: .init(
+				standardOutput: Data(
+					(progressRecords + [summaryRecord])
+						.joined(separator: "\n")
+						.utf8
+				),
+				terminationStatus: 0
+			)
+		)
+		let adapter = makeAdapter(
+			operation: operation,
+			tool: "events",
+			runner: runner,
+			maximumBufferedEventCount: 3
+		)
+		let stream = adapter.events(for: .init(operation: operation))
+		try await Task.sleep(for: .milliseconds(50))
+		var events: [XcodeBuildMCPEvent] = []
+
+		for try await event in stream {
+			events.append(event)
+		}
+
+		#expect(events.count == 3)
+		#expect(events.last?.kind == .completed)
+	}
+
 	private func makeAdapter(
 		operation: XcodeBuildMCPOperation,
 		tool: String,
 		runner: any XcodeBuildMCPProcessRunner,
 		environment: [String: String] = [:],
-		maximumJSONByteCount: Int = 1_048_576
+		maximumJSONByteCount: Int = 1_048_576,
+		maximumBufferedEventCount: Int = 64
 	) -> XcodeBuildMCPCLIAdapter {
 		.init(
 			configuration: makeConfiguration(
 				environment: environment,
-				maximumJSONByteCount: maximumJSONByteCount
+				maximumJSONByteCount: maximumJSONByteCount,
+				maximumBufferedEventCount: maximumBufferedEventCount
 			),
 			contracts: .init(
 				commandDescriptors: [
@@ -204,7 +246,8 @@ struct XcodeBuildMCPCLIAdapterTests {
 
 	private func makeConfiguration(
 		environment: [String: String] = [:],
-		maximumJSONByteCount: Int = 1_048_576
+		maximumJSONByteCount: Int = 1_048_576,
+		maximumBufferedEventCount: Int = 64
 	) -> XcodeBuildMCPCLIAdapter.Configuration {
 		.init(
 			executableURL: fakeExecutableURL,
@@ -212,7 +255,8 @@ struct XcodeBuildMCPCLIAdapterTests {
 			environment: environment,
 			timeout: .seconds(1),
 			terminationGracePeriod: .milliseconds(50),
-			maximumJSONByteCount: maximumJSONByteCount
+			maximumJSONByteCount: maximumJSONByteCount,
+			maximumBufferedEventCount: maximumBufferedEventCount
 		)
 	}
 
