@@ -11,6 +11,51 @@ import QALenzCore
 struct XcodeBuildMCPOutputContract: Sendable {
 	let versions: Set<String>
 	let payload: XcodeBuildMCPPayloadContract
+	let result: XcodeBuildMCPOutputResultContract
+
+	// JSON version과 payload 및 결과 판정 계약을 구성합니다.
+	init(
+		versions: Set<String>,
+		payload: XcodeBuildMCPPayloadContract,
+		result: XcodeBuildMCPOutputResultContract = .passed
+	) {
+		self.versions = versions
+		self.payload = payload
+		self.result = result
+	}
+}
+
+// 정규화된 payload에서 최종 실행 결과를 판정하는 규칙을 표현합니다.
+enum XcodeBuildMCPOutputResultContract: Sendable {
+	case passed
+	case summaryStatus
+
+	// 판정 규칙에 따라 payload를 공통 실행 결과로 변환합니다.
+	func normalizedResult(
+		from payload: XcodeBuildMCPPayload?
+	) throws -> RunResult {
+		switch self {
+		case .passed:
+			return .passed
+		case .summaryStatus:
+			guard
+				case let .object(data)? = payload,
+				case let .object(summary)? = data["summary"],
+				case let .string(status)? = summary["status"]
+			else {
+				throw XcodeBuildMCPOutputResultContractError.invalid
+			}
+
+			switch status {
+			case "SUCCEEDED":
+				return .passed
+			case "FAILED":
+				return .failed
+			default:
+				throw XcodeBuildMCPOutputResultContractError.invalid
+			}
+		}
+	}
 }
 
 // 성공 payload의 필수 여부와 허용 구조를 보관합니다.
@@ -74,5 +119,10 @@ indirect enum XcodeBuildMCPPayloadSchema: Sendable {
 
 // payload가 operation별 허용 구조와 다름을 나타냅니다.
 private enum XcodeBuildMCPPayloadContractError: Error {
+	case invalid
+}
+
+// payload의 결과 상태가 계약과 다름을 나타냅니다.
+private enum XcodeBuildMCPOutputResultContractError: Error {
 	case invalid
 }

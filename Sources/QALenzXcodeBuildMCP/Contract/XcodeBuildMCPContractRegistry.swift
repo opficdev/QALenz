@@ -121,7 +121,8 @@ extension XcodeBuildMCPContractRegistry {
 							fields: ["summary": summary],
 							requiredFields: ["summary"]
 						)
-					)
+					),
+					result: .summaryStatus
 				)
 			]
 		]

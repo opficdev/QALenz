@@ -64,10 +64,12 @@ package struct XcodeBuildMCPOutputDecoder: Sendable {
 		}
 
 		do {
+			let payload = try contract.payload.projected(envelope.data)
+
 			return .init(
 				operation: operation,
-				result: .passed,
-				payload: try contract.payload.projected(envelope.data)
+				result: try contract.result.normalizedResult(from: payload),
+				payload: payload
 			)
 		} catch {
 			return failure(

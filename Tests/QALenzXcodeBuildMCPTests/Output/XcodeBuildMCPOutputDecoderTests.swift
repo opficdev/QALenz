@@ -192,6 +192,70 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	@Test
+	func build_summary의_FAILED_상태가_실패_결과로_변환된다() {
+		let operation = XcodeBuildMCPOperation(rawValue: "build.simulator")
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.build-result",
+			"schemaVersion": "3",
+			"didError": false,
+			"error": null,
+			"data": {"summary": {"status": "FAILED"}}
+		}
+		"""
+
+		let result = makeDecoder().decode(
+			Data(json.utf8),
+			operation: operation
+		)
+
+		#expect(result.result == .failed)
+	}
+
+	@Test
+	func build_summary의_SUCCEEDED_상태가_통과_결과로_변환된다() {
+		let operation = XcodeBuildMCPOperation(rawValue: "build.simulator")
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.build-result",
+			"schemaVersion": "3",
+			"didError": false,
+			"error": null,
+			"data": {"summary": {"status": "SUCCEEDED"}}
+		}
+		"""
+
+		let result = makeDecoder().decode(
+			Data(json.utf8),
+			operation: operation
+		)
+
+		#expect(result.result == .passed)
+	}
+
+	@Test
+	func 지원하지_않는_build_summary_상태가_거부된다() throws {
+		let operation = XcodeBuildMCPOperation(rawValue: "build.simulator")
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.build-result",
+			"schemaVersion": "3",
+			"didError": false,
+			"error": null,
+			"data": {"summary": {"status": "UNKNOWN"}}
+		}
+		"""
+
+		let result = makeDecoder().decode(
+			Data(json.utf8),
+			operation: operation
+		)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+	}
+
+	@Test
 	func 성공_응답에_오류가_있으면_거부된다() throws {
 		let json = """
 		{
