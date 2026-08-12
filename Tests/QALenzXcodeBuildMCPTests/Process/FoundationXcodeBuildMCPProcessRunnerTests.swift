@@ -1,0 +1,150 @@
+//
+//  FoundationXcodeBuildMCPProcessRunnerTests.swift
+//  QALenz
+//
+//  Created by opfic on 8/12/26.
+//
+
+import Foundation
+import Testing
+@testable import QALenzXcodeBuildMCP
+
+@Suite(.serialized)
+struct FoundationProcessRunnerTests {
+	@Test
+	func runsFakeExecutableInWorkingDirectory() async throws {
+		let directory = FileManager.default.temporaryDirectory
+		let request = XcodeBuildMCPProcessRequest(
+			executableURL: fakeExecutableURL,
+			arguments: ["fixture", "working-directory"],
+			workingDirectoryURL: directory,
+			environment: [:],
+			timeout: .seconds(1),
+			terminationGracePeriod: .milliseconds(50)
+		)
+
+		let response = try await FoundationXcodeBuildMCPProcessRunner().run(
+			request
+		)
+
+		#expect(response.terminationStatus == 0)
+		let path = try #require(
+			String(data: response.standardOutput, encoding: .utf8)
+		)
+			.trimmingCharacters(in: .whitespacesAndNewlines)
+		let actual = URL(fileURLWithPath: path).resolvingSymlinksInPath()
+		let expected = directory.resolvingSymlinksInPath()
+
+		#expect(actual == expected)
+	}
+
+	@Test
+	func streamsStandardOutputBeforeProcessExit() async throws {
+		let directory = FileManager.default.temporaryDirectory
+			.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+		let signal = directory.appending(path: "continue")
+		try FileManager.default.createDirectory(
+			at: directory,
+			withIntermediateDirectories: true
+		)
+		defer { try? FileManager.default.removeItem(at: directory) }
+
+		let request = XcodeBuildMCPProcessRequest(
+			executableURL: fakeExecutableURL,
+			arguments: ["fixture", "streaming", signal.path()],
+			workingDirectoryURL: directory,
+			environment: [:],
+			timeout: .seconds(1),
+			terminationGracePeriod: .milliseconds(50)
+		)
+		let stream = FoundationXcodeBuildMCPProcessRunner().events(for: request)
+		var iterator = stream.makeAsyncIterator()
+		let first = try #require(await iterator.next())
+
+		guard case let .standardOutput(data) = first else {
+			Issue.record("첫 번째 process 사건이 stdout이 아님")
+			return
+		}
+		let line = try #require(String(data: data, encoding: .utf8))
+
+		#expect(line.contains("invocation"))
+
+		try Data().write(to: signal)
+
+		var status: Int32?
+		while let event = try await iterator.next() {
+			if case let .terminated(value) = event {
+				status = value
+			}
+		}
+
+		#expect(status == 0)
+	}
+
+	@Test
+	func timesOutAndForceStopsIgnoringProcess() async {
+		let request = XcodeBuildMCPProcessRequest(
+			executableURL: fakeExecutableURL,
+			arguments: ["fixture", "ignore-term"],
+			workingDirectoryURL: FileManager.default.temporaryDirectory,
+			environment: [:],
+			timeout: .milliseconds(50),
+			terminationGracePeriod: .milliseconds(50)
+		)
+
+		await #expect(throws: XcodeBuildMCPProcessError.timedOut) {
+			try await FoundationXcodeBuildMCPProcessRunner().run(request)
+		}
+	}
+
+	@Test
+	func cancellationStopsRunningProcess() async {
+		let request = XcodeBuildMCPProcessRequest(
+			executableURL: fakeExecutableURL,
+			arguments: ["fixture", "sleep"],
+			workingDirectoryURL: FileManager.default.temporaryDirectory,
+			environment: [:],
+			timeout: .seconds(5),
+			terminationGracePeriod: .milliseconds(50)
+		)
+		let task = Task {
+			try await FoundationXcodeBuildMCPProcessRunner().run(request)
+		}
+
+		try? await Task.sleep(for: .milliseconds(50))
+		task.cancel()
+
+		await #expect(throws: XcodeBuildMCPProcessError.cancelled) {
+			try await task.value
+		}
+	}
+
+	@Test
+	func filtersEnvironmentToAllowedNames() {
+		let filter = XcodeBuildMCPEnvironmentFilter()
+		let environment = filter.apply(to: [
+			"PATH": "/usr/bin",
+			"HOME": "/tmp/home",
+			"TMPDIR": "/tmp",
+			"DEVELOPER_DIR": "/Applications/Xcode.app",
+			"XCODEBUILDMCP_CWD": "/tmp/project",
+			"SECRET_TOKEN": "secret-token-value"
+		])
+
+		#expect(environment == [
+			"PATH": "/usr/bin",
+			"HOME": "/tmp/home",
+			"TMPDIR": "/tmp",
+			"DEVELOPER_DIR": "/Applications/Xcode.app",
+			"XCODEBUILDMCP_CWD": "/tmp/project"
+		])
+	}
+
+	private var fakeExecutableURL: URL {
+		Bundle.module.url(
+			forResource: "fake-xcodebuildmcp",
+			withExtension: nil,
+			subdirectory: "Fixtures"
+		)!
+	}
+}

@@ -1,0 +1,38 @@
+#!/bin/sh
+
+tool="$2"
+
+case "$tool" in
+	"success")
+		printf '%s\n' '{"schema":"xcodebuildmcp.output.fixture","schemaVersion":"1","didError":false,"error":null,"data":{}}'
+		;;
+	"events")
+		printf '%s\n' '{"event":"fixture.invocation"}'
+		printf '%s\n' '{"event":"fixture.progress","message":"Working"}'
+		printf '%s\n' '{"event":"fixture.summary","status":"SUCCEEDED"}'
+		;;
+	"streaming")
+		signal_path="$3"
+		printf '%s\n' '{"event":"fixture.invocation"}'
+		while [ ! -f "$signal_path" ]; do sleep 0.01; done
+		printf '%s\n' '{"event":"fixture.summary","status":"SUCCEEDED"}'
+		;;
+	"failure")
+		printf '%s\n' 'secret-token-value' >&2
+		exit 9
+		;;
+	"working-directory")
+		pwd
+		;;
+	"sleep")
+		trap 'exit 0' TERM
+		while :; do :; done
+		;;
+	"ignore-term")
+		trap '' TERM
+		while :; do :; done
+		;;
+	*)
+		exit 64
+		;;
+esac
