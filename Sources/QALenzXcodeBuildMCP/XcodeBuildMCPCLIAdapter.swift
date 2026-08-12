@@ -123,7 +123,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		let eventContract = try eventContract(for: request.operation)
 		var decoder = XcodeBuildMCPEventDecoder(contract: eventContract)
 		var didTerminate = false
-		var didReceiveSummary = false
+		var pendingTerminalEvent: XcodeBuildMCPEvent?
 
 		for try await processEvent in processRunner.events(for: processRequest) {
 			switch processEvent {
@@ -132,23 +132,21 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 					data,
 					operation: request.operation
 				)
-				for event in events {
-					if event.kind == .completed || event.kind == .failed {
-						didReceiveSummary = true
-					}
-					continuation.yield(event)
-				}
+				publishNonterminalEvents(
+					events,
+					pendingTerminalEvent: &pendingTerminalEvent,
+					continuation: continuation
+				)
 			case let .terminated(status):
 				didTerminate = true
 				try validate(status: status, operation: request.operation)
 
 				let events = try decoder.finish(operation: request.operation)
-				for event in events {
-					if event.kind == .completed || event.kind == .failed {
-						didReceiveSummary = true
-					}
-					continuation.yield(event)
-				}
+				publishNonterminalEvents(
+					events,
+					pendingTerminalEvent: &pendingTerminalEvent,
+					continuation: continuation
+				)
 			}
 		}
 
@@ -159,13 +157,15 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 				kind: .adapter
 			)
 		}
-		guard didReceiveSummary else {
+		guard let pendingTerminalEvent else {
 			throw runError(
 				operation: request.operation,
 				code: "adapter.xcodebuildmcp.output.invalid",
 				kind: .adapter
 			)
 		}
+
+		continuation.yield(pendingTerminalEvent)
 	}
 
 	// operation에 대응하는 JSONL event contract를 반환합니다.
@@ -293,6 +293,27 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 			code: .init(rawValue: code),
 			context: .init(command: operation.rawValue)
 		)
+	}
+}
+
+private extension XcodeBuildMCPCLIAdapter {
+	// terminal 사건을 보류하고 나머지 진행 사건만 즉시 게시합니다.
+	func publishNonterminalEvents(
+		_ events: [XcodeBuildMCPEvent],
+		pendingTerminalEvent: inout XcodeBuildMCPEvent?,
+		continuation: AsyncThrowingStream<
+			XcodeBuildMCPEvent,
+			any Error
+		>.Continuation
+	) {
+		for event in events {
+			switch event.kind {
+			case .completed, .failed:
+				pendingTerminalEvent = event
+			case .started, .progress:
+				continuation.yield(event)
+			}
+		}
 	}
 }
 

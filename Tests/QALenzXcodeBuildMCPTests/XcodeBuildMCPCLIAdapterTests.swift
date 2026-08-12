@@ -277,6 +277,44 @@ struct XcodeBuildMCPCLIAdapterTests {
 	}
 }
 
+extension XcodeBuildMCPCLIAdapterTests {
+	@Test
+	func nonzero로_종료한_process의_완료_이벤트가_게시되지_않는다() async {
+		let operation = XcodeBuildMCPOperation(rawValue: "fixture.events")
+		let runner = XcodeBuildMCPProcessRunnerSpy(
+			recorder: .init(),
+			response: .init(
+				standardOutput: Data(
+					"""
+					{"event":"fixture.summary","operation":"FIXTURE","status":"SUCCEEDED"}
+
+					""".utf8
+				),
+				terminationStatus: 9
+			),
+			terminationDelay: .milliseconds(50)
+		)
+		let adapter = makeAdapter(
+			operation: operation,
+			tool: "events",
+			runner: runner
+		)
+		var events: [XcodeBuildMCPEvent] = []
+
+		do {
+			for try await event in adapter.events(for: .init(operation: operation)) {
+				events.append(event)
+			}
+			Issue.record("실패한 process의 stream이 오류 없이 종료됨")
+		} catch let error as RunError {
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.process.failed")
+			#expect(events.isEmpty)
+		} catch {
+			Issue.record("구조화되지 않은 오류 반환")
+		}
+	}
+}
+
 private actor XcodeBuildMCPProcessRequestRecorder {
 	private(set) var requests: [XcodeBuildMCPProcessRequest] = []
 
@@ -288,6 +326,18 @@ private actor XcodeBuildMCPProcessRequestRecorder {
 private struct XcodeBuildMCPProcessRunnerSpy: XcodeBuildMCPProcessRunner {
 	let recorder: XcodeBuildMCPProcessRequestRecorder
 	let response: XcodeBuildMCPProcessResponse
+	let terminationDelay: Duration?
+
+	// 응답과 선택적인 종료 지연으로 시험용 process runner를 구성합니다.
+	init(
+		recorder: XcodeBuildMCPProcessRequestRecorder,
+		response: XcodeBuildMCPProcessResponse,
+		terminationDelay: Duration? = nil
+	) {
+		self.recorder = recorder
+		self.response = response
+		self.terminationDelay = terminationDelay
+	}
 
 	func events(
 		for request: XcodeBuildMCPProcessRequest
@@ -296,6 +346,9 @@ private struct XcodeBuildMCPProcessRunnerSpy: XcodeBuildMCPProcessRunner {
 			Task {
 				await recorder.record(request)
 				continuation.yield(.standardOutput(response.standardOutput))
+				if let terminationDelay {
+					try? await Task.sleep(for: terminationDelay)
+				}
 				continuation.yield(.terminated(response.terminationStatus))
 				continuation.finish()
 			}
