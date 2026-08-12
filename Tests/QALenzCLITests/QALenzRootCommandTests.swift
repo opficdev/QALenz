@@ -27,6 +27,13 @@ struct QALenzRootCommandTests {
 		#expect(QALenzRootCommand.fullMessage(for: error) == CLIVersion.current)
 	}
 
+	@Test
+	func parsesSharedOutputFormat() throws {
+		let command = try QALenzRootCommand.parse(["--output", "json"])
+
+		#expect(command.options.output == .json)
+	}
+
 	private func caughtError(for arguments: [String]) -> (any Error)? {
 		do {
 			var command = try QALenzRootCommand.parseAsRoot(arguments)
