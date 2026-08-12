@@ -279,6 +279,41 @@ struct XcodeBuildMCPCLIAdapterTests {
 
 extension XcodeBuildMCPCLIAdapterTests {
 	@Test
+	func 두_번째_terminal_이벤트가_거부된다() async {
+		let operation = XcodeBuildMCPOperation(rawValue: "fixture.events")
+		let runner = XcodeBuildMCPProcessRunnerSpy(
+			recorder: .init(),
+			response: .init(
+				standardOutput: Data(
+					"""
+					{"event":"fixture.summary","operation":"FIXTURE","status":"FAILED"}
+					{"event":"fixture.summary","operation":"FIXTURE","status":"SUCCEEDED"}
+
+					""".utf8
+				),
+				terminationStatus: 0
+			)
+		)
+		let adapter = makeAdapter(
+			operation: operation,
+			tool: "events",
+			runner: runner
+		)
+		var events: [XcodeBuildMCPEvent] = []
+		do {
+			for try await event in adapter.events(for: .init(operation: operation)) {
+				events.append(event)
+			}
+			Issue.record("두 번째 terminal 이벤트가 거부되지 않음")
+		} catch let error as RunError {
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+			#expect(events.isEmpty)
+		} catch {
+			Issue.record("구조화되지 않은 오류 반환")
+		}
+	}
+
+	@Test
 	func nonzero로_종료한_process의_완료_이벤트가_게시되지_않는다() async {
 		let operation = XcodeBuildMCPOperation(rawValue: "fixture.events")
 		let runner = XcodeBuildMCPProcessRunnerSpy(

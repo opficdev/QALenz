@@ -132,8 +132,9 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 					data,
 					operation: request.operation
 				)
-				publishNonterminalEvents(
+				try publishNonterminalEvents(
 					events,
+					operation: request.operation,
 					pendingTerminalEvent: &pendingTerminalEvent,
 					continuation: continuation
 				)
@@ -142,8 +143,9 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 				try validate(status: status, operation: request.operation)
 
 				let events = try decoder.finish(operation: request.operation)
-				publishNonterminalEvents(
+				try publishNonterminalEvents(
 					events,
+					operation: request.operation,
 					pendingTerminalEvent: &pendingTerminalEvent,
 					continuation: continuation
 				)
@@ -297,18 +299,26 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 }
 
 private extension XcodeBuildMCPCLIAdapter {
-	// terminal 사건을 보류하고 나머지 진행 사건만 즉시 게시합니다.
+	// terminal 사건을 하나만 보류하고 중복 사건을 거부하며 나머지 진행 사건을 게시합니다.
 	func publishNonterminalEvents(
 		_ events: [XcodeBuildMCPEvent],
+		operation: XcodeBuildMCPOperation,
 		pendingTerminalEvent: inout XcodeBuildMCPEvent?,
 		continuation: AsyncThrowingStream<
 			XcodeBuildMCPEvent,
 			any Error
 		>.Continuation
-	) {
+	) throws {
 		for event in events {
 			switch event.kind {
 			case .completed, .failed:
+				guard pendingTerminalEvent == nil else {
+					throw runError(
+						operation: operation,
+						code: "adapter.xcodebuildmcp.output.invalid",
+						kind: .adapter
+					)
+				}
 				pendingTerminalEvent = event
 			case .started, .progress:
 				continuation.yield(event)
