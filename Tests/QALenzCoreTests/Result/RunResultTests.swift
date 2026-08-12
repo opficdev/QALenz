@@ -12,7 +12,7 @@ import Testing
 @Suite
 struct RunResultTests {
 	@Test
-	func exposesMutuallyExclusiveStatuses() {
+	func 결과_상태가_상호_배타적으로_노출된다() {
 		let error = RunError(
 			kind: .adapter,
 			code: .init(rawValue: "adapter.unavailable")
@@ -36,7 +36,7 @@ struct RunResultTests {
 			)
 		]
 	)
-	func preservesEveryResultThroughJSONRoundTrip(_ result: RunResult) throws {
+	func 모든_결과가_JSON_왕복_변환에서_유지된다(_ result: RunResult) throws {
 		let data = try JSONEncoder().encode(result)
 		let decoded = try JSONDecoder().decode(RunResult.self, from: data)
 
@@ -44,7 +44,7 @@ struct RunResultTests {
 	}
 
 	@Test
-	func encodesErrorOnlyForErroredResult() throws {
+	func 오류_결과에만_오류_정보가_인코딩된다() throws {
 		let passed = try object(for: .passed)
 		let failed = try object(for: .failed)
 		let errored = try object(
@@ -80,14 +80,14 @@ struct RunResultTests {
 			"""
 		]
 	)
-	func rejectsInvalidStatusAndErrorCombinations(_ json: String) {
+	func 잘못된_상태와_오류_조합이_거부된다(_ json: String) {
 		#expect(throws: DecodingError.self) {
 			try JSONDecoder().decode(RunResult.self, from: Data(json.utf8))
 		}
 	}
 
 	@Test
-	func satisfiesSharedContractRequirements() {
+	func 공통_결과_계약이_Codable과_Sendable과_Equatable을_충족한다() {
 		requireContract(RunResult.self)
 		requireContract(RunResult.Status.self)
 	}

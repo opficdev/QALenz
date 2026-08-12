@@ -17,7 +17,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 	)
 
 	@Test
-	func normalizesSuccessfulEnvelope() throws {
+	func 지원하는_성공_응답이_통과_결과로_변환된다() throws {
 		let decoder = makeDecoder()
 		let json = """
 		{
@@ -38,7 +38,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	@Test
-	func normalizesToolFailureWithoutCopyingErrorText() throws {
+	func 도구_실패가_원본_오류_내용_없이_정규화된다() throws {
 		let decoder = makeDecoder()
 		let json = """
 		{
@@ -60,7 +60,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	@Test
-	func rejectsMalformedJSON() throws {
+	func 잘못된_JSON이_구조화된_출력_오류로_변환된다() throws {
 		let result = makeDecoder().decode(
 			Data("{malformed".utf8),
 			operation: operation
@@ -71,7 +71,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	@Test
-	func rejectsUnsupportedSchemaVersion() throws {
+	func 지원하지_않는_응답_형식_버전이_거부된다() throws {
 		let json = """
 		{
 			"schema": "xcodebuildmcp.output.simulator-list",
@@ -92,7 +92,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	@Test
-	func rejectsErrorTextOnSuccessfulEnvelope() throws {
+	func 성공_응답에_오류가_있으면_거부된다() throws {
 		let json = """
 		{
 			"schema": "xcodebuildmcp.output.simulator-list",

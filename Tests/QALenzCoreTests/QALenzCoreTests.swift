@@ -9,4 +9,4 @@ import Testing
 @testable import QALenzCore
 
 @Test
-func coreModuleLoads() {}
+func 공통_모듈을_불러올_수_있다() {}

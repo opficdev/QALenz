@@ -12,7 +12,7 @@ import Testing
 @Suite
 struct QALenzCLIApplicationTests {
 	@Test
-	func writesHelpToStandardOutput() throws {
+	func 도움말이_표준_출력으로_작성된다() throws {
 		let result = QALenzCLIApplication.execute(arguments: ["--help"])
 
 		#expect(result.exitStatus == .success)
@@ -21,7 +21,7 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func writesTextUsageErrorToStandardError() throws {
+	func 텍스트_사용법_오류가_표준_오류로_작성된다() throws {
 		let result = QALenzCLIApplication.execute(arguments: ["unknown"])
 
 		#expect(result.exitStatus == .usageError)
@@ -30,7 +30,7 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func writesStructuredJSONUsageError() throws {
+	func JSON_사용법_오류가_구조화되어_작성된다() throws {
 		let result = QALenzCLIApplication.execute(
 			arguments: ["--output", "json", "--unknown"]
 		)
@@ -46,7 +46,7 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func writesStructuredJSONUsageErrorForUnknownCommand() throws {
+	func 알_수_없는_명령의_JSON_사용법_오류가_구조화되어_작성된다() throws {
 		let result = QALenzCLIApplication.execute(
 			arguments: ["--output", "json", "unknown"]
 		)
@@ -59,7 +59,7 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func rejectsUsageErrorWithNonErroredResult() {
+	func 오류가_아닌_결과를_가진_사용법_오류가_거부된다() {
 		let json = """
 		{"message":"Invalid usage","result":{"status":"passed"},"usage":"qalenz"}
 		"""
@@ -70,7 +70,7 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func keepsTextAndJSONUsageMeaningEqual() throws {
+	func 텍스트와_JSON_사용법_오류의_의미가_같다() throws {
 		let text = QALenzCLIApplication.execute(arguments: ["--unknown"])
 		let json = QALenzCLIApplication.execute(
 			arguments: ["--output", "json", "--unknown"]

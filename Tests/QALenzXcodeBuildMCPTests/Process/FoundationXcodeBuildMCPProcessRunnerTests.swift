@@ -12,7 +12,7 @@ import Testing
 @Suite(.serialized)
 struct FoundationProcessRunnerTests {
 	@Test
-	func runsFakeExecutableInWorkingDirectory() async throws {
+	func 시험용_실행_파일이_지정한_작업_경로에서_실행된다() async throws {
 		let directory = FileManager.default.temporaryDirectory
 		let request = XcodeBuildMCPProcessRequest(
 			executableURL: fakeExecutableURL,
@@ -39,7 +39,7 @@ struct FoundationProcessRunnerTests {
 	}
 
 	@Test
-	func streamsStandardOutputBeforeProcessExit() async throws {
+	func 표준_출력_이벤트가_프로세스_종료_전에_전달된다() async throws {
 		let directory = FileManager.default.temporaryDirectory
 			.appending(path: UUID().uuidString, directoryHint: .isDirectory)
 		let signal = directory.appending(path: "continue")
@@ -82,7 +82,7 @@ struct FoundationProcessRunnerTests {
 	}
 
 	@Test
-	func timesOutAndForceStopsIgnoringProcess() async {
+	func 종료_신호를_무시하는_프로세스가_시간_초과_후_강제_종료된다() async {
 		let request = XcodeBuildMCPProcessRequest(
 			executableURL: fakeExecutableURL,
 			arguments: ["fixture", "ignore-term"],
@@ -98,7 +98,7 @@ struct FoundationProcessRunnerTests {
 	}
 
 	@Test
-	func cancellationStopsRunningProcess() async {
+	func 실행_작업을_취소하면_자식_프로세스가_종료되고_취소_오류가_반환된다() async {
 		let request = XcodeBuildMCPProcessRequest(
 			executableURL: fakeExecutableURL,
 			arguments: ["fixture", "sleep"],
@@ -120,7 +120,7 @@ struct FoundationProcessRunnerTests {
 	}
 
 	@Test
-	func filtersEnvironmentToAllowedNames() {
+	func 허용_목록의_환경_변수만_남는다() {
 		let filter = XcodeBuildMCPEnvironmentFilter()
 		let environment = filter.apply(to: [
 			"PATH": "/usr/bin",

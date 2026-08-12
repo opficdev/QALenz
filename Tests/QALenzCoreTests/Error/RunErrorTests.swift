@@ -12,7 +12,7 @@ import Testing
 @Suite
 struct RunErrorTests {
 	@Test
-	func preservesStructuredValuesThroughJSONRoundTrip() throws {
+	func 구조화된_오류값이_JSON_왕복_변환에서_유지된다() throws {
 		let error = RunError(
 			kind: .adapter,
 			code: .init(rawValue: "adapter.schema.invalid"),
@@ -31,7 +31,7 @@ struct RunErrorTests {
 	}
 
 	@Test
-	func encodesOnlyStructuredFields() throws {
+	func 구조화된_오류_필드만_JSON으로_인코딩된다() throws {
 		let error = RunError(
 			kind: .execution,
 			code: .init(rawValue: "execution.timeout"),
@@ -59,7 +59,7 @@ struct RunErrorTests {
 			.report
 		]
 	)
-	func preservesEveryKindThroughJSONRoundTrip(_ kind: RunError.Kind) throws {
+	func 모든_오류_종류가_JSON_왕복_변환에서_유지된다(_ kind: RunError.Kind) throws {
 		let error = RunError(
 			kind: kind,
 			code: .init(rawValue: "test.code"),
@@ -73,7 +73,7 @@ struct RunErrorTests {
 	}
 
 	@Test
-	func satisfiesSharedContractRequirements() {
+	func 공통_오류_계약이_Codable과_Sendable과_Equatable을_충족한다() {
 		requireContract(RunError.self)
 		requireContract(RunError.Kind.self)
 		requireContract(RunError.Code.self)

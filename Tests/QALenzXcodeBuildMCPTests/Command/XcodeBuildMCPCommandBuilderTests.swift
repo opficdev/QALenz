@@ -12,7 +12,7 @@ import Testing
 @Suite
 struct XcodeBuildMCPCommandBuilderTests {
 	@Test
-	func mapsSemanticRequestToJSONCommandArguments() throws {
+	func 의미_기반_요청이_JSON_명령_인자로_변환된다() throws {
 		let operation = XcodeBuildMCPOperation(rawValue: "discover.simulators")
 		let builder = XcodeBuildMCPCommandBuilder(descriptors: [
 			operation: .init(
@@ -41,7 +41,7 @@ struct XcodeBuildMCPCommandBuilderTests {
 	}
 
 	@Test
-	func mapsEventRequestToJSONLinesOutput() throws {
+	func 이벤트_요청이_JSONL_출력을_사용한다() throws {
 		let operation = XcodeBuildMCPOperation(rawValue: "discover.simulators")
 		let builder = XcodeBuildMCPCommandBuilder(descriptors: [
 			operation: .init(workflow: "simulator", tool: "list")
@@ -54,7 +54,7 @@ struct XcodeBuildMCPCommandBuilderTests {
 	}
 
 	@Test
-	func rejectsUnsupportedOperationWithoutExposingCommandDetails() {
+	func 지원하지_않는_작업이_명령_정보_노출_없이_거부된다() {
 		let request = XcodeBuildMCPRequest(
 			operation: .init(rawValue: "unsupported.operation")
 		)
@@ -66,7 +66,7 @@ struct XcodeBuildMCPCommandBuilderTests {
 	}
 
 	@Test
-	func rejectsUnsupportedSemanticArgument() {
+	func 작업_설명에_없는_의미_기반_인자가_거부된다() {
 		let operation = XcodeBuildMCPOperation(rawValue: "discover.simulators")
 		let request = XcodeBuildMCPRequest(
 			operation: operation,

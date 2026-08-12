@@ -13,7 +13,7 @@ import Testing
 @Suite(.serialized)
 struct XcodeBuildMCPCLIAdapterTests {
 	@Test
-	func executesInjectedProcessRunnerWithFilteredConfiguration() async throws {
+	func 주입한_프로세스_실행기가_정제된_설정과_JSON_인자를_받는다() async throws {
 		let operation = XcodeBuildMCPOperation(rawValue: "fixture.success")
 		let recorder = XcodeBuildMCPProcessRequestRecorder()
 		let runner = XcodeBuildMCPProcessRunnerSpy(
@@ -44,7 +44,7 @@ struct XcodeBuildMCPCLIAdapterTests {
 	}
 
 	@Test
-	func executesAgainstFakeExecutable() async {
+	func 시험용_실행_파일의_성공_응답이_통과_결과로_변환된다() async {
 		let operation = XcodeBuildMCPOperation(rawValue: "fixture.success")
 		let adapter = makeAdapter(
 			operation: operation,
@@ -58,7 +58,7 @@ struct XcodeBuildMCPCLIAdapterTests {
 	}
 
 	@Test
-	func hidesStandardErrorFromFailedProcessResult() async throws {
+	func 실패한_프로세스의_표준_오류가_결과에_노출되지_않는다() async throws {
 		let operation = XcodeBuildMCPOperation(rawValue: "fixture.failure")
 		let adapter = makeAdapter(
 			operation: operation,
@@ -74,7 +74,7 @@ struct XcodeBuildMCPCLIAdapterTests {
 	}
 
 	@Test
-	func streamsNormalizedEventsFromFakeExecutable() async throws {
+	func 시험용_실행_파일의_JSONL_출력이_정규화된_이벤트로_전달된다() async throws {
 		let operation = XcodeBuildMCPOperation(rawValue: "fixture.events")
 		let adapter = makeAdapter(
 			operation: operation,

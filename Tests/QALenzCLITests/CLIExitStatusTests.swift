@@ -12,17 +12,17 @@ import Testing
 @Suite
 struct CLIExitStatusTests {
 	@Test
-	func mapsPassedResultToSuccess() {
+	func 통과_결과가_성공_종료_상태로_변환된다() {
 		#expect(CLIExitStatus(result: .passed).rawValue == 0)
 	}
 
 	@Test
-	func mapsFailedResultToVerificationFailure() {
+	func 검증_실패_결과가_검증_실패_종료_상태로_변환된다() {
 		#expect(CLIExitStatus(result: .failed).rawValue == 1)
 	}
 
 	@Test
-	func mapsErroredResultToExecutionError() {
+	func 실행_오류_결과가_실행_오류_종료_상태로_변환된다() {
 		let error = RunError(
 			kind: .execution,
 			code: .init(rawValue: "execution.test")
@@ -32,7 +32,7 @@ struct CLIExitStatusTests {
 	}
 
 	@Test
-	func exposesUsageErrorStatus() {
+	func 잘못된_사용법의_종료_상태는_64이다() {
 		#expect(CLIExitStatus.usageError.rawValue == 64)
 	}
 }

@@ -15,7 +15,7 @@ struct CLIOutputFormatTests {
 		["--output=json"],
 		["unknown", "--output", "json"]
 	])
-	func detectsJSONBeforeParsingFailure(_ arguments: [String]) {
+	func 파싱_실패_전에_JSON_출력_요청을_찾는다(_ arguments: [String]) {
 		#expect(CLIOutputFormat.requested(in: arguments) == .json)
 	}
 
@@ -25,7 +25,7 @@ struct CLIOutputFormatTests {
 		["--output", "xml"],
 		["--", "--output", "json"]
 	])
-	func defaultsToTextWithoutValidJSONRequest(_ arguments: [String]) {
+	func 올바른_JSON_출력_요청이_없으면_텍스트_출력을_사용한다(_ arguments: [String]) {
 		#expect(CLIOutputFormat.requested(in: arguments) == .text)
 	}
 }

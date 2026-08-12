@@ -17,7 +17,7 @@ struct XcodeBuildMCPEventDecoderTests {
 	)
 
 	@Test
-	func normalizesJSONLinesEvents() throws {
+	func JSONL_이벤트가_공통_진행_단계와_메시지로_변환된다() throws {
 		var decoder = XcodeBuildMCPEventDecoder()
 		let jsonLines = """
 		{"event":"build-result.invocation","operation":"BUILD"}
@@ -36,7 +36,7 @@ struct XcodeBuildMCPEventDecoderTests {
 	}
 
 	@Test
-	func buffersSplitEventUntilNewlineArrives() throws {
+	func 나뉜_JSONL_이벤트가_줄바꿈_전까지_버퍼에_남는다() throws {
 		var decoder = XcodeBuildMCPEventDecoder()
 
 		let first = try decoder.decode(
@@ -53,7 +53,7 @@ struct XcodeBuildMCPEventDecoderTests {
 	}
 
 	@Test
-	func decodesFinalEventWithoutTrailingNewline() throws {
+	func 줄바꿈_없는_마지막_이벤트가_마무리_시점에_처리된다() throws {
 		var decoder = XcodeBuildMCPEventDecoder()
 		let json = #"{"event":"build-result.build-summary","status":"FAILED"}"#
 
@@ -69,7 +69,7 @@ struct XcodeBuildMCPEventDecoderTests {
 	}
 
 	@Test
-	func rejectsMalformedEventWithoutCopyingRawLine() throws {
+	func 잘못된_이벤트의_원본_내용이_오류에_복사되지_않는다() throws {
 		var decoder = XcodeBuildMCPEventDecoder()
 
 		do {
@@ -77,7 +77,7 @@ struct XcodeBuildMCPEventDecoderTests {
 				Data("secret-token-value\n".utf8),
 				operation: operation
 			)
-			Issue.record("Expected malformed event error")
+			Issue.record("잘못된 이벤트 오류가 반환되지 않음")
 		} catch let error as RunError {
 			#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
 			#expect(!String(describing: error).contains("secret-token-value"))

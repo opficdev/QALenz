@@ -11,7 +11,7 @@ import Testing
 @Suite
 struct XcodeBuildMCPAdapterTests {
 	@Test
-	func preservesSemanticRequestValues() {
+	func 의미_기반_요청값이_유지된다() {
 		let request = XcodeBuildMCPRequest(
 			operation: .init(rawValue: "discover.simulators"),
 			arguments: [
@@ -26,7 +26,7 @@ struct XcodeBuildMCPAdapterTests {
 	}
 
 	@Test
-	func returnsNormalizedResultThroughAdapterContract() async {
+	func 어댑터_계약이_정규화된_결과를_반환한다() async {
 		let request = XcodeBuildMCPRequest(
 			operation: .init(rawValue: "discover.simulators")
 		)
@@ -42,7 +42,7 @@ struct XcodeBuildMCPAdapterTests {
 	}
 
 	@Test
-	func streamsNormalizedEventsThroughAdapterContract() async throws {
+	func 어댑터_계약이_정규화된_이벤트를_전달한다() async throws {
 		let request = XcodeBuildMCPRequest(
 			operation: .init(rawValue: "discover.simulators")
 		)
@@ -65,7 +65,7 @@ struct XcodeBuildMCPAdapterTests {
 	}
 
 	@Test
-	func satisfiesSharedContractRequirements() {
+	func 공통_계약이_Sendable과_Equatable을_충족한다() {
 		requireContract(XcodeBuildMCPOperation.self)
 		requireContract(XcodeBuildMCPArgument.self)
 		requireContract(XcodeBuildMCPRequest.self)
