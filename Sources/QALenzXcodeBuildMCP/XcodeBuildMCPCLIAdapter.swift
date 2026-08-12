@@ -103,21 +103,30 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		)
 		var decoder = XcodeBuildMCPEventDecoder()
 		var didTerminate = false
+		var didReceiveSummary = false
 
 		for try await processEvent in processRunner.events(for: processRequest) {
 			switch processEvent {
 			case let .standardOutput(data):
-				for event in try decoder.decode(
+				let events = try decoder.decode(
 					data,
 					operation: request.operation
-				) {
+				)
+				for event in events {
+					if event.kind == .completed || event.kind == .failed {
+						didReceiveSummary = true
+					}
 					continuation.yield(event)
 				}
 			case let .terminated(status):
 				didTerminate = true
 				try validate(status: status, operation: request.operation)
 
-				for event in try decoder.finish(operation: request.operation) {
+				let events = try decoder.finish(operation: request.operation)
+				for event in events {
+					if event.kind == .completed || event.kind == .failed {
+						didReceiveSummary = true
+					}
 					continuation.yield(event)
 				}
 			}
@@ -127,6 +136,13 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 			throw runError(
 				operation: request.operation,
 				code: "adapter.xcodebuildmcp.process.incomplete",
+				kind: .adapter
+			)
+		}
+		guard didReceiveSummary else {
+			throw runError(
+				operation: request.operation,
+				code: "adapter.xcodebuildmcp.output.invalid",
 				kind: .adapter
 			)
 		}

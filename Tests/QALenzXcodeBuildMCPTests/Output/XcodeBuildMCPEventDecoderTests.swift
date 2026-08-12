@@ -102,7 +102,7 @@ struct XcodeBuildMCPEventDecoderTests {
 		var decoder = XcodeBuildMCPEventDecoder()
 		let jsonLines = """
 		{"event":"build-result.build-stage","message":"secret-token-value"}
-		{"event":"build-result.build-summary","status":"secret-status-value"}
+		{"event":"build-result.build-stage","status":"secret-status-value"}
 
 		"""
 
@@ -145,5 +145,23 @@ struct XcodeBuildMCPEventDecoderTests {
 		)
 
 		#expect(events.map(\.kind) == [.started, .started])
+	}
+
+	@Test
+	func 지원하지_않는_summary_status가_거부된다() {
+		var decoder = XcodeBuildMCPEventDecoder()
+		let json = """
+		{"event":"build-result.build-summary","status":"UNKNOWN"}
+
+		"""
+
+		do {
+			_ = try decoder.decode(Data(json.utf8), operation: operation)
+			Issue.record("지원하지 않는 summary status가 거부되지 않음")
+		} catch let error as RunError {
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+		} catch {
+			Issue.record("구조화되지 않은 오류 반환")
+		}
 	}
 }

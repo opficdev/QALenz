@@ -91,6 +91,29 @@ struct XcodeBuildMCPCLIAdapterTests {
 		#expect(events.map(\.message) == [nil, nil, "SUCCEEDED"])
 	}
 
+	@Test
+	func 완료_summary가_없는_JSONL_stream이_거부된다() async {
+		let operation = XcodeBuildMCPOperation(rawValue: "fixture.events")
+		let runner = XcodeBuildMCPProcessRunnerSpy(
+			recorder: .init(),
+			response: .init(standardOutput: Data(), terminationStatus: 0)
+		)
+		let adapter = makeAdapter(
+			operation: operation,
+			tool: "events",
+			runner: runner
+		)
+
+		do {
+			for try await _ in adapter.events(for: .init(operation: operation)) {}
+			Issue.record("완료 summary가 없는 stream이 거부되지 않음")
+		} catch let error as RunError {
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+		} catch {
+			Issue.record("구조화되지 않은 오류 반환")
+		}
+	}
+
 	private func makeAdapter(
 		operation: XcodeBuildMCPOperation,
 		tool: String,
