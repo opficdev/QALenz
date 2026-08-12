@@ -1,4 +1,4 @@
-name: Swift Package
+name: CI
 
 on:
   pull_request:
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    name: Swift Build
+    name: Build
     runs-on: macos-15
     steps:
       - name: Checkout
@@ -60,9 +60,33 @@ jobs:
           if-no-files-found: ignore
 
   test:
-    name: Swift Test
+    name: Test
     needs: build
     if: ${{ needs.build.result == 'success' }}
-    uses: ./.github/workflows/test.yml
-    with:
-      checkout_sha: ${{ github.sha }}
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Swift Version
+        run: swift --version
+
+      - name: Test
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          swift test 2>&1 | tee test.log
+          testStatus=${PIPESTATUS[0]}
+          set -e
+          exit "$testStatus"
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-log
+          path: test.log
+          if-no-files-found: ignore

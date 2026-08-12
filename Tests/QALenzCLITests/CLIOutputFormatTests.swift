@@ -13,7 +13,7 @@ struct CLIOutputFormatTests {
 	@Test(arguments: [
 		["--output", "json"],
 		["--output=json"],
-		["unknown", "--output", "json"],
+		["unknown", "--output", "json"]
 	])
 	func detectsJSONBeforeParsingFailure(_ arguments: [String]) {
 		#expect(CLIOutputFormat.requested(in: arguments) == .json)
@@ -23,7 +23,7 @@ struct CLIOutputFormatTests {
 		[],
 		["--output", "text"],
 		["--output", "xml"],
-		["--", "--output", "json"],
+		["--", "--output", "json"]
 	])
 	func defaultsToTextWithoutValidJSONRequest(_ arguments: [String]) {
 		#expect(CLIOutputFormat.requested(in: arguments) == .text)

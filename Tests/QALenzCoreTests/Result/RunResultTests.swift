@@ -33,7 +33,7 @@ struct RunResultTests {
 					code: .init(rawValue: "execution.timeout"),
 					context: .init(command: "run", step: "launch")
 				)
-			),
+			)
 		]
 	)
 	func preservesEveryResultThroughJSONRoundTrip(_ result: RunResult) throws {
@@ -77,7 +77,7 @@ struct RunResultTests {
 			""",
 			"""
 			{"status":"unknown"}
-			""",
+			"""
 		]
 	)
 	func rejectsInvalidStatusAndErrorCombinations(_ json: String) {

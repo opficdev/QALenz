@@ -56,7 +56,7 @@ struct RunErrorTests {
 			.execution,
 			.evidence,
 			.verdict,
-			.report,
+			.report
 		]
 	)
 	func preservesEveryKindThroughJSONRoundTrip(_ kind: RunError.Kind) throws {
