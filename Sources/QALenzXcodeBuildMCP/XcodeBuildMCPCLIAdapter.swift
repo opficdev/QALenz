@@ -13,18 +13,35 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 	private let configuration: Configuration
 	private let commandBuilder: XcodeBuildMCPCommandBuilder
 	private let outputDecoder: XcodeBuildMCPOutputDecoder
+	private let eventContracts: [
+		XcodeBuildMCPOperation: XcodeBuildMCPEventContract
+	]
 	private let processRunner: any XcodeBuildMCPProcessRunner
 
-	// 실행 설정과 command, output, process 경계를 주입해 adapter를 구성합니다.
+	// 실행 설정과 adapter 내부 contract로 운영 adapter를 구성합니다.
 	package init(
 		configuration: Configuration,
-		commandBuilder: XcodeBuildMCPCommandBuilder,
-		outputDecoder: XcodeBuildMCPOutputDecoder,
+		processRunner: any XcodeBuildMCPProcessRunner = FoundationXcodeBuildMCPProcessRunner()
+	) {
+		self.init(
+			configuration: configuration,
+			contracts: .current,
+			processRunner: processRunner
+		)
+	}
+
+	// 시험용 contract와 process 경계를 주입해 adapter를 구성합니다.
+	init(
+		configuration: Configuration,
+		contracts: XcodeBuildMCPContractRegistry,
 		processRunner: any XcodeBuildMCPProcessRunner
 	) {
 		self.configuration = configuration
-		self.commandBuilder = commandBuilder
-		self.outputDecoder = outputDecoder
+		commandBuilder = .init(descriptors: contracts.commandDescriptors)
+		outputDecoder = .init(
+			supportedSchemaVersions: contracts.supportedSchemaVersions
+		)
+		eventContracts = contracts.eventContracts
 		self.processRunner = processRunner
 	}
 
@@ -101,7 +118,8 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 			for: request,
 			output: .jsonLines
 		)
-		var decoder = XcodeBuildMCPEventDecoder()
+		let eventContract = try eventContract(for: request.operation)
+		var decoder = XcodeBuildMCPEventDecoder(contract: eventContract)
 		var didTerminate = false
 		var didReceiveSummary = false
 
@@ -146,6 +164,21 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 				kind: .adapter
 			)
 		}
+	}
+
+	// operation에 대응하는 JSONL event contract를 반환합니다.
+	private func eventContract(
+		for operation: XcodeBuildMCPOperation
+	) throws -> XcodeBuildMCPEventContract {
+		guard let contract = eventContracts[operation] else {
+			throw runError(
+				operation: operation,
+				code: "adapter.xcodebuildmcp.command.unsupported",
+				kind: .adapter
+			)
+		}
+
+		return contract
 	}
 
 	// process 종료 상태가 성공인지 검증합니다.

@@ -7,15 +7,15 @@ case "$tool" in
 		printf '%s\n' '{"schema":"xcodebuildmcp.output.fixture","schemaVersion":"1","didError":false,"error":null,"data":{}}'
 		;;
 	"events")
-		printf '%s\n' '{"event":"fixture.invocation"}'
-		printf '%s\n' '{"event":"fixture.progress","message":"Working"}'
-		printf '%s\n' '{"event":"fixture.summary","status":"SUCCEEDED"}'
+		printf '%s\n' '{"event":"fixture.invocation","operation":"FIXTURE"}'
+		printf '%s\n' '{"event":"fixture.progress","operation":"FIXTURE","message":"Working"}'
+		printf '%s\n' '{"event":"fixture.summary","operation":"FIXTURE","status":"SUCCEEDED"}'
 		;;
 	"streaming")
 		signal_path="$3"
-		printf '%s\n' '{"event":"fixture.invocation"}'
+		printf '%s\n' '{"event":"fixture.invocation","operation":"FIXTURE"}'
 		while [ ! -f "$signal_path" ]; do sleep 0.01; done
-		printf '%s\n' '{"event":"fixture.summary","status":"SUCCEEDED"}'
+		printf '%s\n' '{"event":"fixture.summary","operation":"FIXTURE","status":"SUCCEEDED"}'
 		;;
 	"failure")
 		printf '%s\n' 'secret-token-value' >&2

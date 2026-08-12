@@ -15,14 +15,18 @@ struct XcodeBuildMCPEventDecoderTests {
 	private let operation = XcodeBuildMCPOperation(
 		rawValue: "build.simulator"
 	)
+	private let contract = XcodeBuildMCPEventContract(
+		namespace: "build-result",
+		operation: "BUILD"
+	)
 
 	@Test
 	func JSONL_이벤트가_공통_진행_단계와_메시지로_변환된다() throws {
-		var decoder = XcodeBuildMCPEventDecoder()
+		var decoder = XcodeBuildMCPEventDecoder(contract: contract)
 		let jsonLines = """
 		{"event":"build-result.invocation","operation":"BUILD"}
-		{"event":"build-result.build-stage","message":"Compiling"}
-		{"event":"build-result.build-summary","status":"SUCCEEDED"}
+		{"event":"build-result.build-stage","operation":"BUILD","message":"Compiling"}
+		{"event":"build-result.build-summary","operation":"BUILD","status":"SUCCEEDED"}
 
 		"""
 
@@ -37,10 +41,10 @@ struct XcodeBuildMCPEventDecoderTests {
 
 	@Test
 	func 나뉜_JSONL_이벤트가_줄바꿈_전까지_버퍼에_남는다() throws {
-		var decoder = XcodeBuildMCPEventDecoder()
+		var decoder = XcodeBuildMCPEventDecoder(contract: contract)
 
 		let first = try decoder.decode(
-			Data(#"{"event":"build-result.build-stage","message":"Com"#.utf8),
+			Data(#"{"event":"build-result.build-stage","operation":"BUILD","message":"Com"#.utf8),
 			operation: operation
 		)
 		let second = try decoder.decode(
@@ -54,8 +58,8 @@ struct XcodeBuildMCPEventDecoderTests {
 
 	@Test
 	func 줄바꿈_없는_마지막_이벤트가_마무리_시점에_처리된다() throws {
-		var decoder = XcodeBuildMCPEventDecoder()
-		let json = #"{"event":"build-result.build-summary","status":"FAILED"}"#
+		var decoder = XcodeBuildMCPEventDecoder(contract: contract)
+		let json = #"{"event":"build-result.build-summary","operation":"BUILD","status":"FAILED"}"#
 
 		let pending = try decoder.decode(
 			Data(json.utf8),
@@ -70,9 +74,9 @@ struct XcodeBuildMCPEventDecoderTests {
 
 	@Test
 	func 실패_summary가_실패_사건으로_변환된다() throws {
-		var decoder = XcodeBuildMCPEventDecoder()
+		var decoder = XcodeBuildMCPEventDecoder(contract: contract)
 		let json = """
-		{"event":"build-result.build-summary","status":"FAILED"}
+		{"event":"build-result.build-summary","operation":"BUILD","status":"FAILED"}
 
 		"""
 
@@ -83,7 +87,7 @@ struct XcodeBuildMCPEventDecoderTests {
 
 	@Test
 	func 잘못된_이벤트의_원본_내용이_오류에_복사되지_않는다() throws {
-		var decoder = XcodeBuildMCPEventDecoder()
+		var decoder = XcodeBuildMCPEventDecoder(contract: contract)
 
 		do {
 			_ = try decoder.decode(
@@ -99,10 +103,10 @@ struct XcodeBuildMCPEventDecoderTests {
 
 	@Test
 	func 원본_message와_허용되지_않은_status가_사건에_노출되지_않는다() throws {
-		var decoder = XcodeBuildMCPEventDecoder()
+		var decoder = XcodeBuildMCPEventDecoder(contract: contract)
 		let jsonLines = """
-		{"event":"build-result.build-stage","message":"secret-token-value"}
-		{"event":"build-result.build-stage","status":"secret-status-value"}
+		{"event":"build-result.build-stage","operation":"BUILD","message":"secret-token-value"}
+		{"event":"build-result.build-stage","operation":"BUILD","status":"secret-status-value"}
 
 		"""
 
@@ -116,7 +120,10 @@ struct XcodeBuildMCPEventDecoderTests {
 
 	@Test
 	func 최대_크기를_초과한_JSONL_한_줄이_거부된다() {
-		var decoder = XcodeBuildMCPEventDecoder(maximumLineByteCount: 32)
+		var decoder = XcodeBuildMCPEventDecoder(
+			contract: contract,
+			maximumLineByteCount: 32
+		)
 
 		do {
 			_ = try decoder.decode(
@@ -133,8 +140,9 @@ struct XcodeBuildMCPEventDecoderTests {
 
 	@Test
 	func 최대_크기_이하의_JSONL_여러_줄이_모두_처리된다() throws {
-		let line = #"{"event":"build-result.invocation"}"#
+		let line = #"{"event":"build-result.invocation","operation":"BUILD"}"#
 		var decoder = XcodeBuildMCPEventDecoder(
+			contract: contract,
 			maximumLineByteCount: line.utf8.count
 		)
 		let jsonLines = "\(line)\n\(line)\n"
@@ -149,9 +157,9 @@ struct XcodeBuildMCPEventDecoderTests {
 
 	@Test
 	func 지원하지_않는_summary_status가_거부된다() {
-		var decoder = XcodeBuildMCPEventDecoder()
+		var decoder = XcodeBuildMCPEventDecoder(contract: contract)
 		let json = """
-		{"event":"build-result.build-summary","status":"UNKNOWN"}
+		{"event":"build-result.build-summary","operation":"BUILD","status":"UNKNOWN"}
 
 		"""
 
@@ -162,6 +170,19 @@ struct XcodeBuildMCPEventDecoderTests {
 			#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
 		} catch {
 			Issue.record("구조화되지 않은 오류 반환")
+		}
+	}
+
+	@Test
+	func 다른_operation의_JSONL_namespace가_거부된다() {
+		var decoder = XcodeBuildMCPEventDecoder(contract: contract)
+		let json = """
+		{"event":"test-result.test-summary","operation":"TEST","status":"SUCCEEDED"}
+
+		"""
+
+		#expect(throws: RunError.self) {
+			_ = try decoder.decode(Data(json.utf8), operation: operation)
 		}
 	}
 }

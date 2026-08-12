@@ -11,11 +11,16 @@ import QALenzCore
 // 분할 수신된 JSONL 데이터를 QALenz 진행 사건으로 변환합니다.
 package struct XcodeBuildMCPEventDecoder: Sendable {
 	private var buffer = Data()
+	private let contract: XcodeBuildMCPEventContract
 	private let maximumLineByteCount: Int
 
-	// 빈 JSONL buffer와 단일 레코드 최대 크기로 decoder를 구성합니다.
-	package init(maximumLineByteCount: Int = 1_048_576) {
+	// JSONL contract와 단일 레코드 최대 크기로 decoder를 구성합니다.
+	init(
+		contract: XcodeBuildMCPEventContract,
+		maximumLineByteCount: Int = 1_048_576
+	) {
 		precondition(0 < maximumLineByteCount)
+		self.contract = contract
 		self.maximumLineByteCount = maximumLineByteCount
 	}
 
@@ -81,7 +86,10 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 			throw invalidOutputError(operation: operation)
 		}
 
-		guard !event.event.isEmpty else {
+		guard
+			event.event.hasPrefix("\(contract.namespace)."),
+			event.operation == contract.operation
+		else {
 			throw invalidOutputError(operation: operation)
 		}
 
@@ -147,6 +155,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 	// JSONL 한 줄에서 정규화에 필요한 필드만 해석합니다.
 	private struct Event: Decodable {
 		let event: String
+		let operation: String
 		let status: String?
 	}
 }

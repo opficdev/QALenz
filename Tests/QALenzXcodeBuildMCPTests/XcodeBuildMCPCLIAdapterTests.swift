@@ -13,6 +13,33 @@ import Testing
 @Suite(.serialized)
 struct XcodeBuildMCPCLIAdapterTests {
 	@Test
+	func 기본_adapter가_operation별_tool_contract를_사용한다() async throws {
+		let operation = XcodeBuildMCPOperation(rawValue: "discover.simulators")
+		let recorder = XcodeBuildMCPProcessRequestRecorder()
+		let runner = XcodeBuildMCPProcessRunnerSpy(
+			recorder: recorder,
+			response: .init(
+				standardOutput: Data(
+					"""
+					{"schema":"xcodebuildmcp.output.simulator-list","schemaVersion":"2","didError":false,"error":null,"data":{"simulators":[]}}
+					""".utf8
+				),
+				terminationStatus: 0
+			)
+		)
+		let adapter = XcodeBuildMCPCLIAdapter(
+			configuration: makeConfiguration(),
+			processRunner: runner
+		)
+
+		let result = await adapter.execute(.init(operation: operation))
+		let request = try #require(await recorder.requests.first)
+
+		#expect(result.result == .passed)
+		#expect(request.arguments.prefix(2) == ["simulator", "list"])
+	}
+
+	@Test
 	func 주입한_프로세스_실행기가_정제된_설정과_JSON_인자를_받는다() async throws {
 		let operation = XcodeBuildMCPOperation(rawValue: "fixture.success")
 		let recorder = XcodeBuildMCPProcessRequestRecorder()
@@ -121,20 +148,31 @@ struct XcodeBuildMCPCLIAdapterTests {
 		environment: [String: String] = [:]
 	) -> XcodeBuildMCPCLIAdapter {
 		.init(
-			configuration: .init(
-				executableURL: fakeExecutableURL,
-				workingDirectoryURL: FileManager.default.temporaryDirectory,
-				environment: environment,
-				timeout: .seconds(1),
-				terminationGracePeriod: .milliseconds(50)
+			configuration: makeConfiguration(environment: environment),
+			contracts: .init(
+				commandDescriptors: [
+					operation: .init(workflow: "fixture", tool: tool)
+				],
+				supportedSchemaVersions: [
+					operation: ["xcodebuildmcp.output.fixture": ["1"]]
+				],
+				eventContracts: [
+					operation: .init(namespace: "fixture", operation: "FIXTURE")
+				]
 			),
-			commandBuilder: .init(descriptors: [
-				operation: .init(workflow: "fixture", tool: tool)
-			]),
-			outputDecoder: .init(supportedSchemaVersions: [
-				operation: ["xcodebuildmcp.output.fixture": ["1"]]
-			]),
 			processRunner: runner
+		)
+	}
+
+	private func makeConfiguration(
+		environment: [String: String] = [:]
+	) -> XcodeBuildMCPCLIAdapter.Configuration {
+		.init(
+			executableURL: fakeExecutableURL,
+			workingDirectoryURL: FileManager.default.temporaryDirectory,
+			environment: environment,
+			timeout: .seconds(1),
+			terminationGracePeriod: .milliseconds(50)
 		)
 	}
 
