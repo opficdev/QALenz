@@ -11,9 +11,13 @@ import QALenzCore
 // 분할 수신된 JSONL 데이터를 QALenz 진행 사건으로 변환합니다.
 package struct XcodeBuildMCPEventDecoder: Sendable {
 	private var buffer = Data()
+	private let maximumLineByteCount: Int
 
-	// 빈 JSONL buffer로 decoder를 구성합니다.
-	package init() {}
+	// 빈 JSONL buffer와 단일 레코드 최대 크기로 decoder를 구성합니다.
+	package init(maximumLineByteCount: Int = 1_048_576) {
+		precondition(0 < maximumLineByteCount)
+		self.maximumLineByteCount = maximumLineByteCount
+	}
 
 	// 새 데이터를 buffer에 추가하고 줄이 완성된 사건을 반환합니다.
 	package mutating func decode(
@@ -26,10 +30,16 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		while let newline = buffer.firstIndex(of: 0x0A) {
 			let line = buffer[..<newline]
 			buffer.removeSubrange(...newline)
+			guard line.count <= maximumLineByteCount else {
+				throw invalidOutputError(operation: operation)
+			}
 
 			if let event = try event(from: Data(line), operation: operation) {
 				events.append(event)
 			}
+		}
+		guard buffer.count <= maximumLineByteCount else {
+			throw invalidOutputError(operation: operation)
 		}
 
 		return events
@@ -40,6 +50,9 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		operation: XcodeBuildMCPOperation
 	) throws -> [XcodeBuildMCPEvent] {
 		guard !buffer.isEmpty else { return [] }
+		guard buffer.count <= maximumLineByteCount else {
+			throw invalidOutputError(operation: operation)
+		}
 
 		let line = buffer
 		buffer.removeAll(keepingCapacity: false)

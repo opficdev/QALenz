@@ -113,4 +113,37 @@ struct XcodeBuildMCPEventDecoderTests {
 
 		#expect(events.map(\.message) == [nil, nil])
 	}
+
+	@Test
+	func 최대_크기를_초과한_JSONL_한_줄이_거부된다() {
+		var decoder = XcodeBuildMCPEventDecoder(maximumLineByteCount: 32)
+
+		do {
+			_ = try decoder.decode(
+				Data(repeating: 0x61, count: 33),
+				operation: operation
+			)
+			Issue.record("크기를 초과한 JSONL 입력이 거부되지 않음")
+		} catch let error as RunError {
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+		} catch {
+			Issue.record("구조화되지 않은 오류 반환")
+		}
+	}
+
+	@Test
+	func 최대_크기_이하의_JSONL_여러_줄이_모두_처리된다() throws {
+		let line = #"{"event":"build-result.invocation"}"#
+		var decoder = XcodeBuildMCPEventDecoder(
+			maximumLineByteCount: line.utf8.count
+		)
+		let jsonLines = "\(line)\n\(line)\n"
+
+		let events = try decoder.decode(
+			Data(jsonLines.utf8),
+			operation: operation
+		)
+
+		#expect(events.map(\.kind) == [.started, .started])
+	}
 }
