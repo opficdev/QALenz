@@ -8,11 +8,14 @@
 import Foundation
 import QALenzCore
 
+// 분할 수신된 JSONL 데이터를 QALenz 진행 사건으로 변환합니다.
 package struct XcodeBuildMCPEventDecoder: Sendable {
 	private var buffer = Data()
 
+	// 빈 JSONL buffer로 decoder를 구성합니다.
 	package init() {}
 
+	// 새 데이터를 buffer에 추가하고 줄이 완성된 사건을 반환합니다.
 	package mutating func decode(
 		_ data: Data,
 		operation: XcodeBuildMCPOperation
@@ -32,6 +35,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		return events
 	}
 
+	// 줄바꿈 없이 남아 있는 마지막 JSONL 사건을 처리합니다.
 	package mutating func finish(
 		operation: XcodeBuildMCPOperation
 	) throws -> [XcodeBuildMCPEvent] {
@@ -47,6 +51,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		return [event]
 	}
 
+	// JSONL 한 줄을 검증하고 정규화된 진행 사건으로 변환합니다.
 	private func event(
 		from data: Data,
 		operation: XcodeBuildMCPOperation
@@ -74,6 +79,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		)
 	}
 
+	// XcodeBuildMCP 사건 이름을 공통 진행 단계로 변환합니다.
 	private func kind(for name: String) -> XcodeBuildMCPEvent.Kind {
 		guard let component = name.split(separator: ".").last else {
 			return .progress
@@ -89,6 +95,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		return .progress
 	}
 
+	// 원본 출력 내용을 포함하지 않는 구조화된 출력 오류를 생성합니다.
 	private func invalidOutputError(
 		operation: XcodeBuildMCPOperation
 	) -> RunError {
@@ -99,6 +106,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		)
 	}
 
+	// JSONL 한 줄에서 정규화에 필요한 필드만 해석합니다.
 	private struct Event: Decodable {
 		let event: String
 		let message: String?

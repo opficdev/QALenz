@@ -8,12 +8,14 @@
 import Foundation
 import QALenzCore
 
+// 의미 기반 요청을 XcodeBuildMCP CLI 실행으로 연결하고 결과를 정규화합니다.
 package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 	private let configuration: Configuration
 	private let commandBuilder: XcodeBuildMCPCommandBuilder
 	private let outputDecoder: XcodeBuildMCPOutputDecoder
 	private let processRunner: any XcodeBuildMCPProcessRunner
 
+	// 실행 설정과 command, output, process 경계를 주입해 adapter를 구성합니다.
 	package init(
 		configuration: Configuration,
 		commandBuilder: XcodeBuildMCPCommandBuilder,
@@ -26,6 +28,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		self.processRunner = processRunner
 	}
 
+	// 요청을 JSON 출력 방식으로 실행해 정규화된 최종 결과를 반환합니다.
 	package func execute(
 		_ request: XcodeBuildMCPRequest
 	) async -> XcodeBuildMCPResult {
@@ -53,6 +56,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		}
 	}
 
+	// 요청을 JSONL 출력 방식으로 실행해 정규화된 진행 사건을 전달합니다.
 	package func events(
 		for request: XcodeBuildMCPRequest
 	) -> AsyncThrowingStream<XcodeBuildMCPEvent, any Error> {
@@ -67,6 +71,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		}
 	}
 
+	// 진행 사건 생산 결과에 따라 stream을 성공 또는 오류로 마무리합니다.
 	private func stream(
 		_ request: XcodeBuildMCPRequest,
 		continuation: AsyncThrowingStream<
@@ -84,6 +89,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		}
 	}
 
+	// process 사건을 JSONL decoder에 전달해 QALenz 사건을 생산합니다.
 	private func produceEvents(
 		for request: XcodeBuildMCPRequest,
 		continuation: AsyncThrowingStream<
@@ -126,6 +132,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		}
 	}
 
+	// process 종료 상태가 성공인지 검증합니다.
 	private func validate(
 		status: Int32,
 		operation: XcodeBuildMCPOperation
@@ -139,6 +146,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		}
 	}
 
+	// 의미 기반 요청을 자식 process 실행 요청으로 변환합니다.
 	private func makeProcessRequest(
 		for request: XcodeBuildMCPRequest,
 		output: XcodeBuildMCPOutputFormat
@@ -158,6 +166,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		)
 	}
 
+	// 발생한 오류를 정규화해 adapter 결과로 구성합니다.
 	private func result(
 		for error: any Error,
 		operation: XcodeBuildMCPOperation
@@ -168,6 +177,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		)
 	}
 
+	// process 및 adapter 오류를 공통 RunError로 변환합니다.
 	private func runError(
 		for error: any Error,
 		operation: XcodeBuildMCPOperation
@@ -198,6 +208,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		}
 	}
 
+	// 오류 code와 kind를 포함하는 실패 결과를 구성합니다.
 	private func failure(
 		operation: XcodeBuildMCPOperation,
 		code: String,
@@ -211,6 +222,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 		)
 	}
 
+	// operation 위치를 보존하는 구조화된 RunError를 생성합니다.
 	private func runError(
 		operation: XcodeBuildMCPOperation,
 		code: String,
@@ -225,6 +237,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 }
 
 extension XcodeBuildMCPCLIAdapter {
+	// XcodeBuildMCP 실행 파일과 작업 경로 및 process 정책을 보관합니다.
 	package struct Configuration: Sendable, Equatable {
 		package let executableURL: URL
 		package let workingDirectoryURL: URL
@@ -232,6 +245,7 @@ extension XcodeBuildMCPCLIAdapter {
 		package let timeout: Duration
 		package let terminationGracePeriod: Duration
 
+		// 환경 변수 허용 목록과 작업 경로를 적용해 실행 설정을 구성합니다.
 		package init(
 			executableURL: URL,
 			workingDirectoryURL: URL,

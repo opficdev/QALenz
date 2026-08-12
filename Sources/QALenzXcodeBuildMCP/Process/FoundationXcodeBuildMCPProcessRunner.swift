@@ -8,9 +8,12 @@
 import Darwin
 import Foundation
 
+// Foundation Process로 XcodeBuildMCP를 실행하고 사건을 전달합니다.
 package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner {
+	// Foundation 기반 process runner를 구성합니다.
 	package init() {}
 
+	// 자식 process를 시작하고 stdout 및 종료 사건 stream을 반환합니다.
 	package func events(
 		for request: XcodeBuildMCPProcessRequest
 	) -> AsyncThrowingStream<XcodeBuildMCPProcessEvent, any Error> {
@@ -25,6 +28,7 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 		}
 	}
 
+	// 자식 process의 실행부터 종료까지 관리하고 continuation을 마무리합니다.
 	private func run(
 		_ request: XcodeBuildMCPProcessRequest,
 		continuation: AsyncThrowingStream<
@@ -81,6 +85,7 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 		}
 	}
 
+	// process 종료와 시간 초과를 함께 감시해 종료 상태를 반환합니다.
 	private func waitForExit(
 		_ process: RunningProcess,
 		request: XcodeBuildMCPProcessRequest
@@ -121,18 +126,21 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 }
 
 private extension FoundationXcodeBuildMCPProcessRunner {
+	// process 종료 감시 경쟁의 결과를 구분합니다.
 	enum WaitOutcome: Sendable {
 		case terminated(Int32)
 		case timedOut
 	}
 }
 
+// Foundation Process와 pipe 및 종료 동기화를 함께 관리합니다.
 private final class RunningProcess: @unchecked Sendable {
 	private let process: Process
 	private let standardOutputPipe = Pipe()
 	private let standardErrorPipe = Pipe()
 	private let lock = NSLock()
 
+	// process 요청을 Foundation Process 설정으로 변환합니다.
 	init(request: XcodeBuildMCPProcessRequest) {
 		process = Process()
 		process.executableURL = request.executableURL
@@ -143,16 +151,19 @@ private final class RunningProcess: @unchecked Sendable {
 		process.standardError = standardErrorPipe
 	}
 
+	// 구성된 자식 process를 시작합니다.
 	func run() throws {
 		try process.run()
 	}
 
+	// 자식 process가 끝날 때까지 기다리고 종료 상태를 반환합니다.
 	func waitUntilExit() -> Int32 {
 		process.waitUntilExit()
 
 		return process.terminationStatus
 	}
 
+	// stdout을 완료 전까지 읽어 각 data 조각을 전달합니다.
 	func readStandardOutput(
 		_ yield: @escaping @Sendable (Data) -> Void
 	) {
@@ -165,10 +176,12 @@ private final class RunningProcess: @unchecked Sendable {
 		}
 	}
 
+	// pipe 정체를 막으면서 stderr 내용을 외부에 노출하지 않고 소비합니다.
 	func discardStandardError() {
 		_ = standardErrorPipe.fileHandleForReading.readDataToEndOfFile()
 	}
 
+	// 정상 종료를 요청한 뒤 유예 시간 이후 강제 종료합니다.
 	func stop(after gracePeriod: Duration) {
 		terminate()
 
@@ -178,6 +191,7 @@ private final class RunningProcess: @unchecked Sendable {
 		}
 	}
 
+	// 실행 중인 process에 정상 종료 신호를 보냅니다.
 	func terminate() {
 		lock.lock()
 		defer { lock.unlock() }
@@ -187,6 +201,7 @@ private final class RunningProcess: @unchecked Sendable {
 		process.terminate()
 	}
 
+	// 정상 종료되지 않은 process에 강제 종료 신호를 보냅니다.
 	func forceTerminate() {
 		lock.lock()
 		defer { lock.unlock() }
@@ -197,6 +212,7 @@ private final class RunningProcess: @unchecked Sendable {
 	}
 }
 
+// 여러 task가 시간 초과 발생 여부를 안전하게 공유합니다.
 private final class TimeoutState: @unchecked Sendable {
 	private let lock = NSLock()
 	private var timedOut = false
@@ -208,6 +224,7 @@ private final class TimeoutState: @unchecked Sendable {
 		return timedOut
 	}
 
+	// 시간 초과 상태를 기록합니다.
 	func markTimedOut() {
 		lock.lock()
 		timedOut = true

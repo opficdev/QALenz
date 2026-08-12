@@ -7,6 +7,7 @@
 
 import Foundation
 
+// XcodeBuildMCP JSON 응답의 공통 envelope를 표현합니다.
 struct XcodeBuildMCPEnvelope: Decodable, Sendable, Equatable {
 	let schema: String
 	let schemaVersion: String
@@ -16,6 +17,7 @@ struct XcodeBuildMCPEnvelope: Decodable, Sendable, Equatable {
 	let nextSteps: [String]?
 }
 
+// XcodeBuildMCP 응답 data의 임의 JSON 값을 손실 없이 표현합니다.
 indirect enum XcodeBuildMCPJSONValue: Decodable, Sendable, Equatable {
 	case object([String: Self])
 	case array([Self])
@@ -24,6 +26,7 @@ indirect enum XcodeBuildMCPJSONValue: Decodable, Sendable, Equatable {
 	case boolean(Bool)
 	case null
 
+	// 단일 값 container에서 JSON 값의 실제 종류를 판별해 변환합니다.
 	init(from decoder: any Decoder) throws {
 		let container = try decoder.singleValueContainer()
 
