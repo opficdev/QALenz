@@ -88,7 +88,7 @@ struct XcodeBuildMCPCLIAdapterTests {
 		}
 
 		#expect(events.map(\.kind) == [.started, .progress, .completed])
-		#expect(events.map(\.message) == [nil, "Working", "SUCCEEDED"])
+		#expect(events.map(\.message) == [nil, nil, "SUCCEEDED"])
 	}
 
 	private func makeAdapter(

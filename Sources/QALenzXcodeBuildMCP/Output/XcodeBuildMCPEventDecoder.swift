@@ -75,8 +75,18 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		return .init(
 			operation: operation,
 			kind: kind(for: event.event),
-			message: event.message ?? event.status
+			message: normalizedStatus(event.status)
 		)
+	}
+
+	// 허용된 summary status만 외부 사건 메시지로 보존합니다.
+	private func normalizedStatus(_ status: String?) -> String? {
+		switch status {
+		case "FAILED", "SUCCEEDED":
+			return status
+		default:
+			return nil
+		}
 	}
 
 	// XcodeBuildMCP 사건 이름을 공통 진행 단계로 변환합니다.
@@ -109,7 +119,6 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 	// JSONL 한 줄에서 정규화에 필요한 필드만 해석합니다.
 	private struct Event: Decodable {
 		let event: String
-		let message: String?
 		let status: String?
 	}
 }

@@ -32,7 +32,7 @@ struct XcodeBuildMCPEventDecoderTests {
 		)
 
 		#expect(events.map(\.kind) == [.started, .progress, .completed])
-		#expect(events.map(\.message) == [nil, "Compiling", "SUCCEEDED"])
+		#expect(events.map(\.message) == [nil, nil, "SUCCEEDED"])
 	}
 
 	@Test
@@ -49,7 +49,7 @@ struct XcodeBuildMCPEventDecoderTests {
 		)
 
 		#expect(first.isEmpty)
-		#expect(second.map(\.message) == ["Compiling"])
+		#expect(second.map(\.kind) == [.progress])
 	}
 
 	@Test
@@ -82,5 +82,22 @@ struct XcodeBuildMCPEventDecoderTests {
 			#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
 			#expect(!String(describing: error).contains("secret-token-value"))
 		}
+	}
+
+	@Test
+	func 원본_message와_허용되지_않은_status가_사건에_노출되지_않는다() throws {
+		var decoder = XcodeBuildMCPEventDecoder()
+		let jsonLines = """
+		{"event":"build-result.build-stage","message":"secret-token-value"}
+		{"event":"build-result.build-summary","status":"secret-status-value"}
+
+		"""
+
+		let events = try decoder.decode(
+			Data(jsonLines.utf8),
+			operation: operation
+		)
+
+		#expect(events.map(\.message) == [nil, nil])
 	}
 }
