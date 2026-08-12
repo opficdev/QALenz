@@ -1,0 +1,47 @@
+name: Test
+
+on:
+  workflow_call:
+    inputs:
+      checkout_sha:
+        required: true
+        type: string
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Swift Test
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.checkout_sha }}
+          persist-credentials: false
+
+      - name: Swift Version
+        run: swift --version
+
+      - name: Test
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          swift test 2>&1 | tee test.log
+          testStatus=${PIPESTATUS[0]}
+          set -e
+          exit "$testStatus"
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-log
+          path: test.log
+          if-no-files-found: ignore

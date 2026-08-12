@@ -1,0 +1,68 @@
+name: Swift Package
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Swift Build
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Show environment
+        run: |
+          swift --version
+          xcodebuild -version
+          sw_vers
+
+      - name: Check whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          git diff --check "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" 2>&1 | tee whitespace.log
+          checkStatus=${PIPESTATUS[0]}
+          set -e
+          exit "$checkStatus"
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          swift build 2>&1 | tee build.log
+          buildStatus=${PIPESTATUS[0]}
+          set -e
+          exit "$buildStatus"
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-log
+          path: |
+            whitespace.log
+            build.log
+          if-no-files-found: ignore
+
+  test:
+    name: Swift Test
+    needs: build
+    if: ${{ needs.build.result == 'success' }}
+    uses: ./.github/workflows/test.yml
+    with:
+      checkout_sha: ${{ github.sha }}
