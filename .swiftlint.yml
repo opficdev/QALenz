@@ -5,6 +5,11 @@ included:
   - Sources
   - Tests
 
+identifier_name:
+  excluded:
+    - "^id$"
+    - "^(?=.*[가-힣])[가-힣A-Za-z0-9]+(?:_[가-힣A-Za-z0-9]+)*$"
+
 line_length:
   ignores_comments: true
   ignores_interpolated_strings: true
