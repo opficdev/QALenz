@@ -15,7 +15,10 @@ let package = Package(
 		),
 	],
 	targets: [
-		.target(name: "QALenzCore"),
+		.target(
+			name: "QALenzCore",
+			path: "Sources/Core"
+		),
 		.target(
 			name: "QALenzCLI",
 			dependencies: [
@@ -24,11 +27,13 @@ let package = Package(
 					name: "ArgumentParser",
 					package: "swift-argument-parser"
 				),
-			]
+			],
+			path: "Sources/CLI"
 		),
 		.executableTarget(
 			name: "QALenzCLIExecutable",
-			dependencies: ["QALenzCLI"]
+			dependencies: ["QALenzCLI"],
+			path: "Sources/CLIExecutable"
 		),
 		.testTarget(
 			name: "QALenzCoreTests",
