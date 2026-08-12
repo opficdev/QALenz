@@ -5,6 +5,7 @@ import PackageDescription
 let package = Package(
 	name: "QALenz",
 	platforms: [
+		.iOS(.v16),
 		.macOS(.v14),
 	],
 	products: [
