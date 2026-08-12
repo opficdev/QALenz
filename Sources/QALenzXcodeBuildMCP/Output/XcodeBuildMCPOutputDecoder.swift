@@ -10,10 +10,16 @@ import QALenzCore
 
 // XcodeBuildMCP JSON envelope를 검증해 공통 실행 결과로 변환합니다.
 package struct XcodeBuildMCPOutputDecoder: Sendable {
-	package let supportedSchemaVersions: [String: Set<String>]
+	package let supportedSchemaVersions: [
+		XcodeBuildMCPOperation: [String: Set<String>]
+	]
 
-	// 지원하는 schema와 version 집합으로 decoder를 구성합니다.
-	package init(supportedSchemaVersions: [String: Set<String>]) {
+	// operation별 지원 schema와 version 집합으로 decoder를 구성합니다.
+	package init(
+		supportedSchemaVersions: [
+			XcodeBuildMCPOperation: [String: Set<String>]
+		]
+	) {
 		self.supportedSchemaVersions = supportedSchemaVersions
 	}
 
@@ -33,7 +39,7 @@ package struct XcodeBuildMCPOutputDecoder: Sendable {
 			)
 		}
 
-		guard supportedSchemaVersions[envelope.schema]?
+		guard supportedSchemaVersions[operation]?[envelope.schema]?
 			.contains(envelope.schemaVersion) == true else {
 			return failure(
 				operation: operation,

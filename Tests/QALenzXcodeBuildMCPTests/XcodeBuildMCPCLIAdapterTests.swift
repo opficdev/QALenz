@@ -109,7 +109,7 @@ struct XcodeBuildMCPCLIAdapterTests {
 				operation: .init(workflow: "fixture", tool: tool)
 			]),
 			outputDecoder: .init(supportedSchemaVersions: [
-				"xcodebuildmcp.output.fixture": ["1"]
+				operation: ["xcodebuildmcp.output.fixture": ["1"]]
 			]),
 			processRunner: runner
 		)

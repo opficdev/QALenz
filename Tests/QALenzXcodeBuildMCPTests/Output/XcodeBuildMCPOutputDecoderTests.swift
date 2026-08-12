@@ -110,6 +110,29 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	@Test
+	func 다른_operation의_응답_schema가_거부된다() throws {
+		let buildOperation = XcodeBuildMCPOperation(rawValue: "build.simulator")
+		let decoder = XcodeBuildMCPOutputDecoder(supportedSchemaVersions: [
+			operation: ["xcodebuildmcp.output.simulator-list": ["2"]],
+			buildOperation: ["xcodebuildmcp.output.build-result": ["3"]]
+		])
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.build-result",
+			"schemaVersion": "3",
+			"didError": false,
+			"error": null,
+			"data": {}
+		}
+		"""
+
+		let result = decoder.decode(Data(json.utf8), operation: operation)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.schema.unsupported")
+	}
+
+	@Test
 	func 성공_응답에_오류가_있으면_거부된다() throws {
 		let json = """
 		{
@@ -132,7 +155,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 
 	private func makeDecoder() -> XcodeBuildMCPOutputDecoder {
 		.init(supportedSchemaVersions: [
-			"xcodebuildmcp.output.simulator-list": ["2"]
+			operation: ["xcodebuildmcp.output.simulator-list": ["2"]]
 		])
 	}
 }
