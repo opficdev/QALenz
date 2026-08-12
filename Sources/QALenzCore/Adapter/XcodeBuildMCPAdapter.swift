@@ -11,7 +11,5 @@ package protocol XcodeBuildMCPAdapter: Sendable {
 	func execute(_ request: XcodeBuildMCPRequest) async -> XcodeBuildMCPResult
 
 	// 요청 실행 중 발생하는 정규화된 진행 사건을 전달합니다.
-	func events(
-		for request: XcodeBuildMCPRequest
-	) -> AsyncThrowingStream<XcodeBuildMCPEvent, any Error>
+	func events(for request: XcodeBuildMCPRequest) -> AsyncThrowingStream<XcodeBuildMCPEvent, any Error>
 }

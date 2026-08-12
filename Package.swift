@@ -5,12 +5,11 @@ import PackageDescription
 let package = Package(
 	name: "QALenz",
 	platforms: [
-		.iOS(.v16),
 		.macOS(.v14),
 	],
 	products: [
 		.library(name: "QALenzCore", targets: ["QALenzCore"]),
-		.executable(name: "qalenz", targets: ["QALenzCLI"]),
+		.executable(name: "qalenz", targets: ["QALenzCLIExecutable"]),
 	],
 	dependencies: [
 		.package(
@@ -24,7 +23,7 @@ let package = Package(
 			name: "QALenzXcodeBuildMCP",
 			dependencies: ["QALenzCore"]
 		),
-		.executableTarget(
+		.target(
 			name: "QALenzCLI",
 			dependencies: [
 				"QALenzCore",
@@ -33,6 +32,10 @@ let package = Package(
 					package: "swift-argument-parser"
 				),
 			]
+		),
+		.executableTarget(
+			name: "QALenzCLIExecutable",
+			dependencies: ["QALenzCLI"]
 		),
 		.testTarget(
 			name: "QALenzCoreTests",
