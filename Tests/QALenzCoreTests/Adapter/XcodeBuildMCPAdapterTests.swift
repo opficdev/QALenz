@@ -5,6 +5,7 @@
 //  Created by opfic on 8/12/26.
 //
 
+import Foundation
 import Testing
 @testable import QALenzCore
 
@@ -72,6 +73,16 @@ struct XcodeBuildMCPAdapterTests {
 		requireContract(XcodeBuildMCPResult.self)
 		requireContract(XcodeBuildMCPEvent.self)
 		requireContract(XcodeBuildMCPEvent.Kind.self)
+	}
+
+	@Test
+	func 큰_정수_payload가_정밀도를_유지한다() throws {
+		let payload = try JSONDecoder().decode(
+			XcodeBuildMCPPayload.self,
+			from: Data("9007199254740993".utf8)
+		)
+
+		#expect(payload == .integer(9_007_199_254_740_993))
 	}
 
 	private func requireContract<T: Sendable & Equatable>(_: T.Type) {}

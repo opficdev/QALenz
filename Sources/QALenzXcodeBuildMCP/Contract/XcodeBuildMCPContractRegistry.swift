@@ -12,8 +12,8 @@ struct XcodeBuildMCPContractRegistry: Sendable {
 	let commandDescriptors: [
 		XcodeBuildMCPOperation: XcodeBuildMCPCommandDescriptor
 	]
-	let supportedSchemaVersions: [
-		XcodeBuildMCPOperation: [String: Set<String>]
+	let outputContracts: [
+		XcodeBuildMCPOperation: [String: XcodeBuildMCPOutputContract]
 	]
 	let eventContracts: [XcodeBuildMCPOperation: XcodeBuildMCPEventContract]
 
@@ -22,15 +22,15 @@ struct XcodeBuildMCPContractRegistry: Sendable {
 		commandDescriptors: [
 			XcodeBuildMCPOperation: XcodeBuildMCPCommandDescriptor
 		],
-		supportedSchemaVersions: [
-			XcodeBuildMCPOperation: [String: Set<String>]
+		outputContracts: [
+			XcodeBuildMCPOperation: [String: XcodeBuildMCPOutputContract]
 		],
 		eventContracts: [
 			XcodeBuildMCPOperation: XcodeBuildMCPEventContract
 		]
 	) {
 		self.commandDescriptors = commandDescriptors
-		self.supportedSchemaVersions = supportedSchemaVersions
+		self.outputContracts = outputContracts
 		self.eventContracts = eventContracts
 	}
 }
@@ -38,47 +38,104 @@ struct XcodeBuildMCPContractRegistry: Sendable {
 extension XcodeBuildMCPContractRegistry {
 	// 현재 지원하는 XcodeBuildMCP CLI contract를 반환합니다.
 	static var current: Self {
-		let discoverSimulators = XcodeBuildMCPOperation(
-			rawValue: "discover.simulators"
+		return .init(
+			commandDescriptors: currentCommandDescriptors,
+			outputContracts: currentOutputContracts,
+			eventContracts: currentEventContracts
 		)
-		let buildSimulator = XcodeBuildMCPOperation(
-			rawValue: "build.simulator"
+	}
+
+	private static let discoverSimulators = XcodeBuildMCPOperation(
+		rawValue: "discover.simulators"
+	)
+	private static let buildSimulator = XcodeBuildMCPOperation(
+		rawValue: "build.simulator"
+	)
+
+	private static var currentCommandDescriptors: [
+		XcodeBuildMCPOperation: XcodeBuildMCPCommandDescriptor
+	] {
+		[
+			discoverSimulators: .init(
+				workflow: "simulator",
+				tool: "list"
+			),
+			buildSimulator: .init(
+				workflow: "simulator",
+				tool: "build",
+				argumentFlags: [
+					"configuration": "--configuration",
+					"project.root": "--project-path",
+					"scheme": "--scheme",
+					"simulator.id": "--simulator-id",
+					"simulator.name": "--simulator-name",
+					"workspace.root": "--workspace-path"
+				]
+			)
+		]
+	}
+
+	private static var currentOutputContracts: [
+		XcodeBuildMCPOperation: [String: XcodeBuildMCPOutputContract]
+	] {
+		let simulator = XcodeBuildMCPPayloadSchema.object(
+			fields: [
+				"name": .scalar,
+				"simulatorId": .scalar,
+				"state": .scalar,
+				"isAvailable": .scalar,
+				"runtime": .scalar
+			],
+			requiredFields: [
+				"name", "simulatorId", "state", "isAvailable", "runtime"
+			]
+		)
+		let summary = XcodeBuildMCPPayloadSchema.object(
+			fields: [
+				"status": .scalar,
+				"durationMs": .scalar,
+				"target": .scalar
+			],
+			requiredFields: ["status"]
 		)
 
-		return .init(
-			commandDescriptors: [
-				discoverSimulators: .init(
-					workflow: "simulator",
-					tool: "list"
-				),
-				buildSimulator: .init(
-					workflow: "simulator",
-					tool: "build",
-					argumentFlags: [
-						"configuration": "--configuration",
-						"project.root": "--project-path",
-						"scheme": "--scheme",
-						"simulator.id": "--simulator-id",
-						"simulator.name": "--simulator-name",
-						"workspace.root": "--workspace-path"
-					]
+		return [
+			discoverSimulators: [
+				"xcodebuildmcp.output.simulator-list": .init(
+					versions: ["2"],
+					payload: .init(
+						isRequired: true,
+						schema: .object(
+							fields: ["simulators": .array(element: simulator)],
+							requiredFields: ["simulators"]
+						)
+					)
 				)
 			],
-			supportedSchemaVersions: [
-				discoverSimulators: [
-					"xcodebuildmcp.output.simulator-list": ["2"]
-				],
-				buildSimulator: [
-					"xcodebuildmcp.output.build-result": ["2", "3"]
-				]
-			],
-			eventContracts: [
-				buildSimulator: .init(
-						namespace: "build-result",
-						operation: "BUILD"
+			buildSimulator: [
+				"xcodebuildmcp.output.build-result": .init(
+					versions: ["2", "3"],
+					payload: .init(
+						isRequired: true,
+						schema: .object(
+							fields: ["summary": summary],
+							requiredFields: ["summary"]
+						)
 					)
-				]
-		)
+				)
+			]
+		]
+	}
+
+	private static var currentEventContracts: [
+		XcodeBuildMCPOperation: XcodeBuildMCPEventContract
+	] {
+		[
+			buildSimulator: .init(
+				namespace: "build-result",
+				operation: "BUILD"
+			)
+		]
 	}
 }
 

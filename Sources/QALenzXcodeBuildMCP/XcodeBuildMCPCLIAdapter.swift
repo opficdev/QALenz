@@ -38,9 +38,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter {
 	) {
 		self.configuration = configuration
 		commandBuilder = .init(descriptors: contracts.commandDescriptors)
-		outputDecoder = .init(
-			supportedSchemaVersions: contracts.supportedSchemaVersions
-		)
+		outputDecoder = .init(outputContracts: contracts.outputContracts)
 		eventContracts = contracts.eventContracts
 		self.processRunner = processRunner
 	}

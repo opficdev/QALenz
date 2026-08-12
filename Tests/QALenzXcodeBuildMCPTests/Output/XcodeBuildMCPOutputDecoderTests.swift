@@ -56,6 +56,65 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	@Test
+	func 허용하지_않는_payload_field가_결과에서_제거된다() {
+		let decoder = makeDecoder()
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.simulator-list",
+			"schemaVersion": "2",
+			"didError": false,
+			"error": null,
+			"data": {
+				"simulators": [{
+					"name": "iPhone 17 Pro",
+					"simulatorId": "SIMULATOR-ID",
+					"state": "Booted",
+					"isAvailable": true,
+					"runtime": "iOS 26.4",
+					"secretToken": "secret-token-value"
+				}],
+				"environment": {"SECRET_TOKEN": "secret-token-value"}
+			}
+		}
+		"""
+
+		let result = decoder.decode(Data(json.utf8), operation: operation)
+
+		#expect(result.payload == .object([
+			"simulators": .array([
+				.object([
+					"name": .string("iPhone 17 Pro"),
+					"simulatorId": .string("SIMULATOR-ID"),
+					"state": .string("Booted"),
+					"isAvailable": .boolean(true),
+					"runtime": .string("iOS 26.4")
+				])
+			])
+		]))
+	}
+
+	@Test
+	func 필수_payload_field가_없는_성공_응답이_거부된다() throws {
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.simulator-list",
+			"schemaVersion": "2",
+			"didError": false,
+			"error": null,
+			"data": {}
+		}
+		"""
+
+		let result = makeDecoder().decode(
+			Data(json.utf8),
+			operation: operation
+		)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+	}
+
+	@Test
 	func 도구_실패가_원본_오류_내용_없이_정규화된다() throws {
 		let decoder = makeDecoder()
 		let json = """
@@ -112,9 +171,9 @@ struct XcodeBuildMCPOutputDecoderTests {
 	@Test
 	func 다른_operation의_응답_schema가_거부된다() throws {
 		let buildOperation = XcodeBuildMCPOperation(rawValue: "build.simulator")
-		let decoder = XcodeBuildMCPOutputDecoder(supportedSchemaVersions: [
-			operation: ["xcodebuildmcp.output.simulator-list": ["2"]],
-			buildOperation: ["xcodebuildmcp.output.build-result": ["3"]]
+		let decoder = XcodeBuildMCPOutputDecoder(outputContracts: [
+			operation: XcodeBuildMCPContractRegistry.current.outputContracts[operation]!,
+			buildOperation: XcodeBuildMCPContractRegistry.current.outputContracts[buildOperation]!
 		])
 		let json = """
 		{
@@ -154,9 +213,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	private func makeDecoder() -> XcodeBuildMCPOutputDecoder {
-		.init(supportedSchemaVersions: [
-			operation: ["xcodebuildmcp.output.simulator-list": ["2"]]
-		])
+		.init(outputContracts: XcodeBuildMCPContractRegistry.current.outputContracts)
 	}
 }
 

@@ -153,8 +153,19 @@ struct XcodeBuildMCPCLIAdapterTests {
 				commandDescriptors: [
 					operation: .init(workflow: "fixture", tool: tool)
 				],
-				supportedSchemaVersions: [
-					operation: ["xcodebuildmcp.output.fixture": ["1"]]
+				outputContracts: [
+					operation: [
+						"xcodebuildmcp.output.fixture": .init(
+							versions: ["1"],
+							payload: .init(
+								isRequired: true,
+								schema: .object(
+									fields: [:],
+									requiredFields: []
+								)
+							)
+						)
+					]
 				],
 				eventContracts: [
 					operation: .init(namespace: "fixture", operation: "FIXTURE")

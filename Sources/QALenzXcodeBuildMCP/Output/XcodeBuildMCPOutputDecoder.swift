@@ -10,17 +10,17 @@ import QALenzCore
 
 // XcodeBuildMCP JSON envelope를 검증해 공통 실행 결과로 변환합니다.
 package struct XcodeBuildMCPOutputDecoder: Sendable {
-	package let supportedSchemaVersions: [
-		XcodeBuildMCPOperation: [String: Set<String>]
+	let outputContracts: [
+		XcodeBuildMCPOperation: [String: XcodeBuildMCPOutputContract]
 	]
 
-	// operation별 지원 schema와 version 집합으로 decoder를 구성합니다.
-	package init(
-		supportedSchemaVersions: [
-			XcodeBuildMCPOperation: [String: Set<String>]
+	// operation별 JSON schema와 payload 계약으로 decoder를 구성합니다.
+	init(
+		outputContracts: [
+			XcodeBuildMCPOperation: [String: XcodeBuildMCPOutputContract]
 		]
 	) {
-		self.supportedSchemaVersions = supportedSchemaVersions
+		self.outputContracts = outputContracts
 	}
 
 	// JSON 응답의 구조와 schema version 및 오류 상태를 검증합니다.
@@ -39,8 +39,10 @@ package struct XcodeBuildMCPOutputDecoder: Sendable {
 			)
 		}
 
-		guard supportedSchemaVersions[operation]?[envelope.schema]?
-			.contains(envelope.schemaVersion) == true else {
+		guard
+			let contract = outputContracts[operation]?[envelope.schema],
+			contract.versions.contains(envelope.schemaVersion)
+		else {
 			return failure(
 				operation: operation,
 				code: "adapter.xcodebuildmcp.schema.unsupported"
@@ -61,11 +63,18 @@ package struct XcodeBuildMCPOutputDecoder: Sendable {
 			)
 		}
 
-		return .init(
-			operation: operation,
-			result: .passed,
-			payload: envelope.data
-		)
+		do {
+			return .init(
+				operation: operation,
+				result: .passed,
+				payload: try contract.payload.projected(envelope.data)
+			)
+		} catch {
+			return failure(
+				operation: operation,
+				code: "adapter.xcodebuildmcp.output.invalid"
+			)
+		}
 	}
 
 	// 원본 JSON data를 XcodeBuildMCP 공통 envelope로 해석합니다.
