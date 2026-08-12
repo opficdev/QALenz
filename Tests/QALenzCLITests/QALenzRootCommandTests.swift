@@ -12,7 +12,7 @@ import Testing
 @Suite
 struct QALenzRootCommandTests {
 	@Test
-	func providesHelpAsCleanExit() throws {
+	func 도움말_요청은_도움말을_포함하고_success로_종료한다() throws {
 		let error = try #require(caughtError(for: ["--help"]))
 
 		#expect(QALenzRootCommand.exitCode(for: error) == .success)
@@ -20,7 +20,7 @@ struct QALenzRootCommandTests {
 	}
 
 	@Test
-	func providesCurrentVersionAsCleanExit() throws {
+	func 버전_요청은_CLIVersion_current를_반환하고_success로_종료한다() throws {
 		let error = try #require(caughtError(for: ["--version"]))
 
 		#expect(QALenzRootCommand.exitCode(for: error) == .success)
@@ -28,7 +28,7 @@ struct QALenzRootCommandTests {
 	}
 
 	@Test
-	func parsesSharedOutputFormat() throws {
+	func JSON_출력_옵션은_CLIOutputFormat_json으로_해석된다() throws {
 		let command = try QALenzRootCommand.parse(["--output", "json"])
 
 		#expect(command.options.output == .json)
