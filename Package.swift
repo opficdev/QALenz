@@ -4,6 +4,9 @@ import PackageDescription
 
 let package = Package(
 	name: "QALenz",
+	platforms: [
+		.macOS(.v14),
+	],
 	products: [
 		.library(name: "QALenzCore", targets: ["QALenzCore"]),
 		.executable(name: "qalenz", targets: ["QALenzCLI"]),
