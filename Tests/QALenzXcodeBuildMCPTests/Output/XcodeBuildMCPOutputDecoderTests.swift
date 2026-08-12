@@ -38,6 +38,24 @@ struct XcodeBuildMCPOutputDecoderTests {
 	}
 
 	@Test
+	func 성공_응답의_payload가_결과에_보존된다() {
+		let decoder = makeDecoder()
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.simulator-list",
+			"schemaVersion": "2",
+			"didError": false,
+			"error": null,
+			"data": {"simulators": []}
+		}
+		"""
+
+		let result = decoder.decode(Data(json.utf8), operation: operation)
+
+		#expect(result.payload == .object(["simulators": .array([])]))
+	}
+
+	@Test
 	func 도구_실패가_원본_오류_내용_없이_정규화된다() throws {
 		let decoder = makeDecoder()
 		let json = """

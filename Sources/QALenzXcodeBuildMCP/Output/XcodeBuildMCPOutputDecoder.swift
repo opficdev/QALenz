@@ -55,7 +55,11 @@ package struct XcodeBuildMCPOutputDecoder: Sendable {
 			)
 		}
 
-		return .init(operation: operation, result: .passed)
+		return .init(
+			operation: operation,
+			result: .passed,
+			payload: envelope.data
+		)
 	}
 
 	// 원본 JSON data를 XcodeBuildMCP 공통 envelope로 해석합니다.
@@ -76,7 +80,7 @@ package struct XcodeBuildMCPOutputDecoder: Sendable {
 
 	// data가 없거나 JSON object인지 판별합니다.
 	private func containsObjectOrNoData(
-		_ data: XcodeBuildMCPJSONValue?
+		_ data: XcodeBuildMCPPayload?
 	) -> Bool {
 		guard let data else { return true }
 
