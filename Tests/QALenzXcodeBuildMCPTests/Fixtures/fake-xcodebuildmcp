@@ -40,6 +40,12 @@ case "$tool" in
 		printf '%s\n' "$child_pid" > "$pid_path"
 		wait "$child_pid"
 		;;
+	"launch-marker")
+		marker_path="$3"
+		: > "$marker_path"
+		trap 'exit 0' TERM
+		while :; do :; done
+		;;
 	*)
 		exit 64
 		;;

@@ -172,6 +172,38 @@ struct FoundationProcessRunnerTests {
 	}
 
 	@Test
+	func 즉시_취소된_요청은_프로세스를_시작하지_않는다() async {
+		let directory = FileManager.default.temporaryDirectory
+			.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+		let markerURL = directory.appending(path: "launched")
+		try? FileManager.default.createDirectory(
+			at: directory,
+			withIntermediateDirectories: true
+		)
+		defer { try? FileManager.default.removeItem(at: directory) }
+
+		let request = XcodeBuildMCPProcessRequest(
+			executableURL: fakeExecutableURL,
+			arguments: ["fixture", "launch-marker", markerURL.path()],
+			workingDirectoryURL: directory,
+			environment: [:],
+			timeout: .seconds(5),
+			terminationGracePeriod: .milliseconds(50)
+		)
+		let task = Task {
+			try? await Task.sleep(for: .seconds(1))
+			let stream = FoundationXcodeBuildMCPProcessRunner().events(for: request)
+			for try await _ in stream {}
+		}
+
+		task.cancel()
+		_ = await task.result
+		try? await Task.sleep(for: .milliseconds(50))
+
+		#expect(!FileManager.default.fileExists(atPath: markerURL.path()))
+	}
+
+	@Test
 	func 허용_목록의_환경_변수만_남는다() {
 		let filter = XcodeBuildMCPEnvironmentFilter()
 		let environment = filter.apply(to: [

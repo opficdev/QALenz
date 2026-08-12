@@ -39,7 +39,13 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 		let process = RunningProcess(request: request)
 
 		do {
+			try Task.checkCancellation()
 			try process.run()
+		} catch is CancellationError {
+			continuation.finish(
+				throwing: XcodeBuildMCPProcessError.cancelled
+			)
+			return
 		} catch {
 			continuation.finish(
 				throwing: XcodeBuildMCPProcessError.launchFailed
