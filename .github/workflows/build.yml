@@ -34,7 +34,7 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          git diff --check "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" 2>&1 | tee whitespace.log
+          git diff --check "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" 2>&1 | tee whitespace.log
           checkStatus=${PIPESTATUS[0]}
           set -e
           exit "$checkStatus"
