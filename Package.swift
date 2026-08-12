@@ -19,6 +19,10 @@ let package = Package(
 	],
 	targets: [
 		.target(name: "QALenzCore"),
+		.target(
+			name: "QALenzXcodeBuildMCP",
+			dependencies: ["QALenzCore"]
+		),
 		.executableTarget(
 			name: "QALenzCLI",
 			dependencies: [
@@ -32,6 +36,10 @@ let package = Package(
 		.testTarget(
 			name: "QALenzCoreTests",
 			dependencies: ["QALenzCore"]
+		),
+		.testTarget(
+			name: "QALenzXcodeBuildMCPTests",
+			dependencies: ["QALenzXcodeBuildMCP", "QALenzCore"]
 		),
 		.testTarget(
 			name: "QALenzCLITests",
