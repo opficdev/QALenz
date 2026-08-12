@@ -79,6 +79,7 @@ The Implementer is a writing role that applies changes inside the approved scope
 Responsibilities:
 
 - Make the smallest change that reuses existing capabilities and boundaries.
+- In Swift implementation, add a `//` comment immediately above every new type and method declaration to describe its role; do not use `///` documentation comments for this purpose.
 - Keep tests and documentation aligned with behavior contracts.
 - Keep app-specific conditions inside configuration and scenario boundaries.
 - Exclude generated files and execution results from source changes.
