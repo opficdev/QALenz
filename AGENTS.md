@@ -30,6 +30,13 @@
 
 Write all code review findings and summaries in Korean. Keep implementation names, file paths, commands, API names, branch names, and commit hashes in their original form.
 
+### Judge potential review findings and current issue scope together
+
+- Before publishing a review finding, identify the current issue from the PR's linked issue or description, assess the finding's technical validity, and compare it with that issue's purpose, task scope, completion conditions, and excluded scope. Do not exclude a technically valid finding based on issue scope when the current issue cannot be identified unambiguously.
+- Publish a finding for a defect introduced by the current PR branch, even when that defect is not explicitly listed in the current issue scope.
+- Do not publish a blocking finding for a technically valid concern that is outside the current issue scope and was not introduced by the current PR branch. Recommend a separate follow-up issue without creating or changing an issue.
+- When recording an excluded concern in a review thread, include its technical validity, the comparison with the current issue, the exclusion reason, and the follow-up issue or recommendation.
+
 ### Preserve the XcodeBuildMCP boundary
 
 - Flag changes that directly implement Simulator control, build or test execution, UI automation, screenshot or video capture, log collection, or debugging capabilities already provided by the supported XcodeBuildMCP contract.
