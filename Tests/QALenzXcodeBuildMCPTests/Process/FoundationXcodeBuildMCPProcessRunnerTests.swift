@@ -5,6 +5,7 @@
 //  Created by opfic on 8/12/26.
 //
 
+import Darwin
 import Foundation
 import Testing
 @testable import QALenzXcodeBuildMCP
@@ -95,6 +96,57 @@ struct FoundationProcessRunnerTests {
 		await #expect(throws: XcodeBuildMCPProcessError.timedOut) {
 			try await FoundationXcodeBuildMCPProcessRunner().run(request)
 		}
+	}
+
+	@Test
+	func 시간_초과가_전체_하위_프로세스_트리를_종료한다() async throws {
+		let directory = FileManager.default.temporaryDirectory
+			.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+		let pidURL = directory.appending(path: "child.pid")
+		try? FileManager.default.createDirectory(
+			at: directory,
+			withIntermediateDirectories: true
+		)
+		defer { try? FileManager.default.removeItem(at: directory) }
+
+		let request = XcodeBuildMCPProcessRequest(
+			executableURL: fakeExecutableURL,
+			arguments: ["fixture", "child-tree", pidURL.path()],
+			workingDirectoryURL: directory,
+			environment: [:],
+			timeout: .milliseconds(50),
+			terminationGracePeriod: .milliseconds(50)
+		)
+		let cleanupTask = Task.detached {
+			try? await Task.sleep(for: .seconds(1))
+			guard
+				let value = try? String(contentsOf: pidURL, encoding: .utf8),
+				let pid = Int32(value.trimmingCharacters(in: .whitespacesAndNewlines))
+			else { return }
+
+			Darwin.kill(pid, SIGKILL)
+		}
+		let clock = ContinuousClock()
+		let start = clock.now
+
+		await #expect(throws: XcodeBuildMCPProcessError.timedOut) {
+			try await FoundationXcodeBuildMCPProcessRunner().run(request)
+		}
+
+		let elapsed = start.duration(to: clock.now)
+		cleanupTask.cancel()
+		_ = await cleanupTask.result
+		let value = try String(contentsOf: pidURL, encoding: .utf8)
+		let pid = try #require(
+			Int32(value.trimmingCharacters(in: .whitespacesAndNewlines))
+		)
+		let isRunning = Darwin.kill(pid, 0) == 0
+		if isRunning {
+			Darwin.kill(pid, SIGKILL)
+		}
+
+		#expect(elapsed < .milliseconds(500))
+		#expect(!isRunning)
 	}
 
 	@Test

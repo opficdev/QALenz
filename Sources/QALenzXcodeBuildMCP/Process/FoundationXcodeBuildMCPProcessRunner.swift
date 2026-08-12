@@ -139,6 +139,7 @@ private final class RunningProcess: @unchecked Sendable {
 	private let standardOutputPipe = Pipe()
 	private let standardErrorPipe = Pipe()
 	private let lock = NSLock()
+	private var processGroupIdentifier: pid_t?
 
 	// process 요청을 Foundation Process 설정으로 변환합니다.
 	init(request: XcodeBuildMCPProcessRequest) {
@@ -154,6 +155,15 @@ private final class RunningProcess: @unchecked Sendable {
 	// 구성된 자식 process를 시작합니다.
 	func run() throws {
 		try process.run()
+
+		let identifier = process.processIdentifier
+		let groupIdentifier = Darwin.getpgid(identifier)
+
+		lock.lock()
+		if groupIdentifier == identifier {
+			processGroupIdentifier = groupIdentifier
+		}
+		lock.unlock()
 	}
 
 	// 자식 process가 끝날 때까지 기다리고 종료 상태를 반환합니다.
@@ -196,9 +206,11 @@ private final class RunningProcess: @unchecked Sendable {
 		lock.lock()
 		defer { lock.unlock() }
 
-		guard process.isRunning else { return }
-
-		process.terminate()
+		if let processGroupIdentifier {
+			Darwin.kill(-processGroupIdentifier, SIGTERM)
+		} else if process.isRunning {
+			process.terminate()
+		}
 	}
 
 	// 정상 종료되지 않은 process에 강제 종료 신호를 보냅니다.
@@ -206,9 +218,11 @@ private final class RunningProcess: @unchecked Sendable {
 		lock.lock()
 		defer { lock.unlock() }
 
-		guard process.isRunning else { return }
-
-		Darwin.kill(process.processIdentifier, SIGKILL)
+		if let processGroupIdentifier {
+			Darwin.kill(-processGroupIdentifier, SIGKILL)
+		} else if process.isRunning {
+			Darwin.kill(process.processIdentifier, SIGKILL)
+		}
 	}
 }
 

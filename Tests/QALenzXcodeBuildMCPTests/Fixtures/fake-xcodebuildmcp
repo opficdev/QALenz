@@ -32,6 +32,14 @@ case "$tool" in
 		trap '' TERM
 		while :; do :; done
 		;;
+	"child-tree")
+		pid_path="$3"
+		trap '' TERM
+		/bin/sh -c 'trap "" TERM; while :; do :; done' &
+		child_pid=$!
+		printf '%s\n' "$child_pid" > "$pid_path"
+		wait "$child_pid"
+		;;
 	*)
 		exit 64
 		;;
