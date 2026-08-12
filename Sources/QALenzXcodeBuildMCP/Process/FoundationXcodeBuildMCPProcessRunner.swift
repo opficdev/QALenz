@@ -54,12 +54,12 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 		}
 
 		let standardOutputTask = Task.detached {
-			process.readStandardOutput { data in
+			await process.readStandardOutput { data in
 				continuation.yield(.standardOutput(data))
 			}
 		}
 		let standardErrorTask = Task.detached {
-			process.discardStandardError()
+			await process.discardStandardError()
 		}
 
 		do {
@@ -100,7 +100,7 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 
 		return try await withThrowingTaskGroup(of: WaitOutcome.self) { group in
 			group.addTask {
-				.terminated(process.waitUntilExit())
+				.terminated(await process.waitUntilExit())
 			}
 			group.addTask {
 				try await Task.sleep(for: request.timeout)
@@ -144,6 +144,10 @@ private final class RunningProcess: @unchecked Sendable {
 	private let process: Process
 	private let standardOutputPipe = Pipe()
 	private let standardErrorPipe = Pipe()
+	private let blockingQueue = DispatchQueue(
+		label: "QALenz.FoundationXcodeBuildMCPProcessRunner.blocking",
+		attributes: .concurrent
+	)
 	private let lock = NSLock()
 	private var processGroupIdentifier: pid_t?
 
@@ -173,28 +177,45 @@ private final class RunningProcess: @unchecked Sendable {
 	}
 
 	// 자식 process가 끝날 때까지 기다리고 종료 상태를 반환합니다.
-	func waitUntilExit() -> Int32 {
-		process.waitUntilExit()
-
-		return process.terminationStatus
+	func waitUntilExit() async -> Int32 {
+		await withCheckedContinuation { continuation in
+			blockingQueue.async {
+				self.process.waitUntilExit()
+				continuation.resume(
+					returning: self.process.terminationStatus
+				)
+			}
+		}
 	}
 
 	// stdout을 완료 전까지 읽어 각 data 조각을 전달합니다.
 	func readStandardOutput(
 		_ yield: @escaping @Sendable (Data) -> Void
-	) {
-		while true {
-			let data = standardOutputPipe.fileHandleForReading.availableData
+	) async {
+		await withCheckedContinuation { continuation in
+			blockingQueue.async {
+				while true {
+					let data = self.standardOutputPipe.fileHandleForReading.availableData
 
-			guard !data.isEmpty else { return }
+					guard !data.isEmpty else {
+						continuation.resume()
+						return
+					}
 
-			yield(data)
+					yield(data)
+				}
+			}
 		}
 	}
 
 	// pipe 정체를 막으면서 stderr 내용을 외부에 노출하지 않고 소비합니다.
-	func discardStandardError() {
-		_ = standardErrorPipe.fileHandleForReading.readDataToEndOfFile()
+	func discardStandardError() async {
+		await withCheckedContinuation { continuation in
+			blockingQueue.async {
+				_ = self.standardErrorPipe.fileHandleForReading.readDataToEndOfFile()
+				continuation.resume()
+			}
+		}
 	}
 
 	// 정상 종료를 요청한 뒤 유예 시간 이후 강제 종료합니다.
