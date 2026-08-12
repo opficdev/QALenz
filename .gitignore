@@ -6,7 +6,6 @@ superpowers/
 
 # SPM
 .build/
-.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
 
 # Xcode
 DerivedData/
