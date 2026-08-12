@@ -82,6 +82,8 @@ Responsibilities:
 - Keep tests and documentation aligned with behavior contracts.
 - Keep app-specific conditions inside configuration and scenario boundaries.
 - Exclude generated files and execution results from source changes.
+- Write a `//` role comment immediately above each Swift type and method declaration; do not use `///` documentation comments for this purpose.
+- Keep a role comment concise without repeating its declaration's identifier. When it must refer to a separate implementation identifier, preserve its original spelling instead of translating it into Korean.
 
 Must not:
 
