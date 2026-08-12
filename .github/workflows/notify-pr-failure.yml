@@ -64,7 +64,7 @@ jobs:
                 fs.readFileSync(path, 'utf8').split(/\r?\n/)
               );
               const errorLines = lines.filter((line) =>
-                /error:|fatal error:|failed|trailing whitespace|space before tab/i.test(line)
+                /error:|fatal error:|failed|trailing whitespace|space before tab|new blank line at EOF/i.test(line)
               );
               const trimmedLines = errorLines.slice(0, 30);
               if (0 < trimmedLines.length) {
