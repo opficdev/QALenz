@@ -16,6 +16,7 @@ jobs:
   build:
     name: Build
     runs-on: macos-15
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -44,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           set +e
-          swift build 2>&1 | tee build.log
+          xcodebuild -scheme QALenz-Package -destination 'platform=macOS' build 2>&1 | tee build.log
           buildStatus=${PIPESTATUS[0]}
           set -e
           exit "$buildStatus"
@@ -64,21 +65,22 @@ jobs:
     needs: build
     if: ${{ needs.build.result == 'success' }}
     runs-on: macos-15
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Swift Version
-        run: swift --version
+      - name: Xcode Version
+        run: xcodebuild -version
 
       - name: Test
         shell: bash
         run: |
           set -euo pipefail
           set +e
-          swift test 2>&1 | tee test.log
+          xcodebuild -scheme QALenz-Package -destination 'platform=macOS' test 2>&1 | tee test.log
           testStatus=${PIPESTATUS[0]}
           set -e
           exit "$testStatus"
