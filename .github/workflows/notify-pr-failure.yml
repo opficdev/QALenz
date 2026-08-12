@@ -19,24 +19,12 @@ jobs:
       }}
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       pull-requests: write
     steps:
-      - name: Download failure logs
-        uses: actions/download-artifact@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-          pattern: '*-log'
-          path: artifacts
-          merge-multiple: true
-        continue-on-error: true
-
       - name: Comment on failed PR
         uses: actions/github-script@v8
         with:
           script: |
-            const fs = require('fs');
             const workflowRun = context.payload.workflow_run;
             const pullRequest = workflowRun.pull_requests[0];
             if (!pullRequest) {
@@ -44,7 +32,7 @@ jobs:
               return;
             }
 
-            let body = [
+            const body = [
               `@${workflowRun.actor.login} CI가 실패했습니다.`,
               '',
               `- Workflow: ${workflowRun.name}`,
@@ -52,29 +40,6 @@ jobs:
               `- Commit: ${workflowRun.head_sha}`,
               `- Run: ${workflowRun.html_url}`,
             ].join('\n');
-
-            const logPaths = [
-              'artifacts/whitespace.log',
-              'artifacts/build.log',
-              'artifacts/test.log',
-            ];
-            const availableLogs = logPaths.filter((path) => fs.existsSync(path));
-            if (0 < availableLogs.length) {
-              const lines = availableLogs.flatMap((path) =>
-                fs.readFileSync(path, 'utf8').split(/\r?\n/)
-              );
-              const errorLines = lines.filter((line) =>
-                /error:|fatal error:|failed|trailing whitespace|space before tab|new blank line at EOF/i.test(line)
-              );
-              const trimmedLines = errorLines.slice(0, 30);
-              if (0 < trimmedLines.length) {
-                body += '\n\n### 오류 요약\n```\n' + trimmedLines.join('\n') + '\n```';
-              } else {
-                body += '\n\n### 오류 요약\n로그에서 오류 줄을 찾지 못했습니다.';
-              }
-            } else {
-              body += '\n\n### 오류 요약\nCI 로그를 찾지 못했습니다.';
-            }
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
