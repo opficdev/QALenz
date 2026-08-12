@@ -22,7 +22,7 @@
 ## Change rules
 
 - Assign only one writing role to a file at a time.
-- Read-only roles must not change files, Git state, or GitHub state.
+- Read-only roles must not leave changes to tracked files or change Git or GitHub state; allowed verification commands may create ignored or task-specific artifacts.
 - Documentation changes must distinguish current behavior from approved future design and must not present unimplemented behavior as current.
 - Do not leave unresolved placeholders in completed documents or present unverified commands or nonexistent paths as current interfaces; label approved future contracts explicitly.
 - Get user approval before adding dependencies, performing external writes, or deleting data.
