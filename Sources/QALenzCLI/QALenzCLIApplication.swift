@@ -63,6 +63,7 @@ package enum QALenzCLIApplication {
 
 			return .init(
 				standardOutput: nil,
+				// swiftlint:disable:next optional_data_string_conversion
 				standardError: String(decoding: data, as: UTF8.self),
 				exitStatus: .usageError
 			)
