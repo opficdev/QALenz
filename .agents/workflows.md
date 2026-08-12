@@ -32,8 +32,8 @@ Apply this gate to every workflow that includes an Architecture Watcher final re
 
 - Do not complete the workflow when the Architecture Watcher final review returns `Block`. Return required changes to the assigned writing role, then repeat final architecture review and downstream review and verification after modification.
 - Do not complete the workflow when the Architecture Watcher final review returns `Needs Owner Decision`. Stop until the user decides, then repeat final architecture review and downstream review and verification required by the workflow.
-- Do not complete the workflow when the Code Reviewer returns `Block` or `Needs Follow-up`. Return required changes to the assigned writing role, then repeat final review and related verification after modification.
-- Do not complete the workflow when the Verification Runner returns `Fail`. Return failure notes to the assigned writing role, then repeat final review and related verification after modification.
+- Do not complete the workflow when the Code Reviewer returns `Block` or `Needs Follow-up`. Return required changes to the assigned writing role, then restart at the earliest final review required by the workflow and repeat all downstream review and verification after modification.
+- Do not complete the workflow when the Verification Runner returns `Fail`. Return failure notes to the assigned writing role, then restart at the earliest final review required by the workflow and repeat all downstream review and verification after modification.
 - `Not Run` does not block completion when the workflow permits the omitted check and its reason is recorded.
 
 ## Workflow selection
