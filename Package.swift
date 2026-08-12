@@ -6,7 +6,7 @@ let package = Package(
 	name: "QALenz",
 	products: [
 		.library(name: "QALenzCore", targets: ["QALenzCore"]),
-		.executable(name: "qalenz", targets: ["QALenzCLI"]),
+		.executable(name: "qalenz", targets: ["QALenzCLIExecutable"]),
 	],
 	dependencies: [
 		.package(
@@ -16,7 +16,7 @@ let package = Package(
 	],
 	targets: [
 		.target(name: "QALenzCore"),
-		.executableTarget(
+		.target(
 			name: "QALenzCLI",
 			dependencies: [
 				"QALenzCore",
@@ -25,6 +25,10 @@ let package = Package(
 					package: "swift-argument-parser"
 				),
 			]
+		),
+		.executableTarget(
+			name: "QALenzCLIExecutable",
+			dependencies: ["QALenzCLI"]
 		),
 		.testTarget(
 			name: "QALenzCoreTests",

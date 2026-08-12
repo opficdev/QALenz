@@ -1,5 +1,5 @@
 //
-//  QALenzCLI.swift
+//  QALenzCLIExecutable.swift
 //  QALenz
 //
 //  Created by opfic on 8/12/26.
@@ -7,9 +7,10 @@
 
 import Darwin
 import Foundation
+import QALenzCLI
 
 @main
-enum QALenzCLI {
+enum QALenzCLIExecutable {
 	static func main() {
 		let result = QALenzCLIApplication.execute(
 			arguments: Array(CommandLine.arguments.dropFirst())
