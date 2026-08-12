@@ -15,7 +15,10 @@ jobs:
     if: >-
       ${{
         github.event.workflow_run.event == 'pull_request' &&
-        github.event.workflow_run.conclusion == 'failure'
+        contains(
+          fromJSON('["failure","timed_out","action_required","stale","startup_failure"]'),
+          github.event.workflow_run.conclusion
+        )
       }}
     runs-on: ubuntu-latest
     permissions:
@@ -33,7 +36,7 @@ jobs:
             }
 
             const body = [
-              `@${workflowRun.actor.login} CI가 실패했습니다.`,
+              `@${workflowRun.actor.login} CI 검증을 완료하지 못했습니다.`,
               '',
               `- Workflow: ${workflowRun.name}`,
               `- Branch: ${workflowRun.head_branch}`,
