@@ -7,10 +7,12 @@
 
 import ArgumentParser
 
+// CLI 결과의 출력 형식을 나타냅니다.
 package enum CLIOutputFormat: String, Codable, Sendable, Equatable, ExpressibleByArgument {
 	case text
 	case json
 
+	// 인수에서 요청한 출력 형식을 찾습니다.
 	package static func requested(in arguments: [String]) -> Self {
 		for (index, argument) in arguments.enumerated() {
 			guard argument != "--" else { break }

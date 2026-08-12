@@ -8,7 +8,9 @@
 import ArgumentParser
 import Foundation
 
+// CLI 인수를 처리해 프로세스 결과로 변환합니다.
 package enum QALenzCLIApplication {
+	// CLI 인수를 실행해 프로세스 결과를 만듭니다.
 	package static func execute(arguments: [String]) -> CLIProcessResult {
 		let format = CLIOutputFormat.requested(in: arguments)
 
@@ -26,6 +28,7 @@ package enum QALenzCLIApplication {
 		}
 	}
 
+	// 파싱 오류를 출력 형식에 맞는 프로세스 결과로 변환합니다.
 	private static func result(
 		for error: any Error,
 		format: CLIOutputFormat
@@ -55,6 +58,7 @@ package enum QALenzCLIApplication {
 		}
 	}
 
+	// CLIUsageError를 JSON 프로세스 결과로 변환합니다.
 	private static func jsonResult(for error: CLIUsageError) -> CLIProcessResult {
 		do {
 			let encoder = JSONEncoder()
