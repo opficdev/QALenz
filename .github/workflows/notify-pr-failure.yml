@@ -3,7 +3,7 @@ name: Notify PR Failure
 on:
   workflow_run:
     workflows:
-      - Swift Package
+      - CI
     types:
       - completed
 
