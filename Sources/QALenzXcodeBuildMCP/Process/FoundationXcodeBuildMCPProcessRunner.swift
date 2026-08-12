@@ -14,6 +14,11 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 		XcodeBuildMCPProcessEvent,
 		any Error
 	>.Continuation
+	// process 종료 상태와 stdout reader 오류를 함께 전달합니다.
+	private typealias ProcessResult = (
+		status: Int32,
+		standardOutputError: XcodeBuildMCPProcessError?
+	)
 
 	// Foundation 기반 process runner를 구성합니다.
 	package init() {}
@@ -63,22 +68,17 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 		let standardErrorTask = Task.detached { await process.discardStandardError() }
 
 		do {
-			let status = try await withTaskCancellationHandler {
-				try await waitForExit(process, request: request)
-			} onCancel: {
-				process.stop(after: request.terminationGracePeriod)
-			}
+			let result = try await execute(
+				process,
+				request: request,
+				standardOutputTask: standardOutputTask,
+				standardErrorTask: standardErrorTask
+			)
 
-			if Task.isCancelled {
-				throw XcodeBuildMCPProcessError.cancelled
-			}
-
-			let standardOutputError = await standardOutputTask.value
-			_ = await standardErrorTask.value
-			if let standardOutputError {
+			if let standardOutputError = result.standardOutputError {
 				throw standardOutputError
 			}
-			continuation.yield(.terminated(status))
+			continuation.yield(.terminated(result.status))
 			continuation.finish()
 		} catch is CancellationError {
 			process.stop(after: request.terminationGracePeriod)
@@ -91,6 +91,75 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 			_ = await standardOutputTask.value
 			_ = await standardErrorTask.value
 			continuation.finish(throwing: error)
+		}
+	}
+
+	// process 종료와 pipe drain을 취소 처리와 함께 수행합니다.
+	private func execute(
+		_ process: RunningProcess,
+		request: XcodeBuildMCPProcessRequest,
+		standardOutputTask: Task<XcodeBuildMCPProcessError?, Never>,
+		standardErrorTask: Task<Void, Never>
+	) async throws -> ProcessResult {
+		try await withTaskCancellationHandler {
+			let status = try await waitForExit(process, request: request)
+			if Task.isCancelled {
+				throw XcodeBuildMCPProcessError.cancelled
+			}
+			let standardOutputError = try await waitForPipeDrain(
+				process,
+				request: request,
+				standardOutputTask: standardOutputTask,
+				standardErrorTask: standardErrorTask
+			)
+
+			return (status, standardOutputError)
+		} onCancel: {
+			process.stop(after: request.terminationGracePeriod)
+		}
+	}
+
+	// wrapper 종료 뒤 pipe가 제한 시간 안에 닫히는지 감시합니다.
+	private func waitForPipeDrain(
+		_ process: RunningProcess,
+		request: XcodeBuildMCPProcessRequest,
+		standardOutputTask: Task<XcodeBuildMCPProcessError?, Never>,
+		standardErrorTask: Task<Void, Never>
+	) async throws -> XcodeBuildMCPProcessError? {
+		let outcome = await withTaskGroup(of: PipeDrainOutcome.self) { group in
+			group.addTask {
+				let standardOutputError = await standardOutputTask.value
+				_ = await standardErrorTask.value
+
+				return .drained(standardOutputError)
+			}
+			group.addTask {
+				do {
+					try await Task.sleep(for: request.terminationGracePeriod)
+				} catch {
+					return .cancelled
+				}
+
+				process.terminate()
+				try? await Task.sleep(for: request.terminationGracePeriod)
+				process.forceTerminate()
+
+				return .timedOut
+			}
+
+			let outcome = await group.next() ?? .timedOut
+			group.cancelAll()
+
+			return outcome
+		}
+
+		switch outcome {
+		case let .drained(standardOutputError):
+			return standardOutputError
+		case .timedOut:
+			throw XcodeBuildMCPProcessError.timedOut
+		case .cancelled:
+			throw XcodeBuildMCPProcessError.cancelled
 		}
 	}
 
@@ -160,6 +229,13 @@ package struct FoundationXcodeBuildMCPProcessRunner: XcodeBuildMCPProcessRunner 
 }
 
 private extension FoundationXcodeBuildMCPProcessRunner {
+	// pipe 종료 감시 경쟁의 결과를 구분합니다.
+	enum PipeDrainOutcome: Sendable {
+		case drained(XcodeBuildMCPProcessError?)
+		case timedOut
+		case cancelled
+	}
+
 	// process 종료 감시 경쟁의 결과를 구분합니다.
 	enum WaitOutcome: Sendable {
 		case terminated(Int32)

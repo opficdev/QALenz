@@ -45,6 +45,13 @@ case "$tool" in
 		printf '%s\n' "$child_pid" > "$pid_path"
 		wait "$child_pid"
 		;;
+	"orphaned-pipe")
+		pid_path="$3"
+		/bin/sh -c 'trap "" TERM; while :; do :; done' &
+		child_pid=$!
+		printf '%s\n' "$child_pid" > "$pid_path"
+		exit 0
+		;;
 	"launch-marker")
 		marker_path="$3"
 		: > "$marker_path"

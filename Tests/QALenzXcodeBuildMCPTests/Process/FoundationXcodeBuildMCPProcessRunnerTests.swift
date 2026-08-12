@@ -171,6 +171,59 @@ struct FoundationProcessRunnerTests {
 		#expect(elapsed < .milliseconds(500))
 		#expect(!isRunning)
 	}
+}
+
+extension FoundationProcessRunnerTests {
+	@Test
+	func wrapper가_종료된_뒤_남은_pipe가_시간_초과로_정리된다() async throws {
+		let directory = FileManager.default.temporaryDirectory
+			.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+		let pidURL = directory.appending(path: "child.pid")
+		try FileManager.default.createDirectory(
+			at: directory,
+			withIntermediateDirectories: true
+		)
+		defer { try? FileManager.default.removeItem(at: directory) }
+
+		let request = XcodeBuildMCPProcessRequest(
+			executableURL: fakeExecutableURL,
+			arguments: ["fixture", "orphaned-pipe", pidURL.path()],
+			workingDirectoryURL: directory,
+			environment: [:],
+			timeout: .seconds(5),
+			terminationGracePeriod: .milliseconds(50)
+		)
+		let cleanupTask = Task.detached {
+			try? await Task.sleep(for: .seconds(1))
+			guard
+				let value = try? String(contentsOf: pidURL, encoding: .utf8),
+				let pid = Int32(value.trimmingCharacters(in: .whitespacesAndNewlines))
+			else { return }
+
+			Darwin.kill(pid, SIGKILL)
+		}
+		let clock = ContinuousClock()
+		let start = clock.now
+
+		await #expect(throws: XcodeBuildMCPProcessError.timedOut) {
+			try await FoundationXcodeBuildMCPProcessRunner().run(request)
+		}
+
+		let elapsed = start.duration(to: clock.now)
+		cleanupTask.cancel()
+		_ = await cleanupTask.result
+		let value = try String(contentsOf: pidURL, encoding: .utf8)
+		let pid = try #require(
+			Int32(value.trimmingCharacters(in: .whitespacesAndNewlines))
+		)
+		let isRunning = Darwin.kill(pid, 0) == 0
+		if isRunning {
+			Darwin.kill(pid, SIGKILL)
+		}
+
+		#expect(elapsed < .milliseconds(500))
+		#expect(!isRunning)
+	}
 
 	@Test
 	func 실행_작업을_취소하면_자식_프로세스가_종료되고_취소_오류가_반환된다() async {
