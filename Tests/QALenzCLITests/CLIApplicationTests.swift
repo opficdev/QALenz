@@ -59,6 +59,20 @@ struct CLIApplicationTests {
 		#expect(error.message.contains("unknown"))
 	}
 
+	// doctor 하위 명령의 JSON 사용 오류가 하위 명령 usage를 보존하는지 검증합니다.
+	@Test
+	func doctor_JSON_사용_오류가_하위_명령_usage를_보존한다() async throws {
+		let result = await CLIApplication.execute(
+			arguments: ["doctor", "--unknown", "--output", "json"]
+		)
+		let data = try #require(result.standardError?.data(using: .utf8))
+		let error = try JSONDecoder().decode(CLIUsageError.self, from: data)
+
+		#expect(result.exitStatus == .usageError)
+		#expect(error.usage == "qalenz doctor [--output <output>]")
+		#expect(error.usage.contains("qalenz doctor"))
+	}
+
 	@Test
 	func CLIUsageError의_RunResult가_errored가_아니면_디코딩을_거부한다() {
 		let json = """

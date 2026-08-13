@@ -53,9 +53,11 @@ package enum CLIApplication {
 		for error: any Error,
 		format: CLIOutputFormat
 	) -> CLIProcessResult {
+		let fullMessage = RootCommand.fullMessage(for: error)
+
 		guard RootCommand.exitCode(for: error) != .success else {
 			return .init(
-				standardOutput: RootCommand.fullMessage(for: error),
+				standardOutput: fullMessage,
 				standardError: nil,
 				exitStatus: .success
 			)
@@ -63,19 +65,30 @@ package enum CLIApplication {
 
 		let usageError = CLIUsageError(
 			message: RootCommand.message(for: error),
-			usage: RootCommand.usageString(for: RootCommand.self)
+			usage: usage(in: fullMessage)
 		)
 
 		switch format {
 		case .text:
 			return .init(
 				standardOutput: nil,
-				standardError: RootCommand.fullMessage(for: error),
+				standardError: fullMessage,
 				exitStatus: .usageError
 			)
 		case .json:
 			return jsonResult(for: usageError)
 		}
+	}
+
+	// ArgumentParser가 보존한 명령 문맥의 usage를 반환합니다.
+	private static func usage(in fullMessage: String) -> String {
+		guard let usageLine = fullMessage.split(separator: "\n").first(
+			where: { $0.hasPrefix("Usage: ") }
+		) else {
+			return RootCommand.usageString(for: RootCommand.self)
+		}
+
+		return String(usageLine.dropFirst("Usage: ".count))
 	}
 
 	// CLIUsageError를 JSON 프로세스 결과로 변환합니다.
