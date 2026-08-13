@@ -86,13 +86,15 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 
 	// process의 표준 출력 조각을 종료 전부터 순서대로 반환합니다.
 	package func events(for request: ProcessRequest) -> ProcessEventStream {
-		let process = Process()
-		let processBox = ProcessBox(process: process)
-		let termination = ProcessTerminationObserver(process: process)
 		let output = Pipe()
+		let process = makeProcess(for: request, standardOutput: output)
+		let processBox = ProcessBox(process: process)
+		let taskBox = ProcessEventTaskBox()
+		let termination = ProcessTerminationObserver(process: process)
 		let (stream, continuation) = ProcessEventStream.makeStream(
 			maximumBufferedEventCount: maximumBufferedStandardOutputChunkCount,
 			onTermination: {
+				taskBox.cancel()
 				processBox.forceTerminate()
 			}
 		)
@@ -102,15 +104,11 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 			maximumStandardOutputChunkByteCount: Self.maximumStandardOutputChunkByteCount
 		)
 
-		process.executableURL = request.executableURL
-		process.arguments = request.arguments
-		process.currentDirectoryURL = request.workingDirectoryURL
-		process.environment = request.environment
-		process.standardOutput = output
-		process.standardError = FileHandle.nullDevice
 		emitter.start()
 
-		Task {
+		let task = Task {
+			defer { taskBox.finish() }
+
 			do {
 				try Task.checkCancellation()
 				try validateLaunchRequest(request)
@@ -138,8 +136,22 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 				try? output.fileHandleForReading.close()
 			}
 		}
+		taskBox.store(task)
 
 		return stream
+	}
+
+	// 실행 요청과 표준 출력을 Foundation Process에 연결합니다.
+	private func makeProcess(for request: ProcessRequest, standardOutput: Pipe) -> Process {
+		let process = Process()
+		process.executableURL = request.executableURL
+		process.arguments = request.arguments
+		process.currentDirectoryURL = request.workingDirectoryURL
+		process.environment = request.environment
+		process.standardOutput = standardOutput
+		process.standardError = FileHandle.nullDevice
+
+		return process
 	}
 
 	// 실행 요청이 시작 가능한 경로를 가지는지 검증합니다.

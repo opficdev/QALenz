@@ -27,6 +27,8 @@ extension ProcessRunning {
 			}
 		)
 		let task = Task {
+			defer { taskBox.finish() }
+
 			do {
 				let result = try await run(request)
 				try await continuation.yield(.standardOutput(result.standardOutput))
@@ -42,17 +44,19 @@ extension ProcessRunning {
 	}
 }
 
-// 기본 사건 stream Task의 취소 상태를 보호합니다.
-private final class ProcessEventTaskBox: @unchecked Sendable {
+// 사건 stream Task의 취소와 완료 상태를 보호합니다.
+final class ProcessEventTaskBox: @unchecked Sendable {
 	private let lock = NSLock()
 	private var task: Task<Void, Never>?
 	private var isCancelled = false
+	private var isFinished = false
 
 	// 취소할 사건 stream Task를 저장합니다.
 	func store(_ task: Task<Void, Never>) {
 		lock.lock()
 		defer { lock.unlock() }
 
+		guard !isFinished else { return }
 		self.task = task
 		if isCancelled {
 			task.cancel()
@@ -66,5 +70,14 @@ private final class ProcessEventTaskBox: @unchecked Sendable {
 
 		isCancelled = true
 		task?.cancel()
+	}
+
+	// 완료한 Task 보관을 해제합니다.
+	func finish() {
+		lock.lock()
+		defer { lock.unlock() }
+
+		isFinished = true
+		task = nil
 	}
 }
