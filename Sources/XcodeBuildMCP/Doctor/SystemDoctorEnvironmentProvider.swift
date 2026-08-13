@@ -35,12 +35,22 @@ package struct SystemDoctorEnvironmentProvider: DoctorEnvironmentProviding, Send
 	}
 
 	// macOS와 Xcode 및 Swift의 검사 항목을 순서대로 반환합니다.
-	package func diagnoseEnvironment() async throws -> [DoctorDiagnostic] {
-		[
-			diagnoseMacOS(),
-			try await diagnoseXcode(),
-			try await diagnoseSwift()
-		]
+	package func diagnoseEnvironment() async -> DoctorEnvironmentResult {
+		var diagnostics = [diagnoseMacOS()]
+
+		do {
+			diagnostics.append(try await diagnoseXcode())
+			diagnostics.append(try await diagnoseSwift())
+
+			return .init(diagnostics: diagnostics)
+		} catch let error as RunError {
+			return .init(diagnostics: diagnostics, error: error)
+		} catch {
+			return .init(
+				diagnostics: diagnostics,
+				error: runError(for: error)
+			)
+		}
 	}
 
 	// 현재 macOS version을 진단 항목으로 반환합니다.

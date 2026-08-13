@@ -34,9 +34,11 @@ struct SystemDoctorEnvironmentProviderTests {
 			]
 		)
 
-		let diagnostics = try await provider.diagnoseEnvironment()
+		let result = await provider.diagnoseEnvironment()
+		let diagnostics = result.diagnostics
 		let requests = await runner.sentRequests()
 
+		#expect(result.error == nil)
 		#expect(diagnostics.map(\.id.rawValue) == ["macos", "xcode", "swift"])
 		#expect(diagnostics.map(\.status) == [.available, .available, .available])
 		#expect(diagnostics[1].message == "Xcode 26.6")
@@ -61,8 +63,10 @@ struct SystemDoctorEnvironmentProviderTests {
 		])
 		let provider = makeProvider(processRunner: runner)
 
-		let diagnostics = try await provider.diagnoseEnvironment()
+		let result = await provider.diagnoseEnvironment()
+		let diagnostics = result.diagnostics
 
+		#expect(result.error == nil)
 		#expect(diagnostics.map(\.status) == [.available, .missing, .missing])
 		#expect(diagnostics[1].recommendation == "Xcode를 설치하거나 xcode-select로 사용할 Xcode를 선택합니다.")
 		#expect(diagnostics[2].recommendation == "Xcode를 설치하거나 xcode-select로 사용할 Xcode를 선택합니다.")
@@ -83,28 +87,41 @@ struct SystemDoctorEnvironmentProviderTests {
 		])
 		let provider = makeProvider(processRunner: runner)
 
-		let diagnostics = try await provider.diagnoseEnvironment()
+		let result = await provider.diagnoseEnvironment()
+		let diagnostics = result.diagnostics
 
+		#expect(result.error == nil)
 		#expect(diagnostics.map(\.status) == [.available, .unsupported, .unsupported])
 		#expect(!String(describing: diagnostics).contains("secret-token-value"))
 	}
 
-	// 환경 도구 실행 시간 초과를 정규화된 실행 오류로 반환하는지 검증합니다.
+	// 환경 도구 실행 시간 초과에도 macOS 진단을 보존하는지 검증합니다.
 	@Test
-	func 환경_도구_실행_시간_초과를_실행_오류로_반환한다() async {
+	func 환경_도구_실행_시간_초과에도_macos_진단을_보존한다() async throws {
 		let provider = makeProvider(
 			processRunner: FailingSystemDoctorProcessRunnerSpy(error: .timedOut)
 		)
+		let result = await provider.diagnoseEnvironment()
+		let error = try #require(result.error)
 
-		do {
-			_ = try await provider.diagnoseEnvironment()
-			Issue.record("실행 오류가 반환되어야 합니다.")
-		} catch let error as RunError {
-			#expect(error.kind == .execution)
-			#expect(error.code.rawValue == "execution.timeout")
-		} catch {
-			Issue.record("정규화되지 않은 오류가 반환됐습니다.")
-		}
+		#expect(result.diagnostics.map(\.id.rawValue) == ["macos"])
+		#expect(error.kind == .execution)
+		#expect(error.code.rawValue == "execution.timeout")
+	}
+
+	// Swift 실행 시간 초과에도 앞선 Xcode 진단을 보존하는지 검증합니다.
+	@Test
+	func Swift_실행_시간_초과에도_Xcode_진단을_보존한다() async throws {
+		let provider = makeProvider(
+			processRunner: SwiftFailingSystemDoctorProcessRunnerSpy()
+		)
+		let result = await provider.diagnoseEnvironment()
+		let error = try #require(result.error)
+
+		#expect(result.diagnostics.map(\.id.rawValue) == ["macos", "xcode"])
+		#expect(result.diagnostics.map(\.status) == [.available, .available])
+		#expect(error.kind == .execution)
+		#expect(error.code.rawValue == "execution.timeout")
 	}
 
 	// 시험용 제공자를 가짜 process 실행기로 구성합니다.
@@ -128,6 +145,25 @@ private struct FailingSystemDoctorProcessRunnerSpy: ProcessRunning {
 	// 지정한 process 실행 오류를 반환합니다.
 	func run(_ request: ProcessRequest) async throws -> ProcessResult {
 		throw error
+	}
+}
+
+// Xcode 결과를 반환한 뒤 Swift 실행 오류를 반환하는 실행기입니다.
+private actor SwiftFailingSystemDoctorProcessRunnerSpy: ProcessRunning {
+	private var didReturnXcode = false
+
+	// 첫 요청에는 Xcode 결과를 반환하고 다음 요청에는 시간 초과를 반환합니다.
+	func run(_ request: ProcessRequest) async throws -> ProcessResult {
+		guard !didReturnXcode else {
+			throw ProcessRunnerError.timedOut
+		}
+
+		didReturnXcode = true
+
+		return .init(
+			standardOutput: Data("Xcode 26.6\n".utf8),
+			terminationStatus: 0
+		)
 	}
 }
 

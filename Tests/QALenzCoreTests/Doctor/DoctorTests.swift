@@ -167,22 +167,38 @@ struct DoctorTests {
 		#expect(report.diagnostics.map(\.id.rawValue) == ["macos"])
 	}
 
-	// 환경 검사 실행 오류를 오류 보고서로 반환하는지 검증합니다.
+	// 환경 검사 실행 오류에서도 수집한 진단을 오류 보고서로 보존하는지 검증합니다.
 	@Test
-	func 환경_검사_실행_오류를_오류_보고서로_반환한다() async {
+	func 환경_검사_실행_오류에서도_수집한_진단을_보존한다() async {
 		let error = RunError(
 			kind: .execution,
 			code: .init(rawValue: "execution.timeout")
 		)
 		let doctor = Doctor(
-			environmentProvider: FailingDoctorEnvironmentProviderSpy(error: error),
+			environmentProvider: FailingDoctorEnvironmentProviderSpy(
+				diagnostics: [
+					.diagnostic(
+						id: "macos",
+						requirement: .required,
+						status: .available,
+						message: "macOS 26.0"
+					),
+					.diagnostic(
+						id: "xcode",
+						requirement: .required,
+						status: .available,
+						message: "Xcode 26.6"
+					)
+				],
+				error: error
+			),
 			xcodeBuildMCPReporter: XcodeBuildMCPDoctorReporterSpy(diagnostics: [])
 		)
 
 		let report = await doctor.diagnose()
 
 		#expect(report.result == .errored(error))
-		#expect(report.diagnostics.isEmpty)
+		#expect(report.diagnostics.map(\.id.rawValue) == ["macos", "xcode"])
 	}
 
 	// JSON 출력에 사용할 보고서의 구조화된 왕복 변환을 검증합니다.
@@ -246,18 +262,19 @@ private struct DoctorEnvironmentProviderSpy: DoctorEnvironmentProviding {
 	}
 
 	// 고정된 환경 진단을 반환합니다.
-	func diagnoseEnvironment() async throws -> [DoctorDiagnostic] {
-		sentDiagnostics
+	func diagnoseEnvironment() async -> DoctorEnvironmentResult {
+		.init(diagnostics: sentDiagnostics)
 	}
 }
 
 // 지정한 실행 오류를 반환하는 환경 진단 대역입니다.
 private struct FailingDoctorEnvironmentProviderSpy: DoctorEnvironmentProviding {
+	let diagnostics: [DoctorDiagnostic]
 	let error: RunError
 
-	// 지정한 실행 오류를 반환합니다.
-	func diagnoseEnvironment() async throws -> [DoctorDiagnostic] {
-		throw error
+	// 지정한 진단과 실행 오류를 반환합니다.
+	func diagnoseEnvironment() async -> DoctorEnvironmentResult {
+		.init(diagnostics: diagnostics, error: error)
 	}
 }
 
