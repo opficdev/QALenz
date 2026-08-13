@@ -10,6 +10,7 @@ import QALenzCore
 
 // XcodeBuildMCP CLI 요청과 출력을 QALenz 공통 계약으로 변환합니다.
 package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
+	private static let commandNotFoundStatus: Int32 = 127
 	private static let allowedEnvironmentKeys: Set<String> = [
 		"DEVELOPER_DIR",
 		"PATH",
@@ -72,10 +73,12 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 			let result = try await run(request, output: .json)
 
 			guard result.terminationStatus == 0 else {
-				return failure(
+				return .init(
 					operation: request.operation,
-					kind: .adapter,
-					code: "adapter.xcodebuildmcp.command.failed"
+					result: .errored(terminationError(
+						operation: request.operation,
+						status: result.terminationStatus
+					))
 				)
 			}
 
@@ -114,7 +117,10 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 						case let .terminated(status):
 							didTerminate = true
 							guard status == 0 else {
-								throw commandFailureError(for: request.operation)
+								throw terminationError(
+									operation: request.operation,
+									status: status
+								)
 							}
 							for event in try decoder.finish(operation: request.operation) {
 								continuation.yield(event)
@@ -223,12 +229,22 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 		)
 	}
 
-	// 비정상 command 종료를 원본 출력 없이 구조화된 오류로 생성합니다.
-	private func commandFailureError(for operation: XcodeBuildMCPOperation) -> RunError {
-		failureError(
+	// env 종료 상태를 CLI 미설치와 command 실패 오류로 구분합니다.
+	private func terminationError(
+		operation: XcodeBuildMCPOperation,
+		status: Int32
+	) -> RunError {
+		let code = switch status {
+		case Self.commandNotFoundStatus:
+			"adapter.xcodebuildmcp.unavailable"
+		default:
+			"adapter.xcodebuildmcp.command.failed"
+		}
+
+		return failureError(
 			operation: operation,
 			kind: .adapter,
-			code: "adapter.xcodebuildmcp.command.failed"
+			code: code
 		)
 	}
 

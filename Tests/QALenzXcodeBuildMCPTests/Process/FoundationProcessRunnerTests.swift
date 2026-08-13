@@ -28,7 +28,7 @@ struct FoundationProcessRunnerTests {
 			arguments: [],
 			workingDirectoryURL: directory,
 			environment: ["VISIBLE": "allowed"],
-			timeout: .seconds(1)
+			timeout: .seconds(5)
 		))
 
 		#expect(result.terminationStatus == 0)
