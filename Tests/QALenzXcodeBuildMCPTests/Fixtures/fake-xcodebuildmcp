@@ -6,6 +6,7 @@ shift 2
 
 output=""
 scheme=""
+project_path=""
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
@@ -15,6 +16,10 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--scheme)
 			scheme="$2"
+			shift 2
+			;;
+		--project-path)
+			project_path="$2"
 			shift 2
 			;;
 		*)
@@ -36,6 +41,18 @@ case "$workflow:$tool:$output" in
 		printf '%s\n' '{"schema":"xcodebuildmcp.output.build-result","schemaVersion":"3","didError":false,"error":null,"data":{"summary":{"status":"SUCCEEDED","durationMs":1,"target":"simulator"},"artifacts":{"appPath":"/tmp/Fixture.app"},"diagnostics":{"warnings":[],"errors":[]}}}'
 		;;
 	simulator:build:jsonl)
+		if [ "$scheme" = "streaming" ]; then
+			printf '%s\n' '{"event":"build-result.invocation","operation":"BUILD"}'
+			attempt=0
+			while [ ! -f "$project_path" ] && [ "$attempt" -lt 40 ]; do
+				/bin/sleep 0.05
+				attempt=$((attempt + 1))
+			done
+			if [ ! -f "$project_path" ]; then
+				printf '%s\n' '{"event":"build-result.build-summary","operation":"BUILD","status":"FAILED"}'
+				exit 0
+			fi
+		fi
 		printf '%s\n' '{"event":"build-result.build-summary","operation":"BUILD","status":"SUCCEEDED"}'
 		;;
 	*)

@@ -101,21 +101,33 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 						)
 					}
 
-					let result = try await run(request, output: .jsonLines)
-					guard result.terminationStatus == 0 else {
+					var decoder = XcodeBuildMCPEventDecoder(descriptor: descriptor)
+					let processRequest = try processRequest(for: request, output: .jsonLines)
+					var didTerminate = false
+
+					for try await processEvent in processRunner.events(for: processRequest) {
+						switch processEvent {
+						case let .standardOutput(data):
+							for event in try decoder.decode(data, operation: request.operation) {
+								continuation.yield(event)
+							}
+						case let .terminated(status):
+							didTerminate = true
+							guard status == 0 else {
+								throw commandFailureError(for: request.operation)
+							}
+							for event in try decoder.finish(operation: request.operation) {
+								continuation.yield(event)
+							}
+						}
+					}
+
+					guard didTerminate else {
 						throw failureError(
 							operation: request.operation,
 							kind: .adapter,
-							code: "adapter.xcodebuildmcp.command.failed"
+							code: "adapter.xcodebuildmcp.process.failed"
 						)
-					}
-
-					var decoder = XcodeBuildMCPEventDecoder(descriptor: descriptor)
-					for event in try decoder.decode(result.standardOutput, operation: request.operation) {
-						continuation.yield(event)
-					}
-					for event in try decoder.finish(operation: request.operation) {
-						continuation.yield(event)
 					}
 					continuation.finish()
 				} catch {
@@ -136,15 +148,23 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 		_ request: XcodeBuildMCPRequest,
 		output: CommandOutputFormat
 	) async throws -> ProcessResult {
+		try await processRunner.run(processRequest(for: request, output: output))
+	}
+
+	// 요청과 출력 형식으로 허용된 process 실행 요청을 생성합니다.
+	private func processRequest(
+		for request: XcodeBuildMCPRequest,
+		output: CommandOutputFormat
+	) throws -> ProcessRequest {
 		let arguments = try commandBuilder.arguments(for: request, output: output)
 
-		return try await processRunner.run(.init(
+		return .init(
 			executableURL: URL(fileURLWithPath: "/usr/bin/env"),
 			arguments: ["xcodebuildmcp"] + arguments,
 			workingDirectoryURL: workingDirectoryURL,
 			environment: allowedEnvironment,
 			timeout: timeout
-		))
+		)
 	}
 
 	// process 실행에 전달할 허용된 환경 값만 반환합니다.
@@ -200,6 +220,15 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 		.init(
 			operation: operation,
 			result: .errored(failureError(operation: operation, kind: kind, code: code))
+		)
+	}
+
+	// 비정상 command 종료를 원본 출력 없이 구조화된 오류로 생성합니다.
+	private func commandFailureError(for operation: XcodeBuildMCPOperation) -> RunError {
+		failureError(
+			operation: operation,
+			kind: .adapter,
+			code: "adapter.xcodebuildmcp.command.failed"
 		)
 	}
 
