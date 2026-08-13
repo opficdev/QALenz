@@ -17,6 +17,9 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 		"PATH",
 		"TMPDIR"
 	]
+	private static let doctorEnvironment = [
+		"XCODEBUILDMCP_DEBUG": "true"
+	]
 	private static let fixedDiagnosticValues = [
 		XcodeBuildMCPDoctorDiagnosticValue(
 			id: "xcodebuildmcp.executable",
@@ -115,7 +118,10 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 	// doctor의 구조화된 출력과 세부 check를 진단 항목으로 변환합니다.
 	private func diagnoseDoctorReport() async -> [DoctorDiagnostic] {
 		do {
-			let result = try await run(arguments: ["xcodebuildmcp", "doctor", "--output", "json"])
+			let result = try await run(
+				arguments: ["xcodebuildmcp", "doctor", "doctor", "--output", "json"],
+				environment: Self.doctorEnvironment
+			)
 
 			guard result.terminationStatus == 0 else {
 				return [diagnostic(for: .fixed(.doctorUnavailable))]
@@ -147,13 +153,19 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 		}
 	}
 
-	// 실행 파일 탐색에 사용할 process 요청을 실행합니다.
-	private func run(arguments: [String]) async throws -> ProcessResult {
+	// 허용 환경과 호출별 환경을 병합한 process 요청을 실행합니다.
+	private func run(
+		arguments: [String],
+		environment additionalEnvironment: [String: String] = [:]
+	) async throws -> ProcessResult {
 		try await processRunner.run(.init(
 			executableURL: URL(fileURLWithPath: "/usr/bin/env"),
 			arguments: arguments,
 			workingDirectoryURL: workingDirectoryURL,
-			environment: allowedEnvironment,
+			environment: allowedEnvironment.merging(
+				additionalEnvironment,
+				uniquingKeysWith: { _, additionalValue in additionalValue }
+			),
 			timeout: timeout
 		))
 	}

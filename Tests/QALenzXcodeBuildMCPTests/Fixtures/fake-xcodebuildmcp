@@ -5,7 +5,7 @@ if [ "$1" = "--version" ]; then
 	exit 0
 fi
 
-if [ "$1" = "doctor" ] && [ "$2" = "--output" ] && [ "$3" = "json" ]; then
+if [ "$1" = "doctor" ] && [ "$2" = "doctor" ] && [ "$3" = "--output" ] && [ "$4" = "json" ]; then
 	printf '%s\n' '{"schema":"xcodebuildmcp.output.doctor-report","schemaVersion":"2","didError":false,"error":null,"data":{"serverVersion":"2.7.0-fixture","checks":[{"name":"xcode","status":"ok","message":"Xcode 26.0"},{"name":"axe","status":"warning","message":"axe를 찾을 수 없습니다."}]}}'
 	exit 0
 fi

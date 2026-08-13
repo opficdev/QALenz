@@ -173,9 +173,9 @@ struct XcodeBuildMCPDoctorReporterTests {
 		#expect(!String(describing: diagnostics).contains("secret-token-value"))
 	}
 
-	// version과 doctor 요청이 PATH만 포함한 process 요청으로 실행되는지 검증합니다.
+	// version과 doctor 요청이 필요한 환경으로 실행되는지 검증합니다.
 	@Test
-	func version과_doctor_요청이_허용된_환경으로_실행된다() async {
+	func version과_doctor_요청이_필요한_환경으로_실행된다() async {
 		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
 			.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data(
@@ -198,17 +198,20 @@ struct XcodeBuildMCPDoctorReporterTests {
 
 		#expect(requests.map(\.arguments) == [
 			["xcodebuildmcp", "--version"],
-			["xcodebuildmcp", "doctor", "--output", "json"]
+			["xcodebuildmcp", "doctor", "doctor", "--output", "json"]
 		])
 		#expect(requests.allSatisfy {
 			$0.executableURL == URL(fileURLWithPath: "/usr/bin/env")
 		})
-		#expect(requests.allSatisfy {
-			$0.environment == [
-				"PATH": "/usr/bin:/bin",
-				"DEVELOPER_DIR": "/Applications/Xcode.app"
-			]
-		})
+		#expect(requests[0].environment == [
+			"PATH": "/usr/bin:/bin",
+			"DEVELOPER_DIR": "/Applications/Xcode.app"
+		])
+		#expect(requests[1].environment == [
+			"PATH": "/usr/bin:/bin",
+			"DEVELOPER_DIR": "/Applications/Xcode.app",
+			"XCODEBUILDMCP_DEBUG": "true"
+		])
 	}
 
 	// 기본 FoundationProcessRunner를 사용하는 reporter를 구성합니다.
