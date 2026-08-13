@@ -13,7 +13,7 @@ import QALenzCore
 package enum CLIApplication {
 	// CLI 인수를 실행해 프로세스 결과를 만듭니다.
 	package static func execute(arguments: [String]) async -> CLIProcessResult {
-		let format = CLIOutputFormat.requested(in: arguments)
+		let format = usageErrorOutputFormat(in: arguments)
 
 		do {
 			let parsedCommand = try RootCommand.parseAsRoot(arguments)
@@ -42,9 +42,7 @@ package enum CLIApplication {
 		command: DoctorCommand
 	) -> CLIOutputFormat {
 		guard let commandName = DoctorCommand.configuration.commandName,
-			let commandIndex = arguments.firstIndex(
-				of: commandName
-			) else {
+			let commandIndex = arguments.firstIndex(of: commandName) else {
 			return command.options.output
 		}
 
@@ -56,6 +54,44 @@ package enum CLIApplication {
 		}
 
 		return CLIOutputFormat.requested(in: Array(arguments[..<commandIndex]))
+	}
+
+	// doctor 사용 오류에서 root와 하위 명령 옵션의 우선순위를 반환합니다.
+	private static func usageErrorOutputFormat(in arguments: [String]) -> CLIOutputFormat {
+		let parsingArguments = arguments.prefix { $0 != "--" }
+		guard let commandName = DoctorCommand.configuration.commandName else {
+			return CLIOutputFormat.requested(in: arguments)
+		}
+		var index = parsingArguments.startIndex
+
+		while index != parsingArguments.endIndex {
+			let argument = parsingArguments[index]
+
+			if argument == "--output" {
+				let valueIndex = parsingArguments.index(after: index)
+				guard parsingArguments.indices.contains(valueIndex) else {
+					return CLIOutputFormat.requested(in: arguments)
+				}
+
+				index = parsingArguments.index(after: valueIndex)
+				continue
+			}
+
+			if argument.hasPrefix("--output=") {
+				index = parsingArguments.index(after: index)
+				continue
+			}
+
+			guard argument == commandName else {
+				return CLIOutputFormat.requested(in: arguments)
+			}
+
+			let commandArguments = parsingArguments.suffix(from: parsingArguments.index(after: index))
+
+			return explicitOutputFormat(in: commandArguments) ?? CLIOutputFormat.requested(in: Array(parsingArguments[..<index]))
+		}
+
+		return CLIOutputFormat.requested(in: arguments)
 	}
 
 	// DoctorReport를 요청한 출력 형식의 프로세스 결과로 변환합니다.
@@ -133,6 +169,30 @@ package enum CLIApplication {
 		}
 
 		return false
+	}
+
+	// 인수 구간에 유효한 출력 옵션이 명시됐으면 반환합니다.
+	private static func explicitOutputFormat(in arguments: ArraySlice<String>) -> CLIOutputFormat? {
+		for index in arguments.indices {
+			let argument = arguments[index]
+
+			if argument.hasPrefix("--output=") {
+				return .init(rawValue: String(argument.dropFirst("--output=".count)))
+			}
+
+			guard argument == "--output" else {
+				continue
+			}
+
+			let valueIndex = arguments.index(after: index)
+			guard arguments.indices.contains(valueIndex) else {
+				return nil
+			}
+
+			return .init(rawValue: arguments[valueIndex])
+		}
+
+		return nil
 	}
 
 	// CLIUsageError를 JSON 프로세스 결과로 변환합니다.

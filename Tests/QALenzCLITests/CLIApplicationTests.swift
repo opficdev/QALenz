@@ -73,6 +73,72 @@ struct CLIApplicationTests {
 		#expect(error.usage.contains("qalenz doctor"))
 	}
 
+	// doctor의 text 출력 옵션이 root JSON보다 사용 오류에서 우선하는지 검증합니다.
+	@Test
+	func doctor_text_출력_옵션이_사용_오류에서_루트_JSON보다_우선한다() async throws {
+		let result = await CLIApplication.execute(
+			arguments: [
+				"--output", "json", "doctor", "--output", "text", "--unknown"
+			]
+		)
+		let error = try #require(result.standardError)
+
+		#expect(result.exitStatus == .usageError)
+		#expect(error.contains("Unknown option '--unknown'"))
+		#expect(result.standardOutput == nil)
+		#expect(throws: DecodingError.self) {
+			try JSONDecoder().decode(CLIUsageError.self, from: Data(error.utf8))
+		}
+	}
+
+	// doctor의 JSON 출력 옵션이 root text보다 사용 오류에서 우선하는지 검증합니다.
+	@Test
+	func doctor_JSON_출력_옵션이_사용_오류에서_루트_text보다_우선한다() async throws {
+		let result = await CLIApplication.execute(
+			arguments: [
+				"--output", "text", "doctor", "--output", "json", "--unknown"
+			]
+		)
+		let data = try #require(result.standardError?.data(using: .utf8))
+		let error = try JSONDecoder().decode(CLIUsageError.self, from: data)
+
+		#expect(result.exitStatus == .usageError)
+		#expect(error.usage == "qalenz doctor [--output <output>]")
+		#expect(result.standardOutput == nil)
+	}
+
+	// 알 수 없는 루트 명령의 앞선 JSON 옵션을 사용 오류에 보존하는지 검증합니다.
+	@Test
+	func 알_수_없는_루트_명령의_앞선_JSON_옵션을_사용_오류에_보존한다() async throws {
+		let result = await CLIApplication.execute(
+			arguments: [
+				"--output", "json", "unknown", "doctor", "--output", "text"
+			]
+		)
+		let data = try #require(result.standardError?.data(using: .utf8))
+		let error = try JSONDecoder().decode(CLIUsageError.self, from: data)
+
+		#expect(result.exitStatus == .usageError)
+		#expect(error.message.contains("unknown"))
+		#expect(result.standardOutput == nil)
+	}
+
+	// 알 수 없는 루트 명령 뒤의 JSON 옵션을 사용 오류에 보존하는지 검증합니다.
+	@Test
+	func 알_수_없는_루트_명령_뒤의_JSON_옵션을_사용_오류에_보존한다() async throws {
+		let result = await CLIApplication.execute(
+			arguments: [
+				"--output", "text", "unknown", "doctor", "--output", "json"
+			]
+		)
+		let data = try #require(result.standardError?.data(using: .utf8))
+		let error = try JSONDecoder().decode(CLIUsageError.self, from: data)
+
+		#expect(result.exitStatus == .usageError)
+		#expect(error.message.contains("unknown"))
+		#expect(result.standardOutput == nil)
+	}
+
 	@Test
 	func CLIUsageError의_RunResult가_errored가_아니면_디코딩을_거부한다() {
 		let json = """
