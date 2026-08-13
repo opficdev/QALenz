@@ -11,9 +11,23 @@ import Foundation
 // Foundation Process로 외부 command를 실행하고 취소 및 시간 제한 시 종료합니다.
 package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable {
 	private static let terminationGracePeriod = Duration.milliseconds(100)
+	private static let maximumBufferedStandardOutputChunkCount = 4
+	private static let maximumStandardOutputChunkByteCount = 16 * 1024
 
-	// Foundation Process 실행기를 구성합니다.
-	package init() {}
+	private let maximumBufferedStandardOutputChunkCount: Int
+
+	// 기본 표준 출력 대기열 상한으로 Foundation Process 실행기를 구성합니다.
+	package convenience init() {
+		self.init(
+			maximumBufferedStandardOutputChunkCount: Self.maximumBufferedStandardOutputChunkCount
+		)
+	}
+
+	// 지정한 표준 출력 대기열 상한으로 Foundation Process 실행기를 구성합니다.
+	package init(maximumBufferedStandardOutputChunkCount: Int) {
+		precondition(0 < maximumBufferedStandardOutputChunkCount)
+		self.maximumBufferedStandardOutputChunkCount = maximumBufferedStandardOutputChunkCount
+	}
 
 	// process를 실행하고 표준 출력과 종료 상태를 반환합니다.
 	package func run(_ request: ProcessRequest) async throws -> ProcessResult {
@@ -71,59 +85,73 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 	}
 
 	// process의 표준 출력 조각을 종료 전부터 순서대로 반환합니다.
-	package func events(for request: ProcessRequest) -> AsyncThrowingStream<ProcessEvent, any Error> {
-		.init { continuation in
-			let process = Process()
-			let processBox = ProcessBox(process: process)
-			let termination = ProcessTerminationObserver(process: process)
-			let output = Pipe()
-			let emitter = ProcessEventEmitter(continuation: continuation)
-
-			process.executableURL = request.executableURL
-			process.arguments = request.arguments
-			process.currentDirectoryURL = request.workingDirectoryURL
-			process.environment = request.environment
-			process.standardOutput = output
-			process.standardError = FileHandle.nullDevice
-			output.fileHandleForReading.readabilityHandler = { handle in
-				emitter.emitAvailableData(from: handle)
-			}
-
-			let task = Task {
-				do {
-					try Task.checkCancellation()
-					try validateLaunchRequest(request)
-
-					do {
-						try process.run()
-					} catch {
-						throw preflightError(for: request) ?? .failedToLaunch
-					}
-
-					guard !Task.isCancelled else {
-						processBox.forceTerminate()
-						throw CancellationError()
-					}
-
-					try await waitForTermination(
-						processBox,
-						termination: termination,
-						timeout: request.timeout
-					)
-					output.fileHandleForReading.readabilityHandler = nil
-					emitter.finish(standardOutputHandle: output.fileHandleForReading, terminationStatus: process.terminationStatus)
-					try? output.fileHandleForReading.close()
-				} catch {
-					output.fileHandleForReading.readabilityHandler = nil
-					emitter.finish(throwing: error)
-				}
-			}
-
-			continuation.onTermination = { @Sendable _ in
-				task.cancel()
+	package func events(for request: ProcessRequest) -> ProcessEventStream {
+		let output = Pipe()
+		let process = makeProcess(for: request, standardOutput: output)
+		let processBox = ProcessBox(process: process)
+		let taskBox = ProcessEventTaskBox()
+		let termination = ProcessTerminationObserver(process: process)
+		let (stream, continuation) = ProcessEventStream.makeStream(
+			maximumBufferedEventCount: maximumBufferedStandardOutputChunkCount,
+			onTermination: {
+				taskBox.cancel()
 				processBox.forceTerminate()
 			}
+		)
+		let emitter = ProcessEventEmitter(
+			continuation: continuation,
+			standardOutputHandle: output.fileHandleForReading,
+			maximumStandardOutputChunkByteCount: Self.maximumStandardOutputChunkByteCount
+		)
+
+		emitter.start()
+
+		let task = Task {
+			defer { taskBox.finish() }
+
+			do {
+				try Task.checkCancellation()
+				try validateLaunchRequest(request)
+
+				do {
+					try process.run()
+				} catch {
+					throw preflightError(for: request) ?? .failedToLaunch
+				}
+
+				guard !Task.isCancelled else {
+					processBox.forceTerminate()
+					throw CancellationError()
+				}
+
+				try await waitForTermination(
+					processBox,
+					termination: termination,
+					timeout: request.timeout
+				)
+				await emitter.finish(terminationStatus: process.terminationStatus)
+				try? output.fileHandleForReading.close()
+			} catch {
+				await emitter.finish(throwing: error)
+				try? output.fileHandleForReading.close()
+			}
 		}
+		taskBox.store(task)
+
+		return stream
+	}
+
+	// 실행 요청과 표준 출력을 Foundation Process에 연결합니다.
+	private func makeProcess(for request: ProcessRequest, standardOutput: Pipe) -> Process {
+		let process = Process()
+		process.executableURL = request.executableURL
+		process.arguments = request.arguments
+		process.currentDirectoryURL = request.workingDirectoryURL
+		process.environment = request.environment
+		process.standardOutput = standardOutput
+		process.standardError = FileHandle.nullDevice
+
+		return process
 	}
 
 	// 실행 요청이 시작 가능한 경로를 가지는지 검증합니다.
@@ -209,57 +237,6 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 			throw ProcessRunnerError.timedOut
 		case .cancelled:
 			throw CancellationError()
-		}
-	}
-}
-
-// 표준 출력 읽기와 process 사건 완료 순서를 직렬화합니다.
-private final class ProcessEventEmitter: @unchecked Sendable {
-	private let continuation: AsyncThrowingStream<ProcessEvent, any Error>.Continuation
-	private let queue = DispatchQueue(label: "QALenz.FoundationProcessRunner.ProcessEventEmitter")
-	private var isFinished = false
-
-	// 사건을 전달할 stream continuation을 보관합니다.
-	init(continuation: AsyncThrowingStream<ProcessEvent, any Error>.Continuation) {
-		self.continuation = continuation
-	}
-
-	// 현재 읽을 수 있는 표준 출력 조각을 전달합니다.
-	func emitAvailableData(from handle: FileHandle) {
-		queue.sync {
-			guard !isFinished else { return }
-
-			let data = handle.availableData
-			guard !data.isEmpty else { return }
-
-			continuation.yield(.standardOutput(data))
-		}
-	}
-
-	// 수신한 표준 출력 뒤 종료 상태를 전달하고 stream을 완료합니다.
-	func finish(
-		standardOutputHandle handle: FileHandle,
-		terminationStatus: Int32
-	) {
-		queue.sync {
-			guard !isFinished else { return }
-			isFinished = true
-
-			let data = StandardOutputDrainer.drainBufferedData(from: handle)
-			if !data.isEmpty {
-				continuation.yield(.standardOutput(data))
-			}
-			continuation.yield(.terminated(terminationStatus))
-			continuation.finish()
-		}
-	}
-
-	// 원본 오류로 stream을 종료합니다.
-	func finish(throwing error: any Error) {
-		queue.sync {
-			guard !isFinished else { return }
-			isFinished = true
-			continuation.finish(throwing: error)
 		}
 	}
 }
