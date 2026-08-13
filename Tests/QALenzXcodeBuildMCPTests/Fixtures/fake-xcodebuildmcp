@@ -1,0 +1,61 @@
+#!/bin/sh
+
+workflow="$1"
+tool="$2"
+shift 2
+
+output=""
+scheme=""
+project_path=""
+
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		--output)
+			output="$2"
+			shift 2
+			;;
+		--scheme)
+			scheme="$2"
+			shift 2
+			;;
+		--project-path)
+			project_path="$2"
+			shift 2
+			;;
+		*)
+			shift
+			;;
+	esac
+done
+
+if [ "$scheme" = "failure" ]; then
+	printf '%s' 'secret-token-value' >&2
+	exit 1
+fi
+
+case "$workflow:$tool:$output" in
+	simulator:list:json)
+		printf '%s\n' '{"schema":"xcodebuildmcp.output.simulator-list","schemaVersion":"2","didError":false,"error":null,"data":{"simulators":[{"name":"Fixture Phone","simulatorId":"fixture-id","state":"Booted","isAvailable":true,"runtime":"iOS 26.0","secretToken":"secret-token-value"}]}}'
+		;;
+	simulator:build:json)
+		printf '%s\n' '{"schema":"xcodebuildmcp.output.build-result","schemaVersion":"3","didError":false,"error":null,"data":{"summary":{"status":"SUCCEEDED","durationMs":1,"target":"simulator"},"artifacts":{"appPath":"/tmp/Fixture.app"},"diagnostics":{"warnings":[],"errors":[]}}}'
+		;;
+	simulator:build:jsonl)
+		if [ "$scheme" = "streaming" ]; then
+			printf '%s\n' '{"event":"build-result.invocation","operation":"BUILD"}'
+			attempt=0
+			while [ ! -f "$project_path" ] && [ "$attempt" -lt 40 ]; do
+				/bin/sleep 0.05
+				attempt=$((attempt + 1))
+			done
+			if [ ! -f "$project_path" ]; then
+				printf '%s\n' '{"event":"build-result.build-summary","operation":"BUILD","status":"FAILED"}'
+				exit 0
+			fi
+		fi
+		printf '%s\n' '{"event":"build-result.build-summary","operation":"BUILD","status":"SUCCEEDED"}'
+		;;
+	*)
+		exit 64
+		;;
+esac

@@ -50,9 +50,7 @@ package enum RunResult: Codable, Sendable, Equatable {
 	}
 
 	// 성공 및 실패 결과에 오류가 없는지 검증합니다.
-	private static func ensureErrorIsAbsent(
-		in container: KeyedDecodingContainer<CodingKeys>
-	) throws {
+	private static func ensureErrorIsAbsent(in container: KeyedDecodingContainer<CodingKeys>) throws {
 		guard !container.contains(.error) else {
 			throw DecodingError.dataCorruptedError(
 				forKey: .error,

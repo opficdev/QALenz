@@ -4,6 +4,9 @@ import PackageDescription
 
 let package = Package(
 	name: "QALenz",
+	platforms: [
+		.macOS(.v14),
+	],
 	products: [
 		.library(name: "QALenzCore", targets: ["QALenzCore"]),
 		.executable(name: "qalenz", targets: ["QALenzCLIExecutable"]),
@@ -18,6 +21,11 @@ let package = Package(
 		.target(
 			name: "QALenzCore",
 			path: "Sources/Core"
+		),
+		.target(
+			name: "QALenzXcodeBuildMCP",
+			dependencies: ["QALenzCore"],
+			path: "Sources/XcodeBuildMCP"
 		),
 		.target(
 			name: "QALenzCLI",
@@ -38,6 +46,11 @@ let package = Package(
 		.testTarget(
 			name: "QALenzCoreTests",
 			dependencies: ["QALenzCore"]
+		),
+		.testTarget(
+			name: "QALenzXcodeBuildMCPTests",
+			dependencies: ["QALenzXcodeBuildMCP", "QALenzCore"],
+			resources: [.copy("Fixtures/fake-xcodebuildmcp")]
 		),
 		.testTarget(
 			name: "QALenzCLITests",
