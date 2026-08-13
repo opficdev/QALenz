@@ -201,11 +201,17 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 					kind: .execution,
 					code: "execution.timeout"
 				)
-			case .failedToLaunch:
+			case .executableUnavailable:
 				return failureError(
 					operation: operation,
 					kind: .adapter,
 					code: "adapter.xcodebuildmcp.unavailable"
+				)
+			case .invalidWorkingDirectory, .failedToLaunch:
+				return failureError(
+					operation: operation,
+					kind: .adapter,
+					code: "adapter.xcodebuildmcp.process.failed"
 				)
 			}
 		}

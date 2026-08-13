@@ -44,13 +44,43 @@ struct XcodeBuildMCPCLIAdapterAvailabilityTests {
 		}
 	}
 
-	// CLI가 없는 PATH를 사용하는 adapter를 생성합니다.
+	// 잘못된 working directory의 일반 실행이 process 실패 오류로 정규화되는지 검증합니다.
+	@Test
+	func 잘못된_작업_경로의_일반_실행이_process_실패로_정규화된다() async throws {
+		let adapter = makeAdapter(workingDirectoryURL: makeMissingDirectoryURL())
+
+		let result = await adapter.execute(.init(operation: discoverSimulatorsOperation))
+		let error = try runError(from: result)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.process.failed")
+	}
+
+	// 잘못된 working directory의 사건 실행이 process 실패 오류로 정규화되는지 검증합니다.
+	@Test
+	func 잘못된_작업_경로의_사건_실행이_process_실패로_정규화된다() async throws {
+		let adapter = makeAdapter(workingDirectoryURL: makeMissingDirectoryURL())
+
+		do {
+			for try await _ in adapter.events(for: .init(operation: buildSimulatorOperation)) {}
+			Issue.record("process 실패 오류가 반환되지 않음")
+		} catch let error as RunError {
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.process.failed")
+		}
+	}
+
+	// 지정한 작업 경로와 CLI가 없는 PATH를 사용하는 adapter를 생성합니다.
 	private func makeAdapter(workingDirectoryURL: URL) -> XcodeBuildMCPCLIAdapter {
 		.init(
 			workingDirectoryURL: workingDirectoryURL,
 			environment: ["PATH": workingDirectoryURL.path],
 			timeout: .seconds(1)
 		)
+	}
+
+	// 존재하지 않는 시험 전용 작업 경로를 생성합니다.
+	private func makeMissingDirectoryURL() -> URL {
+		FileManager.default.temporaryDirectory
+			.appendingPathComponent(UUID().uuidString, isDirectory: true)
 	}
 
 	// 실행 결과에서 정규화된 오류를 꺼냅니다.

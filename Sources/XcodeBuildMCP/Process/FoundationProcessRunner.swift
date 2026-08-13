@@ -20,6 +20,7 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 		guard !Task.isCancelled else {
 			throw CancellationError()
 		}
+		try validateLaunchRequest(request)
 
 		let process = Process()
 		let processBox = ProcessBox(process: process)
@@ -48,7 +49,7 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 			try process.run()
 		} catch {
 			output.fileHandleForReading.readabilityHandler = nil
-			throw ProcessRunnerError.failedToLaunch
+			throw preflightError(for: request) ?? .failedToLaunch
 		}
 
 		guard !Task.isCancelled else {
@@ -101,11 +102,12 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 					guard !Task.isCancelled else {
 						throw CancellationError()
 					}
+					try validateLaunchRequest(request)
 
 					do {
 						try process.run()
 					} catch {
-						throw ProcessRunnerError.failedToLaunch
+						throw preflightError(for: request) ?? .failedToLaunch
 					}
 
 					guard !Task.isCancelled else {
@@ -134,6 +136,30 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 				processBox.forceTerminate()
 			}
 		}
+	}
+
+	// 실행 요청이 시작 가능한 경로를 가지는지 검증합니다.
+	private func validateLaunchRequest(_ request: ProcessRequest) throws {
+		if let error = preflightError(for: request) {
+			throw error
+		}
+	}
+
+	// 실행 파일과 작업 경로의 시작 가능 여부를 반환합니다.
+	private func preflightError(for request: ProcessRequest) -> ProcessRunnerError? {
+		guard FileManager.default.isExecutableFile(atPath: request.executableURL.path) else {
+			return .executableUnavailable
+		}
+
+		var isDirectory = ObjCBool(false)
+		guard FileManager.default.fileExists(
+			atPath: request.workingDirectoryURL.path,
+			isDirectory: &isDirectory
+		), isDirectory.boolValue else {
+			return .invalidWorkingDirectory
+		}
+
+		return nil
 	}
 
 	// 종료, 시간 제한 및 취소 중 먼저 발생한 상태를 처리합니다.
