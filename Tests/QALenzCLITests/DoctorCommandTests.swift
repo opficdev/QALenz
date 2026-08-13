@@ -1,5 +1,5 @@
 //
-//  QALenzDoctorCommandTests.swift
+//  DoctorCommandTests.swift
 //  QALenz
 //
 //  Created by opfic on 8/13/26.
@@ -12,7 +12,7 @@ import Testing
 
 // qalenz doctor 명령의 출력과 종료 상태 연결을 검증합니다.
 @Suite
-struct QALenzDoctorCommandTests {
+struct DoctorCommandTests {
 	// text 출력에서 진단 상태와 안내를 보존하는지 검증합니다.
 	@Test
 	func text_출력이_진단_상태와_안내를_보존한다() async throws {
@@ -80,8 +80,8 @@ struct QALenzDoctorCommandTests {
 	// 하위 명령과 출력 옵션을 해석하는지 검증합니다.
 	@Test
 	func doctor_하위_명령과_JSON_출력_옵션을_해석한다() throws {
-		let command = try QALenzRootCommand.parseAsRoot(["doctor", "--output", "json"])
-		let doctor = try #require(command as? QALenzDoctorCommand)
+		let command = try RootCommand.parseAsRoot(["doctor", "--output", "json"])
+		let doctor = try #require(command as? DoctorCommand)
 
 		#expect(doctor.options.output == .json)
 	}
@@ -92,7 +92,7 @@ struct QALenzDoctorCommandTests {
 		environmentDiagnostics: [DoctorDiagnostic],
 		xcodeBuildMCPDiagnostics: [DoctorDiagnostic]
 	) async -> CLIProcessResult {
-		await QALenzDoctorCommand().execute(
+		await DoctorCommand().execute(
 			format: format,
 			environmentProvider: DoctorEnvironmentProviderSpy(
 				diagnostics: environmentDiagnostics

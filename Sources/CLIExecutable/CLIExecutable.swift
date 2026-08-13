@@ -1,5 +1,5 @@
 //
-//  QALenzCLIExecutable.swift
+//  CLIExecutable.swift
 //  QALenz
 //
 //  Created by opfic on 8/12/26.
@@ -11,10 +11,10 @@ import QALenzCLI
 
 @main
 // qalenz 실행 파일의 진입점을 제공합니다.
-enum QALenzCLIExecutable {
+enum CLIExecutable {
 	// CLI 인수를 실행하고 출력과 종료 상태를 전달합니다.
 	static func main() async {
-		let result = await QALenzCLIApplication.execute(
+		let result = await CLIApplication.execute(
 			arguments: Array(CommandLine.arguments.dropFirst())
 		)
 

@@ -1,5 +1,5 @@
 //
-//  QALenzCLIApplication.swift
+//  CLIApplication.swift
 //  QALenz
 //
 //  Created by opfic on 8/12/26.
@@ -10,15 +10,15 @@ import Foundation
 import QALenzCore
 
 // CLI 인수를 처리해 프로세스 결과로 변환합니다.
-package enum QALenzCLIApplication {
+package enum CLIApplication {
 	// CLI 인수를 실행해 프로세스 결과를 만듭니다.
 	package static func execute(arguments: [String]) async -> CLIProcessResult {
 		let format = CLIOutputFormat.requested(in: arguments)
 
 		do {
-			let parsedCommand = try QALenzRootCommand.parseAsRoot(arguments)
+			let parsedCommand = try RootCommand.parseAsRoot(arguments)
 
-			if let doctorCommand = parsedCommand as? QALenzDoctorCommand {
+			if let doctorCommand = parsedCommand as? DoctorCommand {
 				return await doctorCommand.execute(format: format)
 			}
 
@@ -53,24 +53,24 @@ package enum QALenzCLIApplication {
 		for error: any Error,
 		format: CLIOutputFormat
 	) -> CLIProcessResult {
-		guard QALenzRootCommand.exitCode(for: error) != .success else {
+		guard RootCommand.exitCode(for: error) != .success else {
 			return .init(
-				standardOutput: QALenzRootCommand.fullMessage(for: error),
+				standardOutput: RootCommand.fullMessage(for: error),
 				standardError: nil,
 				exitStatus: .success
 			)
 		}
 
 		let usageError = CLIUsageError(
-			message: QALenzRootCommand.message(for: error),
-			usage: QALenzRootCommand.usageString(for: QALenzRootCommand.self)
+			message: RootCommand.message(for: error),
+			usage: RootCommand.usageString(for: RootCommand.self)
 		)
 
 		switch format {
 		case .text:
 			return .init(
 				standardOutput: nil,
-				standardError: QALenzRootCommand.fullMessage(for: error),
+				standardError: RootCommand.fullMessage(for: error),
 				exitStatus: .usageError
 			)
 		case .json:

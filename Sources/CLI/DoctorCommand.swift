@@ -1,5 +1,5 @@
 //
-//  QALenzDoctorCommand.swift
+//  DoctorCommand.swift
 //  QALenz
 //
 //  Created by opfic on 8/13/26.
@@ -11,7 +11,7 @@ import QALenzCore
 import QALenzXcodeBuildMCP
 
 // 실행 환경 진단을 제공하는 qalenz 하위 명령을 정의합니다.
-package struct QALenzDoctorCommand: ParsableCommand {
+package struct DoctorCommand: ParsableCommand {
 	package static let configuration = CommandConfiguration(
 		commandName: "doctor",
 		abstract: "실행 환경과 XcodeBuildMCP 호환성을 진단합니다."
@@ -61,6 +61,6 @@ package struct QALenzDoctorCommand: ParsableCommand {
 		)
 		let report = await doctor.diagnose()
 
-		return QALenzCLIApplication.result(for: report, format: format)
+		return CLIApplication.result(for: report, format: format)
 	}
 }
