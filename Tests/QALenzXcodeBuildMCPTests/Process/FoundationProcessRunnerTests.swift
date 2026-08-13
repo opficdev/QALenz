@@ -5,6 +5,7 @@
 //  Created by opfic on 8/13/26.
 //
 
+import Darwin
 import Foundation
 import Testing
 @testable import QALenzXcodeBuildMCP
@@ -67,6 +68,41 @@ struct FoundationProcessRunnerTests {
 		}
 
 		#expect(Date().timeIntervalSince(start) < 5)
+	}
+
+	// 시간 제한 오류가 하위 process의 stdout EOF를 기다리지 않고 반환되는지 검증합니다.
+	@Test
+	func 시간_제한_경로가_하위_process의_stdout_EOF를_기다리지_않는다() async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		let pidURL = directory.appendingPathComponent("child.pid")
+		defer { terminateProcess(at: pidURL) }
+		let executableURL = try makeExecutable(
+			in: directory,
+			script: """
+			#!/bin/sh
+			/bin/sh -c 'trap "" TERM; /bin/sleep 3' &
+			printf '%s' "$!" > "\(pidURL.path)"
+			wait
+			"""
+		)
+		let runner = FoundationProcessRunner()
+		let start = Date()
+
+		do {
+			_ = try await runner.run(.init(
+				executableURL: executableURL,
+				arguments: [],
+				workingDirectoryURL: directory,
+				environment: [:],
+				timeout: .milliseconds(500)
+			))
+			Issue.record("시간 제한 오류가 반환되지 않음")
+		} catch let error as ProcessRunnerError {
+			#expect(error == .timedOut)
+		}
+
+		#expect(Date().timeIntervalSince(start) < 1.5)
 	}
 
 	// 종료 요청을 무시하는 가짜 실행 파일도 유예 시간 뒤 강제 종료하는지 검증합니다.
@@ -157,5 +193,15 @@ struct FoundationProcessRunnerTests {
 		)
 
 		return executableURL
+	}
+
+	// PID 파일이 가리키는 하위 process를 정리합니다.
+	private func terminateProcess(at url: URL) {
+		guard
+			let contents = try? String(contentsOf: url, encoding: .utf8),
+			let pid = Int32(contents)
+		else { return }
+
+		_ = kill(pid, SIGKILL)
 	}
 }

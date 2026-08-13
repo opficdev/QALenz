@@ -64,7 +64,7 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 			)
 		} catch {
 			output.fileHandleForReading.readabilityHandler = nil
-			collector.append(output.fileHandleForReading.readDataToEndOfFile())
+			try? output.fileHandleForReading.close()
 			throw error
 		}
 
