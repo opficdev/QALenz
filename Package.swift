@@ -20,7 +20,8 @@ let package = Package(
 	targets: [
 		.target(
 			name: "QALenzCore",
-			path: "Sources/Core"
+			path: "Sources/Core",
+			resources: [.copy("Resources/Schemas/qalenz-config.schema.json")]
 		),
 		.target(
 			name: "QALenzXcodeBuildMCP",

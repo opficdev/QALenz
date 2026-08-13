@@ -169,7 +169,16 @@ package struct QALenzConfigurationDecoder: Sendable {
 }
 
 // JSONDecoder가 해석할 config 파일의 원본 구조를 표현합니다.
-private struct QALenzConfigurationDocument: Decodable {
+package struct QALenzConfigurationDocument: Decodable {
+	package static let requiredKeyNames = [
+		"schemaVersion",
+		"projectRoot",
+		"xcodeBuildMCPProfile",
+		"scenariosDirectory"
+	]
+
+	package static let keyNames = requiredKeyNames + ["outputDirectory"]
+
 	let schemaVersion: Int
 	let projectRoot: String
 	let xcodeBuildMCPProfile: String
