@@ -18,6 +18,12 @@ package struct DoctorReport: Codable, Sendable, Equatable {
 		} ? .failed : .passed
 	}
 
+	// 실행 오류와 진단 항목으로 오류 보고서를 초기화합니다.
+	package init(diagnostics: [DoctorDiagnostic], error: RunError) {
+		self.diagnostics = diagnostics
+		result = .errored(error)
+	}
+
 	// 디코더에서 진단 항목과 일치하는 최종 결과를 복원합니다.
 	package init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -26,17 +32,22 @@ package struct DoctorReport: Codable, Sendable, Equatable {
 			forKey: .diagnostics
 		)
 		let decodedResult = try container.decode(RunResult.self, forKey: .result)
-		let report = Self(diagnostics: diagnostics)
+		switch decodedResult {
+		case let .errored(error):
+			self.init(diagnostics: diagnostics, error: error)
+		case .passed, .failed:
+			let report = Self(diagnostics: diagnostics)
 
-		guard decodedResult == report.result else {
-			throw DecodingError.dataCorruptedError(
-				forKey: .result,
-				in: container,
-				debugDescription: "The result must match the diagnostics."
-			)
+			guard decodedResult == report.result else {
+				throw DecodingError.dataCorruptedError(
+					forKey: .result,
+					in: container,
+					debugDescription: "The result must match the diagnostics."
+				)
+			}
+
+			self = report
 		}
-
-		self = report
 	}
 
 	// 인코더에 진단 항목과 계산된 최종 결과를 기록합니다.

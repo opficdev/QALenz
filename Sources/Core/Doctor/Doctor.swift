@@ -14,7 +14,7 @@ package protocol DoctorEnvironmentProviding: Sendable {
 // XcodeBuildMCP 호환성 검사 결과를 제공하는 계약입니다.
 package protocol XcodeBuildMCPDoctorReporting: Sendable {
 	// XcodeBuildMCP의 검사 항목을 반환합니다.
-	func diagnoseXcodeBuildMCP() async -> [DoctorDiagnostic]
+	func diagnoseXcodeBuildMCP() async throws -> [DoctorDiagnostic]
 }
 
 // 환경과 XcodeBuildMCP 검사 결과를 단일 보고서로 조합합니다.
@@ -34,10 +34,23 @@ package struct Doctor: Sendable {
 	// 제공자의 검사 항목을 순서대로 조합한 보고서를 반환합니다.
 	package func diagnose() async -> DoctorReport {
 		let environmentDiagnostics = await environmentProvider.diagnoseEnvironment()
-		let xcodeBuildMCPDiagnostics = await xcodeBuildMCPReporter.diagnoseXcodeBuildMCP()
 
-		return .init(
-			diagnostics: environmentDiagnostics + xcodeBuildMCPDiagnostics
-		)
+		do {
+			let xcodeBuildMCPDiagnostics = try await xcodeBuildMCPReporter.diagnoseXcodeBuildMCP()
+
+			return .init(
+				diagnostics: environmentDiagnostics + xcodeBuildMCPDiagnostics
+			)
+		} catch let error as RunError {
+			return .init(diagnostics: environmentDiagnostics, error: error)
+		} catch {
+			return .init(
+				diagnostics: environmentDiagnostics,
+				error: .init(
+					kind: .adapter,
+					code: .init(rawValue: "adapter.xcodebuildmcp.doctor.failed")
+				)
+			)
+		}
 	}
 }

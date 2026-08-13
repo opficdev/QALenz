@@ -142,6 +142,31 @@ struct DoctorTests {
 		#expect(report.diagnostics.first?.status == .missing)
 	}
 
+	// XcodeBuildMCP 실행 오류를 오류 보고서와 분리하는지 검증합니다.
+	@Test
+	func XcodeBuildMCP_실행_오류를_오류_보고서로_반환한다() async {
+		let error = RunError(
+			kind: .execution,
+			code: .init(rawValue: "execution.timeout")
+		)
+		let doctor = Doctor(
+			environmentProvider: DoctorEnvironmentProviderSpy(diagnostics: [
+				.diagnostic(
+					id: "macos",
+					requirement: .required,
+					status: .available,
+					message: "macOS 26.0"
+				)
+			]),
+			xcodeBuildMCPReporter: FailingXcodeBuildMCPDoctorReporterSpy(error: error)
+		)
+
+		let report = await doctor.diagnose()
+
+		#expect(report.result == .errored(error))
+		#expect(report.diagnostics.map(\.id.rawValue) == ["macos"])
+	}
+
 	// JSON 출력에 사용할 보고서의 구조화된 왕복 변환을 검증합니다.
 	@Test
 	func 보고서는_JSON_왕복_변환_후에도_같다() throws {
@@ -218,8 +243,18 @@ private struct XcodeBuildMCPDoctorReporterSpy: XcodeBuildMCPDoctorReporting {
 	}
 
 	// 고정된 XcodeBuildMCP 진단을 반환합니다.
-	func diagnoseXcodeBuildMCP() async -> [DoctorDiagnostic] {
+	func diagnoseXcodeBuildMCP() async throws -> [DoctorDiagnostic] {
 		sentDiagnostics
+	}
+}
+
+// 지정한 실행 오류를 반환하는 XcodeBuildMCP 진단 대역입니다.
+private struct FailingXcodeBuildMCPDoctorReporterSpy: XcodeBuildMCPDoctorReporting {
+	let error: RunError
+
+	// 지정한 실행 오류를 반환합니다.
+	func diagnoseXcodeBuildMCP() async throws -> [DoctorDiagnostic] {
+		throw error
 	}
 }
 

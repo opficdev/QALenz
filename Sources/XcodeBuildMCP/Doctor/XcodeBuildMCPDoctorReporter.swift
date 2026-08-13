@@ -84,20 +84,20 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 	}
 
 	// XcodeBuildMCP 실행 파일과 doctor 결과를 순서대로 진단합니다.
-	package func diagnoseXcodeBuildMCP() async -> [DoctorDiagnostic] {
-		let executableDiagnostic = await diagnoseExecutable()
+	package func diagnoseXcodeBuildMCP() async throws -> [DoctorDiagnostic] {
+		let executableDiagnostic = try await diagnoseExecutable()
 
 		guard executableDiagnostic.status == .available else {
 			return [executableDiagnostic]
 		}
 
-		let doctorDiagnostics = await diagnoseDoctorReport()
+		let doctorDiagnostics = try await diagnoseDoctorReport()
 
 		return [executableDiagnostic] + doctorDiagnostics
 	}
 
 	// PATH에서 실행 파일을 찾고 version 출력을 확인합니다.
-	private func diagnoseExecutable() async -> DoctorDiagnostic {
+	private func diagnoseExecutable() async throws -> DoctorDiagnostic {
 		do {
 			let result = try await run(arguments: ["xcodebuildmcp", "--version"])
 
@@ -110,23 +110,31 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 			}
 
 			return diagnostic(for: .executableAvailable(version))
-		} catch {
+		} catch let error as ProcessRunnerError where error == .executableUnavailable {
 			return diagnostic(for: .fixed(.executableMissing))
+		} catch {
+			throw runError(for: error)
 		}
 	}
 
 	// doctor의 구조화된 출력과 세부 check를 진단 항목으로 변환합니다.
-	private func diagnoseDoctorReport() async -> [DoctorDiagnostic] {
+	private func diagnoseDoctorReport() async throws -> [DoctorDiagnostic] {
+		let result: ProcessResult
+
 		do {
-			let result = try await run(
+			result = try await run(
 				arguments: ["xcodebuildmcp", "doctor", "doctor", "--output", "json"],
 				environment: Self.doctorEnvironment
 			)
+		} catch {
+			throw runError(for: error)
+		}
 
-			guard result.terminationStatus == 0 else {
-				return [diagnostic(for: .fixed(.doctorUnavailable))]
-			}
+		guard result.terminationStatus == 0 else {
+			return [diagnostic(for: .fixed(.doctorUnavailable))]
+		}
 
+		do {
 			let report = try JSONDecoder().decode(
 				XcodeBuildMCPDoctorReport.self,
 				from: result.standardOutput
@@ -151,6 +159,41 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 		} catch {
 			return [diagnostic(for: .fixed(.doctorOutputInvalid))]
 		}
+	}
+
+	// process 실행 오류를 원문 없이 공통 실행 오류로 변환합니다.
+	private func runError(for error: any Error) -> RunError {
+		if error is CancellationError {
+			return .init(
+				kind: .execution,
+				code: .init(rawValue: "execution.cancelled")
+			)
+		}
+
+		if let error = error as? ProcessRunnerError {
+			switch error {
+			case .timedOut:
+				return .init(
+					kind: .execution,
+					code: .init(rawValue: "execution.timeout")
+				)
+			case .executableUnavailable:
+				return .init(
+					kind: .adapter,
+					code: .init(rawValue: "adapter.xcodebuildmcp.unavailable")
+				)
+			case .invalidWorkingDirectory, .failedToLaunch:
+				return .init(
+					kind: .adapter,
+					code: .init(rawValue: "adapter.xcodebuildmcp.process.failed")
+				)
+			}
+		}
+
+		return .init(
+			kind: .adapter,
+			code: .init(rawValue: "adapter.xcodebuildmcp.process.failed")
+		)
 	}
 
 	// 허용 환경과 호출별 환경을 병합한 process 요청을 실행합니다.

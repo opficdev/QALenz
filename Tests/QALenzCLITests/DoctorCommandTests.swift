@@ -86,6 +86,23 @@ struct DoctorCommandTests {
 		#expect(doctor.options.output == .json)
 	}
 
+	// XcodeBuildMCP 실행 오류를 executionError 종료 상태로 연결하는지 검증합니다.
+	@Test
+	func XcodeBuildMCP_실행_오류를_executionError로_연결한다() async {
+		let result = await DoctorCommand().execute(
+			format: .json,
+			environmentProvider: DoctorEnvironmentProviderSpy(diagnostics: []),
+			xcodeBuildMCPReporter: FailingXcodeBuildMCPDoctorReporterSpy(
+				error: .init(
+					kind: .execution,
+					code: .init(rawValue: "execution.timeout")
+				)
+			)
+		)
+
+		#expect(result.exitStatus == .executionError)
+	}
+
 	// 가짜 제공자로 doctor 명령을 실행합니다.
 	private func execute(
 		format: CLIOutputFormat,
@@ -119,8 +136,18 @@ private struct XcodeBuildMCPDoctorReporterSpy: XcodeBuildMCPDoctorReporting {
 	let diagnostics: [DoctorDiagnostic]
 
 	// 고정된 XcodeBuildMCP 진단을 반환합니다.
-	func diagnoseXcodeBuildMCP() async -> [DoctorDiagnostic] {
+	func diagnoseXcodeBuildMCP() async throws -> [DoctorDiagnostic] {
 		diagnostics
+	}
+}
+
+// 지정한 실행 오류를 반환하는 XcodeBuildMCP 진단 대역입니다.
+private struct FailingXcodeBuildMCPDoctorReporterSpy: XcodeBuildMCPDoctorReporting {
+	let error: RunError
+
+	// 지정한 실행 오류를 반환합니다.
+	func diagnoseXcodeBuildMCP() async throws -> [DoctorDiagnostic] {
+		throw error
 	}
 }
 
