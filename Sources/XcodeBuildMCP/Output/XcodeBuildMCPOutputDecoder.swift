@@ -13,7 +13,7 @@ package struct XcodeBuildMCPOutputDecoder: Sendable {
 	private let outputDefinitions: [XcodeBuildMCPOperation: [String: OutputDefinition]]
 
 	// operation별 JSON schema와 payload 정의로 decoder를 구성합니다.
-	init(outputDefinitions: [XcodeBuildMCPOperation: [String: OutputDefinition]]) {
+	package init(outputDefinitions: [XcodeBuildMCPOperation: [String: OutputDefinition]]) {
 		self.outputDefinitions = outputDefinitions
 	}
 
