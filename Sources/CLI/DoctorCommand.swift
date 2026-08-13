@@ -35,6 +35,7 @@ package struct DoctorCommand: ParsableCommand {
 		let environment = ProcessInfo.processInfo.environment
 
 		return await execute(
+			format: format,
 			environmentProvider: SystemDoctorEnvironmentProvider(
 				workingDirectoryURL: workingDirectoryURL,
 				environment: environment,
