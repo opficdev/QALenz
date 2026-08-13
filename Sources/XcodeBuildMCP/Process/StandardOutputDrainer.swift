@@ -15,13 +15,23 @@ enum StandardOutputDrainer {
 
 	// 현재 읽을 수 있는 바이트 수를 고정한 뒤 해당 범위만 반환합니다.
 	static func drainBufferedData(from handle: FileHandle) -> Data {
+		readBufferedData(from: handle, maximumByteCount: .max)
+	}
+
+	// 현재 읽을 수 있는 출력 중 지정한 상한까지만 반환합니다.
+	static func readBufferedData(
+		from handle: FileHandle,
+		maximumByteCount: Int
+	) -> Data {
+		precondition(0 < maximumByteCount)
+
 		var availableByteCount = Int32.zero
 		guard
 			ioctl(handle.fileDescriptor, Self.bytesAvailableRequest, &availableByteCount) == 0,
 			0 < availableByteCount
 		else { return Data() }
 
-		let targetByteCount = Int(availableByteCount)
+		let targetByteCount = min(Int(availableByteCount), maximumByteCount)
 		var data = Data(count: targetByteCount)
 		var offset = 0
 
