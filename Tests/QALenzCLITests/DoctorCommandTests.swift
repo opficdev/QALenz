@@ -143,7 +143,7 @@ private struct DoctorEnvironmentProviderSpy: DoctorEnvironmentProviding {
 	let diagnostics: [DoctorDiagnostic]
 
 	// 고정된 환경 진단을 반환합니다.
-	func diagnoseEnvironment() async -> [DoctorDiagnostic] {
+	func diagnoseEnvironment() async throws -> [DoctorDiagnostic] {
 		diagnostics
 	}
 }

@@ -167,6 +167,24 @@ struct DoctorTests {
 		#expect(report.diagnostics.map(\.id.rawValue) == ["macos"])
 	}
 
+	// 환경 검사 실행 오류를 오류 보고서로 반환하는지 검증합니다.
+	@Test
+	func 환경_검사_실행_오류를_오류_보고서로_반환한다() async {
+		let error = RunError(
+			kind: .execution,
+			code: .init(rawValue: "execution.timeout")
+		)
+		let doctor = Doctor(
+			environmentProvider: FailingDoctorEnvironmentProviderSpy(error: error),
+			xcodeBuildMCPReporter: XcodeBuildMCPDoctorReporterSpy(diagnostics: [])
+		)
+
+		let report = await doctor.diagnose()
+
+		#expect(report.result == .errored(error))
+		#expect(report.diagnostics.isEmpty)
+	}
+
 	// JSON 출력에 사용할 보고서의 구조화된 왕복 변환을 검증합니다.
 	@Test
 	func 보고서는_JSON_왕복_변환_후에도_같다() throws {
@@ -228,8 +246,18 @@ private struct DoctorEnvironmentProviderSpy: DoctorEnvironmentProviding {
 	}
 
 	// 고정된 환경 진단을 반환합니다.
-	func diagnoseEnvironment() async -> [DoctorDiagnostic] {
+	func diagnoseEnvironment() async throws -> [DoctorDiagnostic] {
 		sentDiagnostics
+	}
+}
+
+// 지정한 실행 오류를 반환하는 환경 진단 대역입니다.
+private struct FailingDoctorEnvironmentProviderSpy: DoctorEnvironmentProviding {
+	let error: RunError
+
+	// 지정한 실행 오류를 반환합니다.
+	func diagnoseEnvironment() async throws -> [DoctorDiagnostic] {
+		throw error
 	}
 }
 

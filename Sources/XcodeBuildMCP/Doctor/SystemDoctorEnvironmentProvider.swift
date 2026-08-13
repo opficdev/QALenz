@@ -35,11 +35,11 @@ package struct SystemDoctorEnvironmentProvider: DoctorEnvironmentProviding, Send
 	}
 
 	// macOS와 Xcode 및 Swift의 검사 항목을 순서대로 반환합니다.
-	package func diagnoseEnvironment() async -> [DoctorDiagnostic] {
+	package func diagnoseEnvironment() async throws -> [DoctorDiagnostic] {
 		[
 			diagnoseMacOS(),
-			await diagnoseXcode(),
-			await diagnoseSwift()
+			try await diagnoseXcode(),
+			try await diagnoseSwift()
 		]
 	}
 
@@ -57,7 +57,7 @@ package struct SystemDoctorEnvironmentProvider: DoctorEnvironmentProviding, Send
 	}
 
 	// 선택된 Xcode version 출력을 진단 항목으로 변환합니다.
-	private func diagnoseXcode() async -> DoctorDiagnostic {
+	private func diagnoseXcode() async throws -> DoctorDiagnostic {
 		do {
 			let result = try await run(
 				executablePath: "/usr/bin/xcodebuild",
@@ -78,13 +78,15 @@ package struct SystemDoctorEnvironmentProvider: DoctorEnvironmentProviding, Send
 				status: .available,
 				message: "Xcode \(version)"
 			)
-		} catch {
+		} catch let error as ProcessRunnerError where error == .executableUnavailable {
 			return .missingXcode
+		} catch {
+			throw runError(for: error)
 		}
 	}
 
 	// Swift toolchain version 출력을 진단 항목으로 변환합니다.
-	private func diagnoseSwift() async -> DoctorDiagnostic {
+	private func diagnoseSwift() async throws -> DoctorDiagnostic {
 		do {
 			let result = try await run(
 				executablePath: "/usr/bin/xcrun",
@@ -105,8 +107,10 @@ package struct SystemDoctorEnvironmentProvider: DoctorEnvironmentProviding, Send
 				status: .available,
 				message: "Swift \(version)"
 			)
-		} catch {
+		} catch let error as ProcessRunnerError where error == .executableUnavailable {
 			return .missingSwift
+		} catch {
+			throw runError(for: error)
 		}
 	}
 
@@ -147,6 +151,43 @@ package struct SystemDoctorEnvironmentProvider: DoctorEnvironmentProviding, Send
 		}
 
 		return String(match.1)
+	}
+}
+
+// 환경 도구 process 실행 오류를 공통 실행 오류로 정규화합니다.
+private extension SystemDoctorEnvironmentProvider {
+	func runError(for error: any Error) -> RunError {
+		if error is CancellationError {
+			return .init(
+				kind: .execution,
+				code: .init(rawValue: "execution.cancelled")
+			)
+		}
+
+		if let error = error as? ProcessRunnerError {
+			switch error {
+			case .timedOut:
+				return .init(
+					kind: .execution,
+					code: .init(rawValue: "execution.timeout")
+				)
+			case .executableUnavailable:
+				return .init(
+					kind: .adapter,
+					code: .init(rawValue: "adapter.system-doctor.environment.unavailable")
+				)
+			case .invalidWorkingDirectory, .failedToLaunch:
+				return .init(
+					kind: .adapter,
+					code: .init(rawValue: "adapter.system-doctor.environment.process.failed")
+				)
+			}
+		}
+
+		return .init(
+			kind: .adapter,
+			code: .init(rawValue: "adapter.system-doctor.environment.process.failed")
+		)
 	}
 }
 
