@@ -10,6 +10,7 @@ import QALenzCore
 
 // XcodeBuildMCP CLI 진단 결과를 QALenz Doctor 항목으로 변환합니다.
 package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendable {
+	private static let commandNotFoundStatus: Int32 = 127
 	private static let doctorSchema = "xcodebuildmcp.output.doctor-report"
 	private static let doctorSchemaVersion = "2"
 	private static let requiredDoctorCheckNames = ["xcode", "manifest-tools"]
@@ -103,7 +104,16 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 			let result = try await run(arguments: ["xcodebuildmcp", "--version"])
 
 			guard result.terminationStatus == 0 else {
-				return diagnostic(for: .fixed(.executableMissing))
+				guard result.terminationStatus != Self.commandNotFoundStatus else {
+					return diagnostic(for: .fixed(.executableMissing))
+				}
+
+				throw RunError(
+					kind: .adapter,
+					code: .init(
+						rawValue: "adapter.xcodebuildmcp.command.failed"
+					)
+				)
 			}
 
 			guard let version = version(from: result.standardOutput),
@@ -304,6 +314,10 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 // process 실행 오류를 원문 없이 공통 실행 오류로 변환합니다.
 private extension XcodeBuildMCPDoctorReporter {
 	func runError(for error: any Error) -> RunError {
+		if let error = error as? RunError {
+			return error
+		}
+
 		if error is CancellationError {
 			return .init(
 				kind: .execution,
