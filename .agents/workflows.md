@@ -191,6 +191,6 @@ Parallelize only read-only roles without unfinished dependencies:
 
 - GitHub/CI Analyst and Planner while a live issue or PR is being scoped.
 - Architecture Watcher and Code Reviewer only after the final diff is stable and their review scopes do not overlap.
-- Documentation Writer and Verification Runner after the diff is stable.
+- Documentation Writer after the diff is stable; Verification Runner after documentation changes are saved.
 
 Do not parallelize two editing roles over the same file, an Implementer with Code Reviewer before the diff is complete, or Verification Runner before relevant files are saved.
