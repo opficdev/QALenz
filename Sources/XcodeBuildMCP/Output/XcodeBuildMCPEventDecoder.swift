@@ -11,6 +11,7 @@ import QALenzCore
 // 분할 수신된 JSONL 데이터를 QALenz 진행 사건으로 변환합니다.
 package struct XcodeBuildMCPEventDecoder: Sendable {
 	private var buffer = Data()
+	private var hasTerminalEvent = false
 	private let descriptor: EventDescriptor
 	private let maximumLineByteCount: Int
 
@@ -52,23 +53,30 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 
 	// 줄바꿈 없이 남아 있는 마지막 JSONL 사건을 처리합니다.
 	package mutating func finish(operation: XcodeBuildMCPOperation) throws -> [XcodeBuildMCPEvent] {
-		guard !buffer.isEmpty else { return [] }
-		guard buffer.count <= maximumLineByteCount else {
+		var events = [XcodeBuildMCPEvent]()
+
+		if !buffer.isEmpty {
+			guard buffer.count <= maximumLineByteCount else {
+				throw invalidOutputError(operation: operation)
+			}
+
+			let line = buffer
+			buffer.removeAll(keepingCapacity: false)
+
+			if let event = try event(from: line, operation: operation) {
+				events.append(event)
+			}
+		}
+
+		guard hasTerminalEvent else {
 			throw invalidOutputError(operation: operation)
 		}
 
-		let line = buffer
-		buffer.removeAll(keepingCapacity: false)
-
-		guard let event = try event(from: line, operation: operation) else {
-			return []
-		}
-
-		return [event]
+		return events
 	}
 
 	// JSONL 한 줄을 검증하고 정규화된 진행 사건으로 변환합니다.
-	private func event(
+	private mutating func event(
 		from data: Data,
 		operation: XcodeBuildMCPOperation
 	) throws -> XcodeBuildMCPEvent? {
@@ -91,13 +99,18 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 			throw invalidOutputError(operation: operation)
 		}
 
+		let kind = try kind(
+			for: event.event,
+			status: event.status,
+			operation: operation
+		)
+		if kind == .completed || kind == .failed {
+			hasTerminalEvent = true
+		}
+
 		return .init(
 			operation: operation,
-			kind: try kind(
-				for: event.event,
-				status: event.status,
-				operation: operation
-			),
+			kind: kind,
 			message: normalizedStatus(event.status)
 		)
 	}

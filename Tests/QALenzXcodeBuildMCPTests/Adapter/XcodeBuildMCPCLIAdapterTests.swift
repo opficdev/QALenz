@@ -174,7 +174,11 @@ struct XcodeBuildMCPCLIAdapterTests {
 	@Test
 	func JSONL_출력이_공통_진행_사건_stream으로_변환된다() async throws {
 		let runner = ProcessRunnerSpy(output: .success(makeProcessResult(
-			"{\"event\":\"fixture.progress\",\"operation\":\"FIXTURE\"}\n"
+			"""
+			{"event":"fixture.progress","operation":"FIXTURE"}
+			{"event":"fixture.summary","operation":"FIXTURE","status":"SUCCEEDED"}
+
+			"""
 		)))
 		let adapter = makeAdapter(processRunner: runner)
 		var events: [XcodeBuildMCPEvent] = []
@@ -184,8 +188,24 @@ struct XcodeBuildMCPCLIAdapterTests {
 		}
 
 		let processRequest = await runner.receivedRequest
-		#expect(events.map(\.kind) == [.progress])
+		#expect(events.map(\.kind) == [.progress, .completed])
 		#expect(processRequest?.arguments.suffix(2) == ["--output", "jsonl"])
+	}
+
+	// JSONL terminal 사건이 없으면 구조화된 출력 오류로 종료되는지 검증합니다.
+	@Test
+	func JSONL_terminal_사건이_없으면_출력_오류로_종료한다() async throws {
+		let runner = ProcessRunnerSpy(output: .success(makeProcessResult(
+			"{\"event\":\"fixture.progress\",\"operation\":\"FIXTURE\"}\n"
+		)))
+		let stream = makeAdapter(processRunner: runner).events(for: .init(operation: operation))
+
+		do {
+			for try await _ in stream {}
+			Issue.record("terminal 사건 누락 오류가 반환되지 않음")
+		} catch let error as RunError {
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+		}
 	}
 
 	// 시간 제한 오류가 원본 오류 없이 실행 오류로 변환되는지 검증합니다.
