@@ -86,6 +86,23 @@ struct DoctorCommandTests {
 		#expect(doctor.options.output == .json)
 	}
 
+	// 하위 명령의 출력 옵션이 루트 옵션보다 우선하는지 검증합니다.
+	@Test
+	func doctor_출력_옵션은_루트_옵션보다_우선한다() async throws {
+		let command = try RootCommand.parseAsRoot([
+			"--output", "json", "doctor", "--output", "text"
+		])
+		let doctor = try #require(command as? DoctorCommand)
+		let result = await doctor.execute(
+			environmentProvider: DoctorEnvironmentProviderSpy(diagnostics: []),
+			xcodeBuildMCPReporter: XcodeBuildMCPDoctorReporterSpy(diagnostics: [])
+		)
+
+		#expect(doctor.options.output == .text)
+		#expect(result.standardOutput == "")
+		#expect(result.standardError == nil)
+	}
+
 	// XcodeBuildMCP 실행 오류를 executionError 종료 상태로 연결하는지 검증합니다.
 	@Test
 	func XcodeBuildMCP_실행_오류를_executionError로_연결한다() async {

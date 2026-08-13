@@ -19,7 +19,7 @@ package enum CLIApplication {
 			let parsedCommand = try RootCommand.parseAsRoot(arguments)
 
 			if let doctorCommand = parsedCommand as? DoctorCommand {
-				return await doctorCommand.execute(format: format)
+				return await doctorCommand.execute()
 			}
 
 			var command = parsedCommand

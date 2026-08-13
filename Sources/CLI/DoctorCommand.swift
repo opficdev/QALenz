@@ -35,7 +35,6 @@ package struct DoctorCommand: ParsableCommand {
 		let environment = ProcessInfo.processInfo.environment
 
 		return await execute(
-			format: format,
 			environmentProvider: SystemDoctorEnvironmentProvider(
 				workingDirectoryURL: workingDirectoryURL,
 				environment: environment,
@@ -46,6 +45,18 @@ package struct DoctorCommand: ParsableCommand {
 				environment: environment,
 				timeout: .seconds(5)
 			)
+		)
+	}
+
+	// 명령이 해석한 출력 옵션과 주입한 진단 제공자로 실행합니다.
+	package func execute(
+		environmentProvider: any DoctorEnvironmentProviding,
+		xcodeBuildMCPReporter: any XcodeBuildMCPDoctorReporting
+	) async -> CLIProcessResult {
+		await execute(
+			format: options.output,
+			environmentProvider: environmentProvider,
+			xcodeBuildMCPReporter: xcodeBuildMCPReporter
 		)
 	}
 
