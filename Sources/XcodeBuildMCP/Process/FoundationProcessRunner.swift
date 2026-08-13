@@ -69,7 +69,7 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 		}
 
 		output.fileHandleForReading.readabilityHandler = nil
-		collector.append(output.fileHandleForReading.readDataToEndOfFile())
+		try? output.fileHandleForReading.close()
 
 		return .init(
 			standardOutput: collector.data,
@@ -119,8 +119,8 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 						timeout: request.timeout
 					)
 					output.fileHandleForReading.readabilityHandler = nil
+					try? output.fileHandleForReading.close()
 					emitter.finish(
-						from: output.fileHandleForReading,
 						terminationStatus: process.terminationStatus
 					)
 				} catch {
@@ -222,16 +222,12 @@ private final class ProcessEventEmitter: @unchecked Sendable {
 		}
 	}
 
-	// 남은 표준 출력과 종료 상태를 전달하고 stream을 완료합니다.
-	func finish(from handle: FileHandle, terminationStatus: Int32) {
+	// 수신한 표준 출력 뒤 종료 상태를 전달하고 stream을 완료합니다.
+	func finish(terminationStatus: Int32) {
 		queue.sync {
 			guard !isFinished else { return }
 			isFinished = true
 
-			let data = handle.readDataToEndOfFile()
-			if !data.isEmpty {
-				continuation.yield(.standardOutput(data))
-			}
 			continuation.yield(.terminated(terminationStatus))
 			continuation.finish()
 		}
