@@ -5,10 +5,13 @@
 //  Created by opfic on 8/13/26.
 //
 
+import Darwin
 import Foundation
 
 // Foundation Process로 외부 command를 실행하고 취소 및 시간 제한 시 종료합니다.
 package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable {
+	private static let terminationGracePeriod = Duration.milliseconds(100)
+
 	// Foundation Process 실행기를 구성합니다.
 	package init() {}
 
@@ -48,7 +51,7 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 		}
 
 		guard !Task.isCancelled else {
-			processBox.terminate()
+			processBox.forceTerminate()
 			throw CancellationError()
 		}
 
@@ -90,15 +93,30 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 				}
 
 				let result = await group.next() ?? .cancelled
-				if result != .terminated {
+				if result == .timedOut {
 					process.terminate()
+					group.addTask {
+						do {
+							try await Task.sleep(for: Self.terminationGracePeriod)
+							return .timedOut
+						} catch {
+							return .cancelled
+						}
+					}
+
+					let terminationResult = await group.next() ?? .cancelled
+					if terminationResult != .terminated {
+						process.forceTerminate()
+					}
+				} else if result == .cancelled {
+					process.forceTerminate()
 				}
 				group.cancelAll()
 
 				return result
 			}
 		} onCancel: {
-			process.terminate()
+			process.forceTerminate()
 		}
 
 		guard !Task.isCancelled else {
@@ -134,6 +152,16 @@ private final class ProcessBox: @unchecked Sendable {
 		guard process.isRunning else { return }
 
 		process.terminate()
+	}
+
+	// process가 실행 중이면 강제 종료 신호를 보냅니다.
+	func forceTerminate() {
+		lock.lock()
+		defer { lock.unlock() }
+
+		guard process.isRunning else { return }
+
+		_ = kill(process.processIdentifier, SIGKILL)
 	}
 
 	// process의 종료까지 대기합니다.

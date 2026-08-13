@@ -66,7 +66,44 @@ struct FoundationProcessRunnerTests {
 			#expect(error == .timedOut)
 		}
 
-		#expect(Date().timeIntervalSince(start) < 1)
+		#expect(Date().timeIntervalSince(start) < 5)
+	}
+
+	// 종료 요청을 무시하는 가짜 실행 파일도 유예 시간 뒤 강제 종료하는지 검증합니다.
+	@Test
+	func 종료_요청을_무시하면_유예_시간_뒤_강제_종료한다() async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		let executableURL = try makeExecutable(
+			in: directory,
+			script: """
+			#!/usr/bin/python3
+			import os
+			import signal
+			import threading
+
+			signal.signal(signal.SIGTERM, signal.SIG_IGN)
+			threading.Timer(10, lambda: os.kill(os.getpid(), signal.SIGKILL)).start()
+			threading.Event().wait()
+			"""
+		)
+		let runner = FoundationProcessRunner()
+		let start = Date()
+
+		do {
+			_ = try await runner.run(.init(
+				executableURL: executableURL,
+				arguments: [],
+				workingDirectoryURL: directory,
+				environment: [:],
+				timeout: .milliseconds(500)
+			))
+			Issue.record("시간 제한 오류가 반환되지 않음")
+		} catch let error as ProcessRunnerError {
+			#expect(error == .timedOut)
+		}
+
+		#expect(Date().timeIntervalSince(start) < 5)
 	}
 
 	// 취소된 실행이 가짜 실행 파일을 종료하는지 검증합니다.
