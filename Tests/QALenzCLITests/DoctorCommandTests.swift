@@ -86,14 +86,41 @@ struct DoctorCommandTests {
 		#expect(doctor.options.output == .json)
 	}
 
+	// 루트 출력 옵션이 doctor 실행 형식으로 전달되는지 검증합니다.
+	@Test
+	func 루트_출력_옵션이_doctor_실행_형식으로_전달된다() async throws {
+		let arguments = ["--output", "json", "doctor"]
+		let command = try RootCommand.parseAsRoot(arguments)
+		let doctor = try #require(command as? DoctorCommand)
+		let result = await doctor.execute(
+			format: CLIApplication.doctorOutputFormat(
+				arguments: arguments,
+				command: doctor
+			),
+			environmentProvider: DoctorEnvironmentProviderSpy(diagnostics: []),
+			xcodeBuildMCPReporter: XcodeBuildMCPDoctorReporterSpy(diagnostics: [])
+		)
+		let data = try #require(result.standardOutput?.data(using: .utf8))
+		let report = try JSONDecoder().decode(DoctorReport.self, from: data)
+
+		#expect(result.exitStatus == .success)
+		#expect(report.result == .passed)
+		#expect(result.standardError == nil)
+	}
+
 	// 하위 명령의 출력 옵션이 루트 옵션보다 우선하는지 검증합니다.
 	@Test
 	func doctor_출력_옵션은_루트_옵션보다_우선한다() async throws {
-		let command = try RootCommand.parseAsRoot([
+		let arguments = [
 			"--output", "json", "doctor", "--output", "text"
-		])
+		]
+		let command = try RootCommand.parseAsRoot(arguments)
 		let doctor = try #require(command as? DoctorCommand)
 		let result = await doctor.execute(
+			format: CLIApplication.doctorOutputFormat(
+				arguments: arguments,
+				command: doctor
+			),
 			environmentProvider: DoctorEnvironmentProviderSpy(diagnostics: []),
 			xcodeBuildMCPReporter: XcodeBuildMCPDoctorReporterSpy(diagnostics: [])
 		)

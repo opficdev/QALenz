@@ -19,7 +19,12 @@ package enum CLIApplication {
 			let parsedCommand = try RootCommand.parseAsRoot(arguments)
 
 			if let doctorCommand = parsedCommand as? DoctorCommand {
-				return await doctorCommand.execute()
+				return await doctorCommand.execute(
+					format: doctorOutputFormat(
+						arguments: arguments,
+						command: doctorCommand
+					)
+				)
 			}
 
 			var command = parsedCommand
@@ -29,6 +34,28 @@ package enum CLIApplication {
 		} catch {
 			return result(for: error, format: format)
 		}
+	}
+
+	// root와 doctor 옵션의 우선순위에 맞는 출력 형식을 반환합니다.
+	package static func doctorOutputFormat(
+		arguments: [String],
+		command: DoctorCommand
+	) -> CLIOutputFormat {
+		guard let commandName = DoctorCommand.configuration.commandName,
+			let commandIndex = arguments.firstIndex(
+				of: commandName
+			) else {
+			return command.options.output
+		}
+
+		let commandArguments = arguments.suffix(
+			from: arguments.index(after: commandIndex)
+		)
+		guard !containsOutputOption(in: commandArguments) else {
+			return command.options.output
+		}
+
+		return CLIOutputFormat.requested(in: Array(arguments[..<commandIndex]))
 	}
 
 	// DoctorReport를 요청한 출력 형식의 프로세스 결과로 변환합니다.
@@ -89,6 +116,23 @@ package enum CLIApplication {
 		}
 
 		return String(usageLine.dropFirst("Usage: ".count))
+	}
+
+	// 인수 구간에 출력 옵션이 명시됐는지 반환합니다.
+	private static func containsOutputOption(
+		in arguments: ArraySlice<String>
+	) -> Bool {
+		for argument in arguments {
+			if argument == "--" {
+				return false
+			}
+
+			if argument == "--output" || argument.hasPrefix("--output=") {
+				return true
+			}
+		}
+
+		return false
 	}
 
 	// CLIUsageError를 JSON 프로세스 결과로 변환합니다.
