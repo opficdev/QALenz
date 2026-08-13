@@ -7,24 +7,44 @@
 
 import ArgumentParser
 import Foundation
+import QALenzCore
 
 // CLI 인수를 처리해 프로세스 결과로 변환합니다.
 package enum QALenzCLIApplication {
 	// CLI 인수를 실행해 프로세스 결과를 만듭니다.
-	package static func execute(arguments: [String]) -> CLIProcessResult {
+	package static func execute(arguments: [String]) async -> CLIProcessResult {
 		let format = CLIOutputFormat.requested(in: arguments)
 
 		do {
-			var command = try QALenzRootCommand.parseAsRoot(arguments)
+			let parsedCommand = try QALenzRootCommand.parseAsRoot(arguments)
+
+			if let doctorCommand = parsedCommand as? QALenzDoctorCommand {
+				return await doctorCommand.execute(format: format)
+			}
+
+			var command = parsedCommand
 			try command.run()
 
-			return .init(
-				standardOutput: nil,
-				standardError: nil,
-				exitStatus: .success
-			)
+			return .init(standardOutput: nil, standardError: nil, exitStatus: .success)
 		} catch {
 			return result(for: error, format: format)
+		}
+	}
+
+	// DoctorReport를 요청한 출력 형식의 프로세스 결과로 변환합니다.
+	package static func result(
+		for report: DoctorReport,
+		format: CLIOutputFormat
+	) -> CLIProcessResult {
+		switch format {
+		case .text:
+			return .init(
+				standardOutput: textOutput(for: report),
+				standardError: nil,
+				exitStatus: .init(result: report.result)
+			)
+		case .json:
+			return jsonResult(for: report)
 		}
 	}
 
@@ -78,5 +98,36 @@ package enum QALenzCLIApplication {
 				exitStatus: .executionError
 			)
 		}
+	}
+
+	// DoctorReport를 정렬된 JSON 프로세스 결과로 변환합니다.
+	private static func jsonResult(for report: DoctorReport) -> CLIProcessResult {
+		do {
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+			let data = try encoder.encode(report)
+
+			return .init(
+				// swiftlint:disable:next optional_data_string_conversion
+				standardOutput: String(decoding: data, as: UTF8.self),
+				standardError: nil,
+				exitStatus: .init(result: report.result)
+			)
+		} catch {
+			return .init(
+				standardOutput: nil,
+				standardError: "Doctor report encoding failed.",
+				exitStatus: .executionError
+			)
+		}
+	}
+
+	// DoctorReport의 항목을 사람이 읽을 수 있는 줄 단위 출력으로 변환합니다.
+	private static func textOutput(for report: DoctorReport) -> String {
+		report.diagnostics.map { diagnostic in
+			let recommendation = diagnostic.recommendation.map { "\n  \($0)" } ?? ""
+
+			return "[\(diagnostic.status.rawValue)] [\(diagnostic.requirement.rawValue)] \(diagnostic.id.rawValue): \(diagnostic.message)\(recommendation)"
+		}.joined(separator: "\n")
 	}
 }

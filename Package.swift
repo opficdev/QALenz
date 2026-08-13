@@ -31,6 +31,7 @@ let package = Package(
 			name: "QALenzCLI",
 			dependencies: [
 				"QALenzCore",
+				"QALenzXcodeBuildMCP",
 				.product(
 					name: "ArgumentParser",
 					package: "swift-argument-parser"

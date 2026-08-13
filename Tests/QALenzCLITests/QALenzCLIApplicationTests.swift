@@ -12,8 +12,8 @@ import Testing
 @Suite
 struct QALenzCLIApplicationTests {
 	@Test
-	func 도움말_요청은_standardOutput만_사용하고_success로_종료한다() throws {
-		let result = QALenzCLIApplication.execute(arguments: ["--help"])
+	func 도움말_요청은_standardOutput만_사용하고_success로_종료한다() async throws {
+		let result = await QALenzCLIApplication.execute(arguments: ["--help"])
 
 		#expect(result.exitStatus == .success)
 		#expect(try #require(result.standardOutput).contains("qalenz"))
@@ -21,8 +21,8 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func 알_수_없는_명령은_standardError에_text_사용_오류를_쓰고_usageError로_종료한다() throws {
-		let result = QALenzCLIApplication.execute(arguments: ["unknown"])
+	func 알_수_없는_명령은_standardError에_text_사용_오류를_쓰고_usageError로_종료한다() async throws {
+		let result = await QALenzCLIApplication.execute(arguments: ["unknown"])
 
 		#expect(result.exitStatus == .usageError)
 		#expect(try #require(result.standardError).contains("Usage:"))
@@ -30,8 +30,8 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func JSON_출력을_요청한_잘못된_옵션은_구조화된_CLIUsageError를_standardError에_쓴다() throws {
-		let result = QALenzCLIApplication.execute(
+	func JSON_출력을_요청한_잘못된_옵션은_구조화된_CLIUsageError를_standardError에_쓴다() async throws {
+		let result = await QALenzCLIApplication.execute(
 			arguments: ["--output", "json", "--unknown"]
 		)
 		let data = try #require(result.standardError?.data(using: .utf8))
@@ -46,8 +46,8 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func JSON_출력을_요청한_알_수_없는_명령은_명령을_포함한_CLIUsageError를_쓴다() throws {
-		let result = QALenzCLIApplication.execute(
+	func JSON_출력을_요청한_알_수_없는_명령은_명령을_포함한_CLIUsageError를_쓴다() async throws {
+		let result = await QALenzCLIApplication.execute(
 			arguments: ["--output", "json", "unknown"]
 		)
 		let data = try #require(result.standardError?.data(using: .utf8))
@@ -70,9 +70,9 @@ struct QALenzCLIApplicationTests {
 	}
 
 	@Test
-	func 같은_CLIUsageError의_text와_JSON_출력은_message_usage_exitStatus가_같다() throws {
-		let text = QALenzCLIApplication.execute(arguments: ["--unknown"])
-		let json = QALenzCLIApplication.execute(
+	func 같은_CLIUsageError의_text와_JSON_출력은_message_usage_exitStatus가_같다() async throws {
+		let text = await QALenzCLIApplication.execute(arguments: ["--unknown"])
+		let json = await QALenzCLIApplication.execute(
 			arguments: ["--output", "json", "--unknown"]
 		)
 		let data = try #require(json.standardError?.data(using: .utf8))

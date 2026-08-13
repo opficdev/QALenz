@@ -13,8 +13,8 @@ import QALenzCLI
 // qalenz 실행 파일의 진입점을 제공합니다.
 enum QALenzCLIExecutable {
 	// CLI 인수를 실행하고 출력과 종료 상태를 전달합니다.
-	static func main() {
-		let result = QALenzCLIApplication.execute(
+	static func main() async {
+		let result = await QALenzCLIApplication.execute(
 			arguments: Array(CommandLine.arguments.dropFirst())
 		)
 
