@@ -169,41 +169,6 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 		}
 	}
 
-	// process 실행 오류를 원문 없이 공통 실행 오류로 변환합니다.
-	private func runError(for error: any Error) -> RunError {
-		if error is CancellationError {
-			return .init(
-				kind: .execution,
-				code: .init(rawValue: "execution.cancelled")
-			)
-		}
-
-		if let error = error as? ProcessRunnerError {
-			switch error {
-			case .timedOut:
-				return .init(
-					kind: .execution,
-					code: .init(rawValue: "execution.timeout")
-				)
-			case .executableUnavailable:
-				return .init(
-					kind: .adapter,
-					code: .init(rawValue: "adapter.xcodebuildmcp.unavailable")
-				)
-			case .invalidWorkingDirectory, .failedToLaunch:
-				return .init(
-					kind: .adapter,
-					code: .init(rawValue: "adapter.xcodebuildmcp.process.failed")
-				)
-			}
-		}
-
-		return .init(
-			kind: .adapter,
-			code: .init(rawValue: "adapter.xcodebuildmcp.process.failed")
-		)
-	}
-
 	// 허용 환경과 호출별 환경을 병합한 process 요청을 실행합니다.
 	private func run(
 		arguments: [String],
@@ -328,6 +293,43 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 			status: .missing,
 			message: "XcodeBuildMCP \(name) 항목을 확인할 수 없습니다.",
 			recommendation: "XcodeBuildMCP doctor의 안내에 따라 \(name) 항목을 확인합니다."
+		)
+	}
+}
+
+// process 실행 오류를 원문 없이 공통 실행 오류로 변환합니다.
+private extension XcodeBuildMCPDoctorReporter {
+	func runError(for error: any Error) -> RunError {
+		if error is CancellationError {
+			return .init(
+				kind: .execution,
+				code: .init(rawValue: "execution.cancelled")
+			)
+		}
+
+		if let error = error as? ProcessRunnerError {
+			switch error {
+			case .timedOut:
+				return .init(
+					kind: .execution,
+					code: .init(rawValue: "execution.timeout")
+				)
+			case .executableUnavailable:
+				return .init(
+					kind: .adapter,
+					code: .init(rawValue: "adapter.xcodebuildmcp.unavailable")
+				)
+			case .invalidWorkingDirectory, .failedToLaunch:
+				return .init(
+					kind: .adapter,
+					code: .init(rawValue: "adapter.xcodebuildmcp.process.failed")
+				)
+			}
+		}
+
+		return .init(
+			kind: .adapter,
+			code: .init(rawValue: "adapter.xcodebuildmcp.process.failed")
 		)
 	}
 }

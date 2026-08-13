@@ -67,7 +67,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// version 출력이 허용된 형식이 아니면 원문을 노출하지 않는지 검증합니다.
 	@Test
 	func version_출력이_허용된_형식이_아니면_원문을_노출하지_않는다() async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 			.init(
 					standardOutput: Data("2.7.0-fixture\nsecret-token-value".utf8),
 				terminationStatus: 0
@@ -89,7 +89,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// 지원하지 않는 주 version을 실행 파일 호환성 실패로 변환하는지 검증합니다.
 	@Test(arguments: ["1.9.0", "3.0.0"])
 	func 지원하지_않는_주_version을_호환성_실패로_변환한다(version: String) async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 			.init(standardOutput: Data("\(version)\n".utf8), terminationStatus: 0)
 		])
 		let reporter = makeReporter(processRunner: runner)
@@ -103,7 +103,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// doctor command의 비정상 종료가 원본 출력 없이 누락 진단으로 변환되는지 검증합니다.
 	@Test
 	func doctor_command의_비정상_종료가_누락_진단으로_변환된다() async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 				.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data("secret-token-value".utf8), terminationStatus: 1)
 		])
@@ -121,7 +121,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// didError 응답의 error 값이 진단 원문에 포함되지 않는지 검증합니다.
 	@Test
 	func didError_응답의_error_값을_진단에_포함하지_않는다() async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 				.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data(
 				"""
@@ -140,7 +140,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// doctor JSON이 형식에 맞지 않으면 지원하지 않는 출력 진단을 반환하는지 검증합니다.
 	@Test
 	func doctor_JSON이_형식에_맞지_않으면_지원하지_않는_출력_진단을_반환한다() async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 			.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data("not-json".utf8), terminationStatus: 0)
 		])
@@ -155,7 +155,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// 지원하지 않는 doctor schema 원문을 진단에 포함하지 않는지 검증합니다.
 	@Test
 	func 지원하지_않는_doctor_schema_원문을_진단에_포함하지_않는다() async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 			.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data(
 				"""
@@ -174,7 +174,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// doctor check 원문이 진단에 포함되지 않는지 검증합니다.
 	@Test
 	func doctor_check_원문을_진단에_포함하지_않는다() async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 			.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data(
 				"""
@@ -193,7 +193,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// 필수 doctor check가 응답에 없으면 누락 진단을 반환하는지 검증합니다.
 	@Test
 	func 필수_doctor_check가_없으면_누락_진단을_반환한다() async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 			.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data(
 				"""
@@ -219,7 +219,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// version과 doctor 요청이 필요한 환경으로 실행되는지 검증합니다.
 	@Test
 	func version과_doctor_요청이_필요한_환경으로_실행된다() async throws {
-		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+		let runner = DoctorProcessRunnerSpy(results: [
 			.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data(
 				"""
@@ -260,7 +260,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	// doctor process timeout을 실행 오류로 반환하는지 검증합니다.
 	@Test
 	func doctor_process_timeout을_실행_오류로_반환한다() async {
-		let reporter = makeReporter(processRunner: XcodeBuildMCPDoctorTimeoutProcessRunnerSpy())
+		let reporter = makeReporter(processRunner: TimeoutProcessRunnerSpy())
 
 		do {
 			_ = try await reporter.diagnoseXcodeBuildMCP()
@@ -277,7 +277,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 	@Test
 	func env_실행_파일_오류를_실행_오류로_반환한다() async {
 		let reporter = makeReporter(
-			processRunner: XcodeBuildMCPDoctorFailingProcessRunnerSpy(
+			processRunner: FailingProcessRunnerSpy(
 				error: .executableUnavailable
 			)
 		)
@@ -293,106 +293,4 @@ struct XcodeBuildMCPDoctorReporterTests {
 		}
 	}
 
-	// 기본 FoundationProcessRunner를 사용하는 reporter를 구성합니다.
-	private func makeReporter(
-		workingDirectoryURL: URL = URL(fileURLWithPath: "/tmp"),
-		environment: [String: String] = [:]
-	) -> XcodeBuildMCPDoctorReporter {
-		.init(
-			workingDirectoryURL: workingDirectoryURL,
-			environment: environment,
-			timeout: .seconds(5)
-		)
-	}
-
-	// 주입한 process runner를 사용하는 reporter를 구성합니다.
-	private func makeReporter(
-		processRunner: any ProcessRunning,
-		workingDirectoryURL: URL = URL(fileURLWithPath: "/tmp"),
-		environment: [String: String] = [:]
-	) -> XcodeBuildMCPDoctorReporter {
-		.init(
-			processRunner: processRunner,
-			workingDirectoryURL: workingDirectoryURL,
-			environment: environment,
-			timeout: .seconds(5)
-		)
-	}
-
-	// 가짜 xcodebuildmcp 실행 파일을 설치할 임시 디렉터리를 생성합니다.
-	private func makeTemporaryDirectory() throws -> URL {
-		let directory = FileManager.default.temporaryDirectory
-			.appendingPathComponent(UUID().uuidString, isDirectory: true)
-		try FileManager.default.createDirectory(
-			at: directory,
-			withIntermediateDirectories: true
-		)
-
-		return directory
-	}
-
-	// fixture script를 PATH에서 찾을 수 있는 xcodebuildmcp 실행 파일로 설치합니다.
-	private func installFakeXcodeBuildMCP(in directory: URL) throws {
-		let fixtureURL = try #require(
-			Bundle.module.url(forResource: "fake-xcodebuildmcp", withExtension: nil)
-		)
-		let executableURL = directory.appendingPathComponent("xcodebuildmcp")
-
-		try FileManager.default.copyItem(at: fixtureURL, to: executableURL)
-		try FileManager.default.setAttributes(
-			[.posixPermissions: 0o755],
-			ofItemAtPath: executableURL.path
-		)
-	}
-}
-
-// process 요청을 기록하고 미리 정한 결과를 순서대로 반환합니다.
-private actor XcodeBuildMCPDoctorProcessRunnerSpy: ProcessRunning {
-	private var results: [ProcessResult]
-	private var requests = [ProcessRequest]()
-
-	// 반환할 process 결과로 시험 대역을 구성합니다.
-	init(results: [ProcessResult]) {
-		self.results = results
-	}
-
-	// 요청을 기록하고 다음 process 결과를 반환합니다.
-	func run(_ request: ProcessRequest) async throws -> ProcessResult {
-		requests.append(request)
-		return results.removeFirst()
-	}
-
-	// 기록한 process 요청을 반환합니다.
-	var receivedRequests: [ProcessRequest] {
-		requests
-	}
-}
-
-// version 요청 뒤 timeout을 반환하는 process 실행기입니다.
-private actor XcodeBuildMCPDoctorTimeoutProcessRunnerSpy: ProcessRunning {
-	private var didReturnVersion = false
-
-	// version 결과를 한 번 반환한 뒤 timeout 오류를 던집니다.
-	func run(_ request: ProcessRequest) async throws -> ProcessResult {
-		if !didReturnVersion {
-			didReturnVersion = true
-
-			return .init(
-				standardOutput: Data("2.7.0-fixture\n".utf8),
-				terminationStatus: 0
-			)
-		}
-
-		throw ProcessRunnerError.timedOut
-	}
-}
-
-// 지정한 process 실행 오류를 반환하는 실행기입니다.
-private struct XcodeBuildMCPDoctorFailingProcessRunnerSpy: ProcessRunning {
-	let error: ProcessRunnerError
-
-	// 지정한 process 실행 오류를 반환합니다.
-	func run(_ request: ProcessRequest) async throws -> ProcessResult {
-		throw error
-	}
 }
