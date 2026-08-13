@@ -105,7 +105,8 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 				return diagnostic(for: .fixed(.executableMissing))
 			}
 
-			guard let version = version(from: result.standardOutput) else {
+			guard let version = version(from: result.standardOutput),
+				XcodeBuildMCPV2.supports(version: version) else {
 				return diagnostic(for: .fixed(.executableUnsupported))
 			}
 

@@ -9,6 +9,11 @@ import QALenzCore
 
 // XcodeBuildMCP 2.x CLI 명령과 구조화된 출력 명세를 보관합니다.
 enum XcodeBuildMCPV2 {
+	// XcodeBuildMCP 2.x semantic version의 지원 여부를 반환합니다.
+	static func supports(version: String) -> Bool {
+		version.wholeMatch(of: /v?2\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?/) != nil
+	}
+
 	static let commandBuilder = CommandBuilder(descriptors: [
 		XcodeBuildMCPOperation.discoverSimulators: .init(
 			workflow: "simulator",

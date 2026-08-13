@@ -83,6 +83,20 @@ struct XcodeBuildMCPDoctorReporterTests {
 		#expect(!String(describing: diagnostics).contains("secret-token-value"))
 	}
 
+	// 지원하지 않는 주 version을 실행 파일 호환성 실패로 변환하는지 검증합니다.
+	@Test(arguments: ["1.9.0", "3.0.0"])
+	func 지원하지_않는_주_version을_호환성_실패로_변환한다(version: String) async throws {
+		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+			.init(standardOutput: Data("\(version)\n".utf8), terminationStatus: 0)
+		])
+		let reporter = makeReporter(processRunner: runner)
+
+		let diagnostics = try await reporter.diagnoseXcodeBuildMCP()
+
+		#expect(diagnostics.map(\.status) == [.unsupported])
+		#expect(diagnostics[0].id.rawValue == "xcodebuildmcp.executable")
+	}
+
 	// doctor command의 비정상 종료가 원본 출력 없이 누락 진단으로 변환되는지 검증합니다.
 	@Test
 	func doctor_command의_비정상_종료가_누락_진단으로_변환된다() async throws {
