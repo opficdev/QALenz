@@ -1,5 +1,15 @@
 #!/bin/sh
 
+if [ "$1" = "--version" ]; then
+	printf '%s\n' '2.7.0-fixture'
+	exit 0
+fi
+
+if [ "$1" = "doctor" ] && [ "$2" = "--output" ] && [ "$3" = "json" ]; then
+	printf '%s\n' '{"schema":"xcodebuildmcp.output.doctor-report","schemaVersion":"2","didError":false,"error":null,"data":{"serverVersion":"2.7.0-fixture","checks":[{"name":"xcode","status":"ok","message":"Xcode 26.0"},{"name":"axe","status":"warning","message":"axe를 찾을 수 없습니다."}]}}'
+	exit 0
+fi
+
 workflow="$1"
 tool="$2"
 shift 2
