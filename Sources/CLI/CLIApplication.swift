@@ -124,10 +124,16 @@ package enum CLIApplication {
 
 	// DoctorReport의 항목을 사람이 읽을 수 있는 줄 단위 출력으로 변환합니다.
 	private static func textOutput(for report: DoctorReport) -> String {
-		report.diagnostics.map { diagnostic in
+		var lines = report.diagnostics.map { diagnostic in
 			let recommendation = diagnostic.recommendation.map { "\n  \($0)" } ?? ""
 
 			return "[\(diagnostic.status.rawValue)] [\(diagnostic.requirement.rawValue)] \(diagnostic.id.rawValue): \(diagnostic.message)\(recommendation)"
-		}.joined(separator: "\n")
+		}
+
+		if case let .errored(error) = report.result {
+			lines.append("[errored] [\(error.kind.rawValue)] \(error.code.rawValue)")
+		}
+
+		return lines.joined(separator: "\n")
 	}
 }

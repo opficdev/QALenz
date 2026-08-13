@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 @testable import QALenzCLI
+@testable import QALenzCore
 
 @Suite
 struct CLIApplicationTests {
@@ -82,5 +83,26 @@ struct CLIApplicationTests {
 		#expect(message.contains(error.message))
 		#expect(message.contains(error.usage))
 		#expect(text.exitStatus == json.exitStatus)
+	}
+
+	// doctor text 출력이 실행 오류 종류와 코드를 보존하는지 검증합니다.
+	@Test
+	func doctor_text_출력이_실행_오류_종류와_코드를_보존한다() throws {
+		let report = DoctorReport(
+			diagnostics: [],
+			error: .init(
+				kind: .execution,
+				code: .init(rawValue: "execution.timeout"),
+				context: .init(command: "secret-command")
+			)
+		)
+
+		let result = CLIApplication.result(for: report, format: .text)
+		let output = try #require(result.standardOutput)
+
+		#expect(result.exitStatus == .executionError)
+		#expect(output.contains("[errored] [execution] execution.timeout"))
+		#expect(!output.contains("secret-command"))
+		#expect(result.standardError == nil)
 	}
 }
