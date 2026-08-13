@@ -137,6 +137,26 @@ struct XcodeBuildMCPDoctorReporterTests {
 		#expect(!String(describing: diagnostics).contains("secret-token-value"))
 	}
 
+	// 성공으로 표시된 응답의 error 값을 형식 오류로 변환하는지 검증합니다.
+	@Test
+	func 성공으로_표시된_응답의_error_값을_형식_오류로_변환한다() async throws {
+		let runner = DoctorProcessRunnerSpy(results: [
+			.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
+			.init(standardOutput: Data(
+				"""
+				{"schema":"xcodebuildmcp.output.doctor-report","schemaVersion":"2","didError":false,"error":"secret-token-value","data":{"serverVersion":"2.7.0-fixture","checks":[]}}
+				""".utf8
+			), terminationStatus: 0)
+		])
+		let reporter = makeReporter(processRunner: runner)
+
+		let diagnostics = try await reporter.diagnoseXcodeBuildMCP()
+
+		#expect(diagnostics.map(\.status) == [.available, .unsupported])
+		#expect(diagnostics[1].message == "XcodeBuildMCP doctor의 JSON 응답을 해석할 수 없습니다.")
+		#expect(!String(describing: diagnostics).contains("secret-token-value"))
+	}
+
 	// doctor JSON이 형식에 맞지 않으면 지원하지 않는 출력 진단을 반환하는지 검증합니다.
 	@Test
 	func doctor_JSON이_형식에_맞지_않으면_지원하지_않는_출력_진단을_반환한다() async throws {

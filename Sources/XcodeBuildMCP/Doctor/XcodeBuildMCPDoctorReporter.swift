@@ -144,6 +144,10 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 				return [diagnostic(for: .fixed(.doctorUnavailable))]
 			}
 
+			guard report.error == nil else {
+				return [diagnostic(for: .fixed(.doctorOutputInvalid))]
+			}
+
 			guard report.schema == Self.doctorSchema,
 				report.schemaVersion == Self.doctorSchemaVersion else {
 				return [diagnostic(for: .fixed(.doctorSchemaUnsupported))]
@@ -366,6 +370,7 @@ private struct XcodeBuildMCPDoctorReport: Decodable {
 	let schema: String
 	let schemaVersion: String
 	let didError: Bool
+	let error: String?
 	let data: Data?
 }
 
