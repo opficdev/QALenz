@@ -14,6 +14,7 @@ import Testing
 @Suite
 struct XcodeBuildMCPOutputDecoderTests {
 	private let operation = XcodeBuildMCPOperation(rawValue: "fixture.list")
+	private let discoverSimulatorsOperation = XcodeBuildMCPOperation(rawValue: "discover.simulators")
 
 	// 정상 envelope가 허용된 payload만 포함한 결과로 변환되는지 검증합니다.
 	@Test
@@ -103,6 +104,34 @@ struct XcodeBuildMCPOutputDecoderTests {
 		"""
 
 		let result = makeDecoder().decode(Data(json.utf8), operation: operation)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+	}
+
+	// simulator payload 필드의 형식이 계약과 다르면 거부되는지 검증합니다.
+	@Test(arguments: [
+		#"{"name":true,"simulatorId":"fixture-id","state":"Booted","isAvailable":true,"runtime":"iOS 26.0"}"#,
+		#"{"name":"Fixture Phone","simulatorId":1,"state":"Booted","isAvailable":true,"runtime":"iOS 26.0"}"#,
+		#"{"name":"Fixture Phone","simulatorId":"fixture-id","state":false,"isAvailable":true,"runtime":"iOS 26.0"}"#,
+		#"{"name":"Fixture Phone","simulatorId":"fixture-id","state":"Booted","isAvailable":"false","runtime":"iOS 26.0"}"#,
+		#"{"name":"Fixture Phone","simulatorId":"fixture-id","state":"Booted","isAvailable":true,"runtime":26}"#
+	])
+	func simulator_payload_필드의_형식이_계약과_다르면_거부한다(_ simulator: String) throws {
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.simulator-list",
+			"schemaVersion": "2",
+			"didError": false,
+			"error": null,
+			"data": {"simulators": [\(simulator)]}
+		}
+		"""
+
+		let result = XcodeBuildMCPV2.outputDecoder.decode(
+			Data(json.utf8),
+			operation: discoverSimulatorsOperation
+		)
 		let error = try #require(result.error)
 
 		#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")

@@ -39,11 +39,11 @@ enum XcodeBuildMCPV2 {
 						fields: [
 							"simulators": .array(element: .object(
 								fields: [
-									"name": .scalar,
-									"simulatorId": .scalar,
-									"state": .scalar,
-									"isAvailable": .scalar,
-									"runtime": .scalar
+									"name": .string,
+									"simulatorId": .string,
+									"state": .string,
+									"isAvailable": .boolean,
+									"runtime": .string
 								],
 								requiredFields: [
 									"name",
@@ -67,7 +67,7 @@ enum XcodeBuildMCPV2 {
 					schema: .object(
 						fields: [
 							"summary": .object(
-								fields: ["status": .scalar],
+								fields: ["status": .string],
 								requiredFields: ["status"]
 							)
 						],

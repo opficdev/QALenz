@@ -10,6 +10,8 @@ import QALenzCore
 // payload에서 허용할 scalar, array 및 object 구조를 표현합니다.
 package indirect enum PayloadSchema: Sendable {
 	case scalar
+	case string
+	case boolean
 	case array(element: Self)
 	case object(fields: [String: Self], requiredFields: Set<String>)
 
@@ -20,7 +22,9 @@ package indirect enum PayloadSchema: Sendable {
 			(.scalar, .integer),
 			(.scalar, .unsignedInteger),
 			(.scalar, .number),
-			(.scalar, .boolean):
+			(.scalar, .boolean),
+			(.string, .string),
+			(.boolean, .boolean):
 			return payload
 		case let (.array(schema), .array(values)):
 			return try .array(values.map(schema.projected))
