@@ -14,6 +14,126 @@ import Testing
 @Suite
 struct XcodeBuildMCPCLIAdapterTests {
 	private let operation = XcodeBuildMCPOperation(rawValue: "fixture.list")
+	private let discoverSimulatorsOperation = XcodeBuildMCPOperation(rawValue: "discover.simulators")
+	private let buildSimulatorOperation = XcodeBuildMCPOperation(rawValue: "build.simulator")
+
+	// 기본 registry가 simulator 목록 JSON 결과를 정규화하는지 검증합니다.
+	@Test
+	func 기본_registry가_simulator_목록_JSON_결과를_정규화한다() async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		try installFakeXcodeBuildMCP(in: directory)
+		let adapter = XcodeBuildMCPCLIAdapter(
+			workingDirectoryURL: directory,
+			environment: ["PATH": directory.path],
+			timeout: .seconds(5)
+		)
+
+		let result = await adapter.execute(.init(operation: discoverSimulatorsOperation))
+
+		#expect(result.result == .passed)
+		#expect(result.payload == .object([
+			"simulators": .array([
+				.object([
+					"name": .string("Fixture Phone"),
+					"simulatorId": .string("fixture-id"),
+					"state": .string("Booted"),
+					"isAvailable": .boolean(true),
+					"runtime": .string("iOS 26.0")
+				])
+			])
+		]))
+		#expect(!adapter.supportsEvents(for: discoverSimulatorsOperation))
+	}
+
+	// 기본 registry가 build JSON 결과를 통과 결과로 정규화하는지 검증합니다.
+	@Test
+	func 기본_registry가_build_JSON_결과를_통과_결과로_정규화한다() async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		try installFakeXcodeBuildMCP(in: directory)
+		let adapter = XcodeBuildMCPCLIAdapter(
+			workingDirectoryURL: directory,
+			environment: ["PATH": directory.path],
+			timeout: .seconds(5)
+		)
+
+		let result = await adapter.execute(.init(
+			operation: buildSimulatorOperation,
+			arguments: [.init(name: "scheme.name", value: "Fixture")]
+		))
+
+		#expect(result.result == .passed)
+		#expect(result.payload == .object([
+			"summary": .object(["status": .string("SUCCEEDED")])
+		]))
+	}
+
+	// 기본 registry가 build JSONL terminal event를 완료 사건으로 변환하는지 검증합니다.
+	@Test
+	func 기본_registry가_build_JSONL_terminal_event를_완료_사건으로_변환한다() async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		try installFakeXcodeBuildMCP(in: directory)
+		let adapter = XcodeBuildMCPCLIAdapter(
+			workingDirectoryURL: directory,
+			environment: ["PATH": directory.path],
+			timeout: .seconds(5)
+		)
+		var events: [XcodeBuildMCPEvent] = []
+
+		for try await event in adapter.events(for: .init(operation: buildSimulatorOperation)) {
+			events.append(event)
+		}
+
+		#expect(events.map(\.kind) == [.completed])
+		#expect(adapter.supportsEvents(for: buildSimulatorOperation))
+	}
+
+	// 가짜 CLI의 민감 stderr가 비정상 종료 결과에 복사되지 않는지 검증합니다.
+	@Test
+	func 가짜_CLI의_민감_stderr가_비정상_종료_결과에_복사되지_않는다() async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		try installFakeXcodeBuildMCP(in: directory)
+		let adapter = XcodeBuildMCPCLIAdapter(
+			workingDirectoryURL: directory,
+			environment: ["PATH": directory.path],
+			timeout: .seconds(5)
+		)
+		let result = await adapter.execute(.init(
+			operation: buildSimulatorOperation,
+			arguments: [.init(name: "scheme.name", value: "failure")]
+		))
+		let error = try #require(result.runError)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.command.failed")
+		#expect(!String(describing: error).contains("secret-token-value"))
+	}
+
+	// event를 지원하지 않는 operation이 process를 시작하지 않고 구조화된 오류를 반환하는지 검증합니다.
+	@Test
+	func event를_지원하지_않는_operation이_구조화된_오류를_반환한다() async throws {
+		let runner = ProcessRunnerSpy(output: .success(makeProcessResult("")))
+		let adapter = XcodeBuildMCPCLIAdapter(
+			processRunner: runner,
+			workingDirectoryURL: URL(fileURLWithPath: "/tmp"),
+			environment: [:],
+			timeout: .seconds(1)
+		)
+		let stream = adapter.events(for: .init(operation: discoverSimulatorsOperation))
+
+		do {
+			for try await _ in stream {}
+			Issue.record("지원하지 않는 event operation 오류가 반환되지 않음")
+		} catch let error as RunError {
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.event.unsupported")
+		}
+
+		let processRequest = await runner.receivedRequest
+
+		#expect(processRequest == nil)
+	}
 
 	// JSON 실행이 허용된 환경과 working directory로 구성되는지 검증합니다.
 	@Test
@@ -136,6 +256,32 @@ struct XcodeBuildMCPCLIAdapterTests {
 	// process runner가 반환할 종료 상태와 출력을 구성합니다.
 	private func makeProcessResult(_ output: String) -> ProcessResult {
 		.init(standardOutput: Data(output.utf8), terminationStatus: 0)
+	}
+
+	// 가짜 xcodebuildmcp 실행 파일을 설치할 임시 디렉터리를 생성합니다.
+	private func makeTemporaryDirectory() throws -> URL {
+		let directory = FileManager.default.temporaryDirectory
+			.appendingPathComponent(UUID().uuidString, isDirectory: true)
+		try FileManager.default.createDirectory(
+			at: directory,
+			withIntermediateDirectories: true
+		)
+
+		return directory
+	}
+
+	// fixture script를 PATH에서 찾을 수 있는 xcodebuildmcp 실행 파일로 설치합니다.
+	private func installFakeXcodeBuildMCP(in directory: URL) throws {
+		let fixtureURL = try #require(
+			Bundle.module.url(forResource: "fake-xcodebuildmcp", withExtension: nil)
+		)
+		let executableURL = directory.appendingPathComponent("xcodebuildmcp")
+
+		try FileManager.default.copyItem(at: fixtureURL, to: executableURL)
+		try FileManager.default.setAttributes(
+			[.posixPermissions: 0o755],
+			ofItemAtPath: executableURL.path
+		)
 	}
 }
 

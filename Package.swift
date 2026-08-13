@@ -49,7 +49,8 @@ let package = Package(
 		),
 		.testTarget(
 			name: "QALenzXcodeBuildMCPTests",
-			dependencies: ["QALenzXcodeBuildMCP", "QALenzCore"]
+			dependencies: ["QALenzXcodeBuildMCP", "QALenzCore"],
+			resources: [.copy("Fixtures/fake-xcodebuildmcp")]
 		),
 		.testTarget(
 			name: "QALenzCLITests",

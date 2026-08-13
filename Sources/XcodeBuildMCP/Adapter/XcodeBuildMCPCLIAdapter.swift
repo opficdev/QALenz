@@ -24,8 +24,26 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 	private let environment: [String: String]
 	private let timeout: Duration
 
-	// command, 출력 decoder, process 실행 경계와 실행 환경으로 adapter를 구성합니다.
+	// XcodeBuildMCP 2.x 명세와 process 실행 환경으로 adapter를 구성합니다.
 	package init(
+		processRunner: any ProcessRunning = FoundationProcessRunner(),
+		workingDirectoryURL: URL,
+		environment: [String: String],
+		timeout: Duration
+	) {
+		self.init(
+			commandBuilder: XcodeBuildMCPV2.commandBuilder,
+			outputDecoder: XcodeBuildMCPV2.outputDecoder,
+			eventDescriptors: XcodeBuildMCPV2.eventDescriptors,
+			processRunner: processRunner,
+			workingDirectoryURL: workingDirectoryURL,
+			environment: environment,
+			timeout: timeout
+		)
+	}
+
+	// command, 출력 decoder, process 실행 경계와 실행 환경으로 adapter를 구성합니다.
+	init(
 		commandBuilder: CommandBuilder,
 		outputDecoder: XcodeBuildMCPOutputDecoder,
 		eventDescriptors: [XcodeBuildMCPOperation: EventDescriptor],
@@ -41,6 +59,11 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 		self.workingDirectoryURL = workingDirectoryURL
 		self.environment = environment
 		self.timeout = timeout
+	}
+
+	// operation이 JSONL 진행 사건을 지원하는지 반환합니다.
+	package func supportsEvents(for operation: XcodeBuildMCPOperation) -> Bool {
+		eventDescriptors[operation] != nil
 	}
 
 	// JSON 출력 command를 실행하고 공통 실행 결과를 반환합니다.
