@@ -22,50 +22,6 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 	private static let doctorEnvironment = [
 		"XCODEBUILDMCP_DEBUG": "true"
 	]
-	private static let fixedDiagnosticValues = [
-		XcodeBuildMCPDoctorDiagnosticValue(
-			id: "xcodebuildmcp.executable",
-			requirement: .required,
-			status: .missing,
-			message: "xcodebuildmcp를 찾을 수 없습니다.",
-			recommendation: "XcodeBuildMCP를 설치한 뒤 PATH를 확인합니다."
-		),
-		XcodeBuildMCPDoctorDiagnosticValue(
-			id: "xcodebuildmcp.executable",
-			requirement: .required,
-			status: .unsupported,
-			message: "xcodebuildmcp version 출력을 해석할 수 없습니다.",
-			recommendation: "지원하는 XcodeBuildMCP version을 사용합니다."
-		),
-		XcodeBuildMCPDoctorDiagnosticValue(
-			id: "xcodebuildmcp.output-schema",
-			requirement: .required,
-			status: .missing,
-			message: "XcodeBuildMCP doctor의 구조화된 출력을 확인할 수 없습니다.",
-			recommendation: "설치된 XcodeBuildMCP가 QALenz가 요구하는 doctor CLI 출력을 지원하는지 확인합니다."
-		),
-		XcodeBuildMCPDoctorDiagnosticValue(
-			id: "xcodebuildmcp.output-schema",
-			requirement: .required,
-			status: .available,
-			message: "xcodebuildmcp.output.doctor-report@2",
-			recommendation: nil
-		),
-		XcodeBuildMCPDoctorDiagnosticValue(
-			id: "xcodebuildmcp.output-schema",
-			requirement: .required,
-			status: .unsupported,
-			message: "XcodeBuildMCP doctor 출력 형식은 지원하지 않습니다.",
-			recommendation: "지원하는 XcodeBuildMCP 버전을 사용합니다."
-		),
-		XcodeBuildMCPDoctorDiagnosticValue(
-			id: "xcodebuildmcp.output-schema",
-			requirement: .required,
-			status: .unsupported,
-			message: "XcodeBuildMCP doctor의 JSON 응답을 해석할 수 없습니다.",
-			recommendation: "지원하는 XcodeBuildMCP 버전을 사용합니다."
-		)
-	]
 
 	private let processRunner: any ProcessRunning
 	private let workingDirectoryURL: URL
@@ -247,7 +203,9 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 				recommendation: nil
 			)
 		case .fixed(let event):
-			Self.fixedDiagnosticValues[event.rawValue]
+			XcodeBuildMCPDoctorReporterConfiguration.fixedDiagnosticValues[
+				event.rawValue
+			]
 		case .doctorCheck(let check, let index):
 			doctorCheckValue(for: check, index: index)
 		case .doctorCheckMissing(let name):
@@ -368,15 +326,6 @@ private enum XcodeBuildMCPDoctorFixedDiagnosticEvent: Int {
 	case doctorSchemaAvailable
 	case doctorSchemaUnsupported
 	case doctorOutputInvalid
-}
-
-// DoctorDiagnostic 생성에 사용할 정규화된 값을 나타냅니다.
-private struct XcodeBuildMCPDoctorDiagnosticValue {
-	let id: String
-	let requirement: DoctorDiagnostic.Requirement
-	let status: DoctorDiagnostic.Status
-	let message: String
-	let recommendation: String?
 }
 
 // XcodeBuildMCP doctor JSON 출력 중 QALenz가 사용하는 필드를 해석합니다.
