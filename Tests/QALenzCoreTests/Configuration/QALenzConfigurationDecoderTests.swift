@@ -49,6 +49,20 @@ struct QALenzConfigurationDecoderTests {
 		#expect(!FileManager.default.fileExists(atPath: expectedURL.path))
 	}
 
+	// outputDirectory가 null이면 Schema와 같은 설정 오류로 거부하는지 검증합니다.
+	@Test
+	func outputDirectory가_null이면_설정_오류로_거부한다() throws {
+		let configurationURL = try fixtureURL(named: "null-output-directory")
+		let error = try requireConfigurationError {
+			try makeDecoder().decode(at: configurationURL)
+		}
+
+		#expect(error.kind == .configuration)
+		#expect(error.code.rawValue == "configuration.json.invalid")
+		#expect(error.context.filePath == configurationURL.standardizedFileURL.path)
+		#expect(error.context.keyPath == "$.outputDirectory")
+	}
+
 	// 읽을 수 없는 config 파일이 파일 경로와 root key path를 보존하는지 검증합니다.
 	@Test
 	func 읽을_수_없는_config_파일은_설정_오류로_거부한다() throws {

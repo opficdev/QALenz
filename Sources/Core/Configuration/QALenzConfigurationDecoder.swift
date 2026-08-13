@@ -179,9 +179,39 @@ package struct QALenzConfigurationDocument: Decodable {
 
 	package static let keyNames = requiredKeyNames + ["outputDirectory"]
 
+	// config JSON의 key를 decoding에 사용합니다.
+	private enum CodingKeys: String, CodingKey {
+		case schemaVersion
+		case projectRoot
+		case xcodeBuildMCPProfile
+		case scenariosDirectory
+		case outputDirectory
+	}
+
 	let schemaVersion: Int
 	let projectRoot: String
 	let xcodeBuildMCPProfile: String
 	let scenariosDirectory: String
 	let outputDirectory: String?
+
+	// 필수 key와 선택 key의 JSON 값 형식을 분리해 해석합니다.
+	package init(from decoder: any Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+
+		schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+		projectRoot = try container.decode(String.self, forKey: .projectRoot)
+		xcodeBuildMCPProfile = try container.decode(
+			String.self,
+			forKey: .xcodeBuildMCPProfile
+		)
+		scenariosDirectory = try container.decode(
+			String.self,
+			forKey: .scenariosDirectory
+		)
+		outputDirectory = if container.contains(.outputDirectory) {
+			try container.decode(String.self, forKey: .outputDirectory)
+		} else {
+			nil
+		}
+	}
 }
