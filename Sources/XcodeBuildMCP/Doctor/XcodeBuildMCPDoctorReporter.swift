@@ -36,8 +36,8 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 			id: "xcodebuildmcp.output-schema",
 			requirement: .required,
 			status: .missing,
-			message: "XcodeBuildMCP doctor를 실행할 수 없습니다.",
-			recommendation: "XcodeBuildMCP 설치와 version을 확인한 뒤 다시 실행합니다."
+			message: "XcodeBuildMCP doctor의 구조화된 출력을 확인할 수 없습니다.",
+			recommendation: "설치된 XcodeBuildMCP가 QALenz가 요구하는 doctor CLI 출력을 지원하는지 확인합니다."
 		),
 		XcodeBuildMCPDoctorDiagnosticValue(
 			id: "xcodebuildmcp.output-schema",

@@ -85,7 +85,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 
 	// doctor command의 비정상 종료가 원본 출력 없이 누락 진단으로 변환되는지 검증합니다.
 	@Test
-	func doctor_command의_비정상_종료가_누락_진단으로_변환된다() async {
+	func doctor_command의_비정상_종료가_누락_진단으로_변환된다() async throws {
 		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
 				.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
 			.init(standardOutput: Data("secret-token-value".utf8), terminationStatus: 1)
@@ -95,6 +95,9 @@ struct XcodeBuildMCPDoctorReporterTests {
 		let diagnostics = await reporter.diagnoseXcodeBuildMCP()
 
 		#expect(diagnostics.map(\.status) == [.available, .missing])
+		let diagnostic = try #require(diagnostics.last)
+		#expect(diagnostic.message == "XcodeBuildMCP doctor의 구조화된 출력을 확인할 수 없습니다.")
+		#expect(diagnostic.recommendation == "설치된 XcodeBuildMCP가 QALenz가 요구하는 doctor CLI 출력을 지원하는지 확인합니다.")
 		#expect(!String(describing: diagnostics).contains("secret-token-value"))
 	}
 
