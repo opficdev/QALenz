@@ -273,6 +273,26 @@ struct XcodeBuildMCPDoctorReporterTests {
 		}
 	}
 
+	// env 실행 파일 오류를 실행 파일 누락 진단으로 변환하지 않는지 검증합니다.
+	@Test
+	func env_실행_파일_오류를_실행_오류로_반환한다() async {
+		let reporter = makeReporter(
+			processRunner: XcodeBuildMCPDoctorFailingProcessRunnerSpy(
+				error: .executableUnavailable
+			)
+		)
+
+		do {
+			_ = try await reporter.diagnoseXcodeBuildMCP()
+			Issue.record("RunError를 반환해야 합니다.")
+		} catch let error as RunError {
+			#expect(error.kind == .adapter)
+			#expect(error.code.rawValue == "adapter.xcodebuildmcp.unavailable")
+		} catch {
+			Issue.record("RunError 대신 다른 오류를 반환했습니다.")
+		}
+	}
+
 	// 기본 FoundationProcessRunner를 사용하는 reporter를 구성합니다.
 	private func makeReporter(
 		workingDirectoryURL: URL = URL(fileURLWithPath: "/tmp"),
@@ -364,5 +384,15 @@ private actor XcodeBuildMCPDoctorTimeoutProcessRunnerSpy: ProcessRunning {
 		}
 
 		throw ProcessRunnerError.timedOut
+	}
+}
+
+// 지정한 process 실행 오류를 반환하는 실행기입니다.
+private struct XcodeBuildMCPDoctorFailingProcessRunnerSpy: ProcessRunning {
+	let error: ProcessRunnerError
+
+	// 지정한 process 실행 오류를 반환합니다.
+	func run(_ request: ProcessRequest) async throws -> ProcessResult {
+		throw error
 	}
 }

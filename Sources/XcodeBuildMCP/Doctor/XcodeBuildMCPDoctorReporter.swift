@@ -112,8 +112,6 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 			}
 
 			return diagnostic(for: .executableAvailable(version))
-		} catch let error as ProcessRunnerError where error == .executableUnavailable {
-			return diagnostic(for: .fixed(.executableMissing))
 		} catch {
 			throw runError(for: error)
 		}
