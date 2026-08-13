@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 2,
+  "projectRoot": "..",
+  "xcodeBuildMCPProfile": "default",
+  "scenariosDirectory": "scenarios"
+}

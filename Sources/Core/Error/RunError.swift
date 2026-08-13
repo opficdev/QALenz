@@ -59,24 +59,30 @@ extension RunError {
 		}
 	}
 
-	// 오류가 발생한 명령과 대상 문맥을 전달합니다.
+	// 오류가 발생한 명령, 대상, 설정 파일 문맥을 전달합니다.
 	package struct Context: Codable, Sendable, Equatable {
 		package let command: String?
 		package let target: String?
 		package let step: String?
 		package let assertion: String?
+		package let filePath: String?
+		package let keyPath: String?
 
 		// 선택 문맥 값으로 초기화합니다.
 		package init(
 			command: String? = nil,
 			target: String? = nil,
 			step: String? = nil,
-			assertion: String? = nil
+			assertion: String? = nil,
+			filePath: String? = nil,
+			keyPath: String? = nil
 		) {
 			self.command = command
 			self.target = target
 			self.step = step
 			self.assertion = assertion
+			self.filePath = filePath
+			self.keyPath = keyPath
 		}
 	}
 }
