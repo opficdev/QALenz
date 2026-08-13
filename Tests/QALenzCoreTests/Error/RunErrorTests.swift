@@ -14,13 +14,11 @@ struct RunErrorTests {
 	@Test
 	func RunError_값은_JSON_왕복_변환_후에도_구조화된_값이_같다() throws {
 		let error = RunError(
-			kind: .adapter,
-			code: .init(rawValue: "adapter.schema.invalid"),
+			kind: .configuration,
+			code: .init(rawValue: "configuration.json.invalid"),
 			context: .init(
-				command: "run",
-				target: "DevLog",
-				step: "launch",
-				assertion: "header.visible"
+				filePath: "/tmp/Project/.qalenz/config.json",
+				keyPath: "$.scenariosDirectory"
 			)
 		)
 
@@ -28,6 +26,28 @@ struct RunErrorTests {
 		let decoded = try JSONDecoder().decode(RunError.self, from: data)
 
 		#expect(decoded == error)
+	}
+
+	// 설정 파일과 JSON key path 문맥이 구조화된 JSON으로 유지되는지 검증합니다.
+	@Test
+	func 설정_오류_문맥은_파일_경로와_JSON_key_path를_포함한다() throws {
+		let error = RunError(
+			kind: .configuration,
+			code: .init(rawValue: "configuration.key.missing"),
+			context: .init(
+				filePath: "/tmp/Project/.qalenz/config.json",
+				keyPath: "$.xcodeBuildMCPProfile"
+			)
+		)
+
+		let data = try JSONEncoder().encode(error)
+		let object = try #require(
+			JSONSerialization.jsonObject(with: data) as? [String: Any]
+		)
+		let context = try #require(object["context"] as? [String: Any])
+
+		#expect(context["filePath"] as? String == "/tmp/Project/.qalenz/config.json")
+		#expect(context["keyPath"] as? String == "$.xcodeBuildMCPProfile")
 	}
 
 	@Test

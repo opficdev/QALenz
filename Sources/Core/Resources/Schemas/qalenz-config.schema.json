@@ -1,0 +1,29 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "QALenz Configuration",
+	"type": "object",
+	"required": [
+		"schemaVersion",
+		"projectRoot",
+		"xcodeBuildMCPProfile",
+		"scenariosDirectory"
+	],
+	"properties": {
+		"schemaVersion": {
+			"type": "integer",
+			"const": 1
+		},
+		"projectRoot": {
+			"type": "string"
+		},
+		"xcodeBuildMCPProfile": {
+			"type": "string"
+		},
+		"scenariosDirectory": {
+			"type": "string"
+		},
+		"outputDirectory": {
+			"type": "string"
+		}
+	}
+}
