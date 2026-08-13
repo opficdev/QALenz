@@ -105,6 +105,51 @@ struct FoundationProcessRunnerTests {
 		#expect(Date().timeIntervalSince(start) < 1.5)
 	}
 
+	// 존재하지 않는 실행 파일이 사용 가능하지 않음 오류로 구분되는지 검증합니다.
+	@Test
+	func 존재하지_않는_실행_파일이_사용_가능하지_않음_오류로_구분된다() async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		let executableURL = directory.appendingPathComponent("missing-executable")
+		let runner = FoundationProcessRunner()
+
+		do {
+			_ = try await runner.run(.init(
+				executableURL: executableURL,
+				arguments: [],
+				workingDirectoryURL: directory,
+				environment: [:],
+				timeout: .seconds(5)
+			))
+			Issue.record("실행 파일 오류가 반환되지 않음")
+		} catch let error as ProcessRunnerError {
+			#expect(error == .executableUnavailable)
+		}
+	}
+
+	// 존재하지 않는 working directory가 별도 오류로 구분되는지 검증합니다.
+	@Test
+	func 존재하지_않는_작업_경로가_별도_오류로_구분된다() async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		let executableURL = try makeExecutable(in: directory, script: "#!/bin/sh\nexit 0")
+		let workingDirectoryURL = directory.appendingPathComponent("missing-directory")
+		let runner = FoundationProcessRunner()
+
+		do {
+			_ = try await runner.run(.init(
+				executableURL: executableURL,
+				arguments: [],
+				workingDirectoryURL: workingDirectoryURL,
+				environment: [:],
+				timeout: .seconds(5)
+			))
+			Issue.record("작업 경로 오류가 반환되지 않음")
+		} catch let error as ProcessRunnerError {
+			#expect(error == .invalidWorkingDirectory)
+		}
+	}
+
 	// 종료 요청을 무시하는 가짜 실행 파일도 유예 시간 뒤 강제 종료하는지 검증합니다.
 	@Test
 	func 종료_요청을_무시하면_유예_시간_뒤_강제_종료한다() async throws {

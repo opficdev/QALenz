@@ -20,6 +20,7 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 		guard !Task.isCancelled else {
 			throw CancellationError()
 		}
+		try validateLaunchRequest(request)
 
 		let process = Process()
 		let processBox = ProcessBox(process: process)
@@ -33,22 +34,13 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 		process.environment = request.environment
 		process.standardOutput = output
 		process.standardError = FileHandle.nullDevice
-		output.fileHandleForReading.readabilityHandler = { handle in
-			let data = handle.availableData
-
-			guard !data.isEmpty else {
-				handle.readabilityHandler = nil
-				return
-			}
-
-			collector.append(data)
-		}
+		output.fileHandleForReading.readabilityHandler = { collector.collectAvailableData(from: $0) }
 
 		do {
 			try process.run()
 		} catch {
 			output.fileHandleForReading.readabilityHandler = nil
-			throw ProcessRunnerError.failedToLaunch
+			throw preflightError(for: request) ?? .failedToLaunch
 		}
 
 		guard !Task.isCancelled else {
@@ -69,10 +61,11 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 		}
 
 		output.fileHandleForReading.readabilityHandler = nil
-		collector.append(output.fileHandleForReading.readDataToEndOfFile())
+		let standardOutput = collector.finishCollecting(from: output.fileHandleForReading)
+		try? output.fileHandleForReading.close()
 
 		return .init(
-			standardOutput: collector.data,
+			standardOutput: standardOutput,
 			terminationStatus: process.terminationStatus
 		)
 	}
@@ -98,14 +91,13 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 
 			let task = Task {
 				do {
-					guard !Task.isCancelled else {
-						throw CancellationError()
-					}
+					try Task.checkCancellation()
+					try validateLaunchRequest(request)
 
 					do {
 						try process.run()
 					} catch {
-						throw ProcessRunnerError.failedToLaunch
+						throw preflightError(for: request) ?? .failedToLaunch
 					}
 
 					guard !Task.isCancelled else {
@@ -119,10 +111,8 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 						timeout: request.timeout
 					)
 					output.fileHandleForReading.readabilityHandler = nil
-					emitter.finish(
-						from: output.fileHandleForReading,
-						terminationStatus: process.terminationStatus
-					)
+					emitter.finish(standardOutputHandle: output.fileHandleForReading, terminationStatus: process.terminationStatus)
+					try? output.fileHandleForReading.close()
 				} catch {
 					output.fileHandleForReading.readabilityHandler = nil
 					emitter.finish(throwing: error)
@@ -134,6 +124,30 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 				processBox.forceTerminate()
 			}
 		}
+	}
+
+	// 실행 요청이 시작 가능한 경로를 가지는지 검증합니다.
+	private func validateLaunchRequest(_ request: ProcessRequest) throws {
+		if let error = preflightError(for: request) {
+			throw error
+		}
+	}
+
+	// 실행 파일과 작업 경로의 시작 가능 여부를 반환합니다.
+	private func preflightError(for request: ProcessRequest) -> ProcessRunnerError? {
+		guard FileManager.default.isExecutableFile(atPath: request.executableURL.path) else {
+			return .executableUnavailable
+		}
+
+		var isDirectory = ObjCBool(false)
+		guard FileManager.default.fileExists(
+			atPath: request.workingDirectoryURL.path,
+			isDirectory: &isDirectory
+		), isDirectory.boolValue else {
+			return .invalidWorkingDirectory
+		}
+
+		return nil
 	}
 
 	// 종료, 시간 제한 및 취소 중 먼저 발생한 상태를 처리합니다.
@@ -222,13 +236,16 @@ private final class ProcessEventEmitter: @unchecked Sendable {
 		}
 	}
 
-	// 남은 표준 출력과 종료 상태를 전달하고 stream을 완료합니다.
-	func finish(from handle: FileHandle, terminationStatus: Int32) {
+	// 수신한 표준 출력 뒤 종료 상태를 전달하고 stream을 완료합니다.
+	func finish(
+		standardOutputHandle handle: FileHandle,
+		terminationStatus: Int32
+	) {
 		queue.sync {
 			guard !isFinished else { return }
 			isFinished = true
 
-			let data = handle.readDataToEndOfFile()
+			let data = StandardOutputDrainer.drainBufferedData(from: handle)
 			if !data.isEmpty {
 				continuation.yield(.standardOutput(data))
 			}
@@ -329,20 +346,31 @@ private final class ProcessTerminationObserver: @unchecked Sendable {
 private final class StandardOutputCollector: @unchecked Sendable {
 	private let lock = NSLock()
 	private var storedData = Data()
+	private var isFinished = false
 
-	// 새 표준 출력 조각을 누적합니다.
-	func append(_ data: Data) {
-		guard !data.isEmpty else { return }
-
+	// 현재 읽을 수 있는 표준 출력 조각을 누적합니다.
+	func collectAvailableData(from handle: FileHandle) {
 		lock.lock()
 		defer { lock.unlock() }
+		guard !isFinished else { return }
+
+		let data = handle.availableData
+		guard !data.isEmpty else {
+			handle.readabilityHandler = nil
+			return
+		}
+
 		storedData.append(data)
 	}
 
-	// 누적된 표준 출력을 반환합니다.
-	var data: Data {
+	// 남은 buffer를 누적한 뒤 전체 표준 출력을 반환합니다.
+	func finishCollecting(from handle: FileHandle) -> Data {
 		lock.lock()
 		defer { lock.unlock() }
+		guard !isFinished else { return storedData }
+		isFinished = true
+
+		storedData.append(StandardOutputDrainer.drainBufferedData(from: handle))
 
 		return storedData
 	}
