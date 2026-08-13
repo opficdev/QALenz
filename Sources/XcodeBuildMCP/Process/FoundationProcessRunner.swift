@@ -23,6 +23,7 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 
 		let process = Process()
 		let processBox = ProcessBox(process: process)
+		let termination = ProcessTerminationObserver(process: process)
 		let output = Pipe()
 		let collector = StandardOutputCollector()
 
@@ -56,7 +57,11 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 		}
 
 		do {
-			try await waitForTermination(processBox, timeout: request.timeout)
+			try await waitForTermination(
+				processBox,
+				termination: termination,
+				timeout: request.timeout
+			)
 		} catch {
 			output.fileHandleForReading.readabilityHandler = nil
 			collector.append(output.fileHandleForReading.readDataToEndOfFile())
@@ -77,6 +82,7 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 		.init { continuation in
 			let process = Process()
 			let processBox = ProcessBox(process: process)
+			let termination = ProcessTerminationObserver(process: process)
 			let output = Pipe()
 			let emitter = ProcessEventEmitter(continuation: continuation)
 
@@ -107,7 +113,11 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 						throw CancellationError()
 					}
 
-					try await waitForTermination(processBox, timeout: request.timeout)
+					try await waitForTermination(
+						processBox,
+						termination: termination,
+						timeout: request.timeout
+					)
 					output.fileHandleForReading.readabilityHandler = nil
 					emitter.finish(
 						from: output.fileHandleForReading,
@@ -129,12 +139,13 @@ package final class FoundationProcessRunner: ProcessRunning, @unchecked Sendable
 	// 종료, 시간 제한 및 취소 중 먼저 발생한 상태를 처리합니다.
 	private func waitForTermination(
 		_ process: ProcessBox,
+		termination: ProcessTerminationObserver,
 		timeout: Duration
 	) async throws {
 		let result = await withTaskCancellationHandler {
 			await withTaskGroup(of: ProcessWaitResult.self, returning: ProcessWaitResult.self) { group in
 				group.addTask {
-					process.waitUntilExit()
+					await termination.wait()
 					return .terminated
 				}
 				group.addTask {
@@ -265,10 +276,52 @@ private final class ProcessBox: @unchecked Sendable {
 
 		_ = kill(process.processIdentifier, SIGKILL)
 	}
+}
 
-	// process의 종료까지 대기합니다.
-	func waitUntilExit() {
-		process.waitUntilExit()
+// Process 종료 알림을 비차단 대기로 변환합니다.
+private final class ProcessTerminationObserver: @unchecked Sendable {
+	private let lock = NSLock()
+	private var isTerminated = false
+	private var continuations = [CheckedContinuation<Void, Never>]()
+
+	// 종료를 관찰할 Process에 handler를 연결합니다.
+	init(process: Process) {
+		process.terminationHandler = { [weak self] _ in
+			self?.resumeWaiters()
+		}
+	}
+
+	// Process 종료까지 현재 Task를 중단합니다.
+	func wait() async {
+		await withCheckedContinuation { continuation in
+			lock.lock()
+			guard !isTerminated else {
+				lock.unlock()
+				continuation.resume()
+				return
+			}
+
+			continuations.append(continuation)
+			lock.unlock()
+		}
+	}
+
+	// 대기 중인 모든 Task에 Process 종료를 알립니다.
+	private func resumeWaiters() {
+		lock.lock()
+		guard !isTerminated else {
+			lock.unlock()
+			return
+		}
+
+		isTerminated = true
+		let waiters = continuations
+		continuations.removeAll(keepingCapacity: false)
+		lock.unlock()
+
+		for waiter in waiters {
+			waiter.resume()
+		}
 	}
 }
 
