@@ -13,6 +13,22 @@ import Testing
 // FoundationProcessRunner의 정상 종료 stdout 처리를 검증합니다.
 @Suite
 struct FoundationProcessRunnerTerminationTests {
+	// stdout 작성자가 열린 상태에서도 현재 buffer만 회수하는지 검증합니다.
+	@Test
+	func stdout_작성자가_열린_상태에서도_현재_buffer만_회수한다() throws {
+		let output = Pipe()
+		defer { try? output.fileHandleForReading.close() }
+		defer { try? output.fileHandleForWriting.close() }
+		let expected = Data("buffered-before-termination".utf8)
+		try output.fileHandleForWriting.write(contentsOf: expected)
+		let start = Date()
+
+		let data = StandardOutputDrainer.drainBufferedData(from: output.fileHandleForReading)
+
+		#expect(Date().timeIntervalSince(start) < 0.5)
+		#expect(data == expected)
+	}
+
 	// 정상 종료한 process의 하위 process가 stdout을 유지해도 단일 실행이 종료하는지 검증합니다.
 	@Test
 	func 정상_종료_뒤_하위_process가_stdout을_유지해도_단일_실행이_종료한다() async throws {
@@ -127,7 +143,6 @@ struct FoundationProcessRunnerTerminationTests {
 			/bin/sh -c 'exec /bin/sleep 3' &
 			printf '%s' "$!" > "\(pidURL.path)"
 			printf '%s' 'received-before-termination'
-			/bin/sleep 0.1
 			"""
 		)
 	}
