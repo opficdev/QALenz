@@ -115,9 +115,7 @@ private struct XcodeBuildMCPAdapterSpy: XcodeBuildMCPAdapter {
 	}
 
 	// 고정된 정규화 사건 stream을 반환합니다.
-	func events(
-		for request: XcodeBuildMCPRequest
-	) -> AsyncThrowingStream<XcodeBuildMCPEvent, any Error> {
+	func events(for request: XcodeBuildMCPRequest) -> AsyncThrowingStream<XcodeBuildMCPEvent, any Error> {
 		AsyncThrowingStream { continuation in
 			for event in sentEvents {
 				continuation.yield(event)
