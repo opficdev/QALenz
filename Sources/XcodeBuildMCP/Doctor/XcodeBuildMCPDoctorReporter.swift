@@ -12,6 +12,7 @@ import QALenzCore
 package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendable {
 	private static let doctorSchema = "xcodebuildmcp.output.doctor-report"
 	private static let doctorSchemaVersion = "2"
+	private static let requiredDoctorCheckNames = ["xcode", "manifest-tools"]
 	private static let allowedEnvironmentKeys: Set<String> = [
 		"DEVELOPER_DIR",
 		"PATH",
@@ -154,9 +155,17 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 				return [diagnostic(for: .fixed(.doctorOutputInvalid))]
 			}
 
-			return [diagnostic(for: .fixed(.doctorSchemaAvailable))] + data.checks.enumerated().map { index, check in
+			let checkDiagnostics = data.checks.enumerated().map { index, check in
 				diagnostic(for: .doctorCheck(check, index: index))
 			}
+			let reportedNames = Set(data.checks.map(\.name))
+			let missingRequiredDiagnostics = Self.requiredDoctorCheckNames
+				.filter { !reportedNames.contains($0) }
+				.map { diagnostic(for: .doctorCheckMissing($0)) }
+
+			return [diagnostic(for: .fixed(.doctorSchemaAvailable))]
+				+ checkDiagnostics
+				+ missingRequiredDiagnostics
 		} catch {
 			return [diagnostic(for: .fixed(.doctorOutputInvalid))]
 		}
@@ -264,6 +273,8 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 			Self.fixedDiagnosticValues[event.rawValue]
 		case .doctorCheck(let check, let index):
 			doctorCheckValue(for: check, index: index)
+		case .doctorCheckMissing(let name):
+			doctorCheckMissingValue(for: name)
 		}
 
 		return .init(
@@ -310,6 +321,17 @@ package struct XcodeBuildMCPDoctorReporter: XcodeBuildMCPDoctorReporting, Sendab
 			recommendation: recommendation
 		)
 	}
+
+	// 누락된 필수 doctor check를 실패 진단 값으로 정규화합니다.
+	private func doctorCheckMissingValue(for name: String) -> XcodeBuildMCPDoctorDiagnosticValue {
+		.init(
+			id: "xcodebuildmcp.doctor.\(name)",
+			requirement: .required,
+			status: .missing,
+			message: "XcodeBuildMCP \(name) 항목을 확인할 수 없습니다.",
+			recommendation: "XcodeBuildMCP doctor의 안내에 따라 \(name) 항목을 확인합니다."
+		)
+	}
 }
 
 // reporter 내부에서 정규화할 진단 사건을 표현합니다.
@@ -317,6 +339,7 @@ private enum XcodeBuildMCPDoctorDiagnosticEvent {
 	case executableAvailable(String)
 	case fixed(XcodeBuildMCPDoctorFixedDiagnosticEvent)
 	case doctorCheck(XcodeBuildMCPDoctorReport.Check, index: Int)
+	case doctorCheckMissing(String)
 }
 
 // 고정 진단 값의 순번을 나타냅니다.

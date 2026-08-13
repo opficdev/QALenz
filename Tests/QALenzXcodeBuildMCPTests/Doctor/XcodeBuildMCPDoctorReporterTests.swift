@@ -30,6 +30,7 @@ struct XcodeBuildMCPDoctorReporterTests {
 			"xcodebuildmcp.executable",
 			"xcodebuildmcp.output-schema",
 			"xcodebuildmcp.doctor.xcode",
+			"xcodebuildmcp.doctor.manifest-tools",
 			"xcodebuildmcp.doctor.axe"
 		])
 		#expect(diagnostics[0].status == .available)
@@ -37,9 +38,11 @@ struct XcodeBuildMCPDoctorReporterTests {
 		#expect(diagnostics[1].status == .available)
 		#expect(diagnostics[2].requirement == .required)
 		#expect(diagnostics[2].status == .available)
-		#expect(diagnostics[3].requirement == .recommended)
-		#expect(diagnostics[3].status == .missing)
-		#expect(diagnostics[3].recommendation?.contains("axe") == true)
+		#expect(diagnostics[3].requirement == .required)
+		#expect(diagnostics[3].status == .available)
+		#expect(diagnostics[4].requirement == .recommended)
+		#expect(diagnostics[4].status == .missing)
+		#expect(diagnostics[4].recommendation?.contains("axe") == true)
 	}
 
 	// PATH에 실행 파일이 없으면 설치 안내를 포함한 누락 진단을 반환하는지 검증합니다.
@@ -183,8 +186,34 @@ struct XcodeBuildMCPDoctorReporterTests {
 
 		let diagnostics = try await reporter.diagnoseXcodeBuildMCP()
 
-		#expect(diagnostics.map(\.status) == [.available, .available, .missing])
+		#expect(diagnostics.map(\.status) == [.available, .available, .missing, .missing, .missing])
 		#expect(!String(describing: diagnostics).contains("secret-token-value"))
+	}
+
+	// 필수 doctor check가 응답에 없으면 누락 진단을 반환하는지 검증합니다.
+	@Test
+	func 필수_doctor_check가_없으면_누락_진단을_반환한다() async throws {
+		let runner = XcodeBuildMCPDoctorProcessRunnerSpy(results: [
+			.init(standardOutput: Data("2.7.0-fixture\n".utf8), terminationStatus: 0),
+			.init(standardOutput: Data(
+				"""
+				{"schema":"xcodebuildmcp.output.doctor-report","schemaVersion":"2","didError":false,"error":null,"data":{"serverVersion":"2.7.0-fixture","checks":[]}}
+				""".utf8
+			), terminationStatus: 0)
+		])
+		let reporter = makeReporter(processRunner: runner)
+
+		let diagnostics = try await reporter.diagnoseXcodeBuildMCP()
+
+		#expect(diagnostics.map(\.id.rawValue) == [
+			"xcodebuildmcp.executable",
+			"xcodebuildmcp.output-schema",
+			"xcodebuildmcp.doctor.xcode",
+			"xcodebuildmcp.doctor.manifest-tools"
+		])
+		#expect(diagnostics.suffix(2).allSatisfy {
+			$0.requirement == .required && $0.status == .missing
+		})
 	}
 
 	// version과 doctor 요청이 필요한 환경으로 실행되는지 검증합니다.
