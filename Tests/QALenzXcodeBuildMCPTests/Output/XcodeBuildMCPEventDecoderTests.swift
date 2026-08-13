@@ -30,7 +30,8 @@ struct XcodeBuildMCPEventDecoderTests {
 
 		"""
 
-		let events = try decoder.decode(Data(jsonLines.utf8), operation: operation)
+		var events = try decoder.decode(Data(jsonLines.utf8), operation: operation)
+		events += try decoder.finish(operation: operation)
 
 		#expect(events.map(\.kind) == [.started, .progress, .completed])
 		#expect(events.map(\.message) == [nil, nil, "SUCCEEDED"])

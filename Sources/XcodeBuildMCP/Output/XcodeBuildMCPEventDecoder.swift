@@ -11,7 +11,7 @@ import QALenzCore
 // 분할 수신된 JSONL 데이터를 QALenz 진행 사건으로 변환합니다.
 package struct XcodeBuildMCPEventDecoder: Sendable {
 	private var buffer = Data()
-	private var hasTerminalEvent = false
+	private var terminalEvent: XcodeBuildMCPEvent?
 	private let descriptor: EventDescriptor
 	private let maximumLineByteCount: Int
 
@@ -68,9 +68,10 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 			}
 		}
 
-		guard hasTerminalEvent else {
+		guard let terminalEvent else {
 			throw invalidOutputError(operation: operation)
 		}
+		events.append(terminalEvent)
 
 		return events
 	}
@@ -104,15 +105,17 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 			status: event.status,
 			operation: operation
 		)
-		if kind == .completed || kind == .failed {
-			hasTerminalEvent = true
-		}
-
-		return .init(
+		let normalizedEvent = XcodeBuildMCPEvent(
 			operation: operation,
 			kind: kind,
 			message: normalizedStatus(event.status)
 		)
+		if kind == .completed || kind == .failed {
+			terminalEvent = normalizedEvent
+			return nil
+		}
+
+		return normalizedEvent
 	}
 
 	// 허용된 summary status만 외부 사건 메시지로 보존합니다.
