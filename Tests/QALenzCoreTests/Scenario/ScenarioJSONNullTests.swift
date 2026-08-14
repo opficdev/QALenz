@@ -22,6 +22,7 @@ struct ScenarioJSONNullTests {
 		case steps
 		case assertions
 		case evidence
+		case testDataRequirements
 		case stepID
 		case action
 		case identifier
@@ -50,6 +51,8 @@ struct ScenarioJSONNullTests {
 				"$.assertions"
 			case .evidence:
 				"$.evidence"
+			case .testDataRequirements:
+				"$.testDataRequirements"
 			case .stepID:
 				"$.steps[0].id"
 			case .action:
@@ -113,7 +116,8 @@ struct ScenarioJSONNullTests {
 					"evidence": [
 						{"afterStepID": "without-parameter"},
 						{"afterStepID": "with-parameter", "parameters": null}
-					]
+					],
+					"testDataRequirements": []
 				}
 				""".utf8
 			)
@@ -146,6 +150,31 @@ struct ScenarioJSONNullTests {
 		let name = value(for: .name, when: key, default: "\"Null typed key\"")
 		let profile = value(for: .profile, when: key, default: "\"default\"")
 		let matrix = value(for: .matrix, when: key, default: "{}")
+		let steps = stepValue(for: key)
+		let references = referenceValues(for: key)
+		let testDataRequirements = value(
+			for: .testDataRequirements,
+			when: key,
+			default: "[]"
+		)
+
+		return """
+		{
+			"schemaVersion": \(schemaVersion),
+			"id": \(id),
+			"name": \(name),
+			"profile": \(profile),
+			"matrix": \(matrix),
+			"steps": \(steps),
+			"assertions": \(references.assertions),
+			"evidence": \(references.evidence),
+			"testDataRequirements": \(testDataRequirements)
+		}
+		"""
+	}
+
+	// step과 selector의 명시적 null 시험 값을 반환합니다.
+	private func stepValue(for key: NullKey) -> String {
 		let stepID = value(for: .stepID, when: key, default: "\"launch\"")
 		let action = value(for: .action, when: key, default: "\"buildAndRun\"")
 		let identifier = value(for: .identifier, when: key, default: "\"launch-button\"")
@@ -157,7 +186,12 @@ struct ScenarioJSONNullTests {
 			"identifier": \(identifier), "label": \(label), "role": \(role), "value": \(selectorValue)
 		}}]
 		"""
-		let steps = value(for: .steps, when: key, default: step)
+
+		return value(for: .steps, when: key, default: step)
+	}
+
+	// assertion과 evidence의 명시적 null 시험 값을 반환합니다.
+	private func referenceValues(for key: NullKey) -> (assertions: String, evidence: String) {
 		let assertionStepID = value(
 			for: .assertionStepID,
 			when: key,
@@ -168,29 +202,11 @@ struct ScenarioJSONNullTests {
 			when: key,
 			default: "\"evidence-step\""
 		)
-		let assertions = value(
-			for: .assertions,
-			when: key,
-			default: "[{\"afterStepID\": \(assertionStepID)}]"
-		)
-		let evidence = value(
-			for: .evidence,
-			when: key,
-			default: "[{\"afterStepID\": \(evidenceStepID)}]"
-		)
 
-		return """
-		{
-			"schemaVersion": \(schemaVersion),
-			"id": \(id),
-			"name": \(name),
-			"profile": \(profile),
-			"matrix": \(matrix),
-			"steps": \(steps),
-			"assertions": \(assertions),
-			"evidence": \(evidence)
-		}
-		"""
+		return (
+			value(for: .assertions, when: key, default: "[{\"afterStepID\": \(assertionStepID)}]"),
+			value(for: .evidence, when: key, default: "[{\"afterStepID\": \(evidenceStepID)}]")
+		)
 	}
 
 	// decoder가 반환한 여러 scenario 검증 오류를 추출합니다.

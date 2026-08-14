@@ -137,7 +137,8 @@ struct ScenarioStepValidatorTests {
 				  "matrix": {},
 				  "steps": \(steps),
 				  "assertions": [],
-				  "evidence": []
+				  "evidence": [],
+				  "testDataRequirements": []
 				}
 				""".utf8
 			)

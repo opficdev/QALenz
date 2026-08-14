@@ -10,7 +10,8 @@
 		"matrix",
 		"steps",
 		"assertions",
-		"evidence"
+		"evidence",
+		"testDataRequirements"
 	],
 	"properties": {
 		"schemaVersion": {
@@ -176,6 +177,27 @@
 					},
 					"parameters": {}
 				}
+			}
+		},
+		"testDataRequirements": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": [
+					"operation",
+					"resource"
+				],
+				"properties": {
+					"operation": {
+						"type": "string",
+						"enum": ["create", "modify", "delete"]
+					},
+					"resource": {
+						"type": "string",
+						"minLength": 1
+					}
+				},
+				"additionalProperties": false
 			}
 		}
 	}

@@ -55,7 +55,8 @@ struct ScenarioJSONParserTests {
 						"profile": "default",
 						"steps": [{"id": "launch", "action": "buildAndRun"}],
 						"assertions": [],
-						"evidence": []
+						"evidence": [],
+						"testDataRequirements": []
 					}
 					""".utf8
 				),
@@ -105,7 +106,8 @@ struct ScenarioJSONParserTests {
 							{"id": "launch", "id": "duplicate", "action": "buildAndRun"}
 						],
 						"assertions": [],
-						"evidence": []
+						"evidence": [],
+						"testDataRequirements": []
 					}
 					""".utf8
 				),

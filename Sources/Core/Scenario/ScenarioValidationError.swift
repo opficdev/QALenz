@@ -25,6 +25,8 @@ package struct ScenarioValidationError: Codable, Sendable, Equatable {
 		case stepSelectorEmpty = "scenario.step.selector.empty"
 		case assertionStepUnresolved = "scenario.assertion.step.unresolved"
 		case evidenceStepUnresolved = "scenario.evidence.step.unresolved"
+		case testDataRequirementOperationUnsupported = "scenario.test-data-requirement.operation.unsupported"
+		case testDataRequirementResourceEmpty = "scenario.test-data-requirement.resource.empty"
 	}
 
 	package let code: Code

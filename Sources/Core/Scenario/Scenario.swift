@@ -19,6 +19,7 @@ package struct Scenario: Sendable, Equatable {
 	package let steps: [ScenarioStep]
 	package let assertions: [ScenarioStepReference]
 	package let evidence: [ScenarioStepReference]
+	package let testDataRequirements: [TestDataRequirement]
 
 	// 검증을 마친 scenario data로 값을 구성합니다.
 	package init(
@@ -29,7 +30,8 @@ package struct Scenario: Sendable, Equatable {
 		matrix: ScenarioValue,
 		steps: [ScenarioStep],
 		assertions: [ScenarioStepReference],
-		evidence: [ScenarioStepReference]
+		evidence: [ScenarioStepReference],
+		testDataRequirements: [TestDataRequirement] = []
 	) {
 		self.schemaVersion = schemaVersion
 		self.id = id
@@ -39,7 +41,27 @@ package struct Scenario: Sendable, Equatable {
 		self.steps = steps
 		self.assertions = assertions
 		self.evidence = evidence
+		self.testDataRequirements = testDataRequirements
 	}
+}
+
+// scenario 실행에 필요한 project-owned test data 작업을 표현합니다.
+package struct TestDataRequirement: Codable, Sendable, Equatable {
+	package let operation: TestDataOperation
+	package let resource: String
+
+	// 필요한 작업 종류와 project-owned resource 식별자로 구성합니다.
+	package init(operation: TestDataOperation, resource: String) {
+		self.operation = operation
+		self.resource = resource
+	}
+}
+
+// 지원하는 test data 작업 종류를 정의합니다.
+package enum TestDataOperation: String, CaseIterable, Codable, Sendable, Equatable {
+	case create
+	case modify
+	case delete
 }
 
 // scenario 배열 순서로 실행할 하나의 동작을 표현합니다.
@@ -64,7 +86,7 @@ package struct ScenarioStep: Sendable, Equatable {
 }
 
 // 지원하는 scenario action tag를 정의합니다.
-package enum ScenarioStepAction: String, CaseIterable, Sendable, Equatable {
+package enum ScenarioStepAction: String, CaseIterable, Codable, Sendable, Equatable {
 	case buildAndRun
 	case waitForUI
 	case tap
@@ -86,7 +108,7 @@ package enum ScenarioStepAction: String, CaseIterable, Sendable, Equatable {
 }
 
 // app별 UI 요소를 scenario data로 한정해 표현합니다.
-package struct ScenarioSelector: Sendable, Equatable {
+package struct ScenarioSelector: Codable, Sendable, Equatable {
 	package static let keyNames = ["identifier", "label", "role", "value"]
 
 	package let identifier: String?

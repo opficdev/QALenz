@@ -70,7 +70,8 @@ struct ScenarioDecoderTests {
 					  "matrix": {},
 					  "steps": [{"id": "tap-profile", "action": "tap", "selector": {"identifier": "profile-button", "identifer": "typo"}}],
 					  "assertions": [],
-					  "evidence": []
+					  "evidence": [],
+					  "testDataRequirements": []
 					}
 					""".utf8
 				),
@@ -103,7 +104,8 @@ struct ScenarioDecoderTests {
 					  "matrix": {},
 					  "steps": [{"id": "capture", "action": "screenshot", "selector": null}],
 					  "assertions": [],
-					  "evidence": []
+					  "evidence": [],
+					  "testDataRequirements": []
 					}
 					""".utf8
 				),
@@ -136,7 +138,8 @@ struct ScenarioDecoderTests {
 					  "matrix": {},
 					  "steps": [{"id": "launch", "action": "buildAndRun", "parameters": null}],
 					  "assertions": [{"afterStepID": "launch", "parameters": null}],
-					  "evidence": [{"afterStepID": "launch", "parameters": null}]
+					  "evidence": [{"afterStepID": "launch", "parameters": null}],
+					  "testDataRequirements": []
 					}
 					""".utf8
 				),
@@ -175,7 +178,8 @@ struct ScenarioDecoderTests {
 					  "matrix": {"large": 1e200, "small": 1e-200},
 					  "steps": [{"id": "launch", "action": "buildAndRun", "parameters": {"large": 1e200}}],
 					  "assertions": [{"afterStepID": "launch", "parameters": 1e-200}],
-					  "evidence": [{"afterStepID": "launch", "parameters": [1e200, 1e-200]}]
+					  "evidence": [{"afterStepID": "launch", "parameters": [1e200, 1e-200]}],
+					  "testDataRequirements": []
 					}
 					""".utf8
 				),
@@ -222,7 +226,8 @@ struct ScenarioDecoderTests {
 					  "matrix": {},
 					  "steps": [{"id": "launch", "action": "buildAndRun"}],
 					  "assertions": [],
-					  "evidence": []
+					  "evidence": [],
+					  "testDataRequirements": []
 					}
 					""".utf8
 				),

@@ -94,6 +94,46 @@ struct ScenarioValidatorTests {
 		#expect(result.errors.map(\.keyPath) == ["$.profile", "$.id", "$.id"])
 	}
 
+	// test data 요구사항의 누락과 잘못된 값을 각 JSON key path로 반환하는지 검증합니다.
+	@Test
+	func testDataRequirements_계약_오류를_반환한다() throws {
+		let document = try ScenarioJSONDecoder().decode(
+			Data(
+				"""
+				{
+				  "schemaVersion": 1,
+				  "id": "test-data-requirements",
+				  "name": "Test data requirements",
+				  "profile": "default",
+				  "matrix": {},
+				  "steps": [{"id": "launch", "action": "buildAndRun"}],
+				  "assertions": [],
+				  "evidence": [],
+				  "testDataRequirements": [
+					{},
+					{"operation": "reset", "resource": "todo"},
+					{"operation": "delete", "resource": "   "}
+				  ]
+				}
+				""".utf8
+			)
+		)
+		let result = ScenarioValidator().validate([
+			.init(document: document, url: URL(fileURLWithPath: "/tmp/test-data-requirements.json"))
+		])
+
+		#expect(result.errors.map(\.code) == [
+			.keyMissing,
+			.testDataRequirementOperationUnsupported,
+			.testDataRequirementResourceEmpty
+		])
+		#expect(result.errors.map(\.keyPath) == [
+			"$.testDataRequirements[0].operation",
+			"$.testDataRequirements[1].operation",
+			"$.testDataRequirements[2].resource"
+		])
+	}
+
 	// fixture 이름에 해당하는 Scenario JSON URL을 반환합니다.
 	private func fixtureURL(named name: String) throws -> URL {
 		try #require(
@@ -129,7 +169,8 @@ struct ScenarioValidatorTests {
 			  "matrix": {},
 			  "steps": [{"id": "launch", "action": "buildAndRun"}],
 			  "assertions": [],
-			  "evidence": []
+			  "evidence": [],
+			  "testDataRequirements": []
 			}
 			""".utf8
 		)
