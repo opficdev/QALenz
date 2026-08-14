@@ -36,6 +36,15 @@ package enum CLIApplication {
 				)
 			}
 
+			if let listCommand = parsedCommand as? ListCommand {
+				return await listCommand.execute(
+					format: listOutputFormat(
+						arguments: arguments,
+						command: listCommand
+					)
+				)
+			}
+
 			var command = parsedCommand
 			try command.run()
 
@@ -69,12 +78,25 @@ package enum CLIApplication {
 		)
 	}
 
+	// root와 list 옵션의 우선순위에 맞는 출력 형식을 반환합니다.
+	package static func listOutputFormat(
+		arguments: [String],
+		command: ListCommand
+	) -> CLIOutputFormat {
+		outputFormat(
+			arguments: arguments,
+			commandName: ListCommand.configuration.commandName,
+			commandOutputFormat: command.options.output
+		)
+	}
+
 	// doctor 사용 오류에서 root와 하위 명령 옵션의 우선순위를 반환합니다.
 	private static func usageErrorOutputFormat(in arguments: [String]) -> CLIOutputFormat {
 		let parsingArguments = arguments.prefix { $0 != "--" }
 		let commandNames = [
 			DoctorCommand.configuration.commandName,
-			DiscoverCommand.configuration.commandName
+			DiscoverCommand.configuration.commandName,
+			ListCommand.configuration.commandName
 		].compactMap { $0 }
 		var index = parsingArguments.startIndex
 
