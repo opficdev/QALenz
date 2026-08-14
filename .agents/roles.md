@@ -12,8 +12,9 @@ This document defines responsibilities, permissions, and handoff formats for non
 - Use one active writer for a file at a time and do not dispatch editing roles over overlapping files.
 - Read-only roles must not edit, stage, commit, push, or create a PR.
 - App and Simulator execution permission comes only from the current user request, never from a role assignment.
-- Every required `Lightweight` role must run as a connected side task using its exact configured `task_name`.
-- A `Lightweight` result is valid only when the matching custom agent TOML selected its pinned model.
+- Every required connected read-only role must run as a side task using its exact configured `task_name`.
+- A connected read-only role result is valid only when the matching custom agent TOML selected its pinned model.
+- For work that needs issue analysis or implementation design, the `Planner` finalizes scope and the Task Packet from the `Designer` result.
 - Send later work for the same role to the existing agent with `followup_task`.
 
 ## Model assignment
@@ -21,29 +22,32 @@ This document defines responsibilities, permissions, and handoff formats for non
 | Tier | Use | Model | 추론 수준 |
 | --- | --- | --- | --- |
 | `Primary` | 계획, 구현, 통합, 최종 결정, 실패 원인 분석 | `gpt-5.6-terra` | `xhigh` |
+| `Design` | 이슈 분석, 구현 설계, 계약과 경계 설계 | `gpt-5.6-sol` | `xhigh` |
 | `Lightweight` | 읽기 전용 사전 점검, 코드 검토, 검증, GitHub·CI 조사, 문서 작성 | `gpt-5.3-codex-spark` | `xhigh` |
 
 | Role | 실행 주체 또는 custom agent | Tier | 승격 조건 |
 | --- | --- | --- | --- |
 | Planner | active main agent | `Primary` | 항상 |
 | Implementer | active main agent | `Primary` | 항상 |
+| Designer | `designer` | `Design` | 이슈 분석 또는 구현 설계 필요 |
 | Architecture Watcher | `architecture_watcher` | `Lightweight` | `Block`, `Needs Owner Decision`, 경계 판단 불명확 |
 | Code Reviewer | `code_reviewer` | `Lightweight` | 실행 동작, 동시성, 계약, 시험 전략 관련 finding |
 | Verification Runner | `verification_runner` | `Lightweight` | 검사 실패 또는 원인 불명확 |
 | GitHub/CI Analyst | `github_ci_analyst` | `Lightweight` | CI 원인 분석에 코드·workflow 변경 필요 또는 이슈·리뷰 범위 충돌 |
 | Documentation Writer | `documentation_writer` | `Lightweight` | 설계 경계, 검증 위험, 이슈 범위를 설명해야 함 |
 
-Project-scoped custom agent TOML은 `.codex/agents/`에 둡니다. `Lightweight` 역할을 주 에이전트가 직접 수행하거나 임의의 `task_name`으로 생성한 에이전트 결과를 사용해서는 안 됩니다.
+Project-scoped custom agent TOML은 `.codex/agents/`에 둡니다. `Designer`와 `Lightweight` 역할을 주 에이전트가 직접 수행하거나 임의의 `task_name`으로 생성한 에이전트 결과를 사용해서는 안 됩니다.
 
 ## Connected side-task dispatch
 
 - `spawn_agent.task_name`에는 아래 표의 정확한 식별자만 사용합니다.
-- 모든 `Lightweight` 역할은 현재 작업에 연결된 side task로 생성하고, 결과를 `Primary`가 통합합니다.
-- custom agent TOML 또는 `gpt-5.3-codex-spark`를 선택할 수 없으면 다른 모델로 대체하지 않고 중단 사유를 보고합니다.
+- 모든 `Designer`와 `Lightweight` 역할은 현재 작업에 연결된 side task로 생성하고, 결과를 `Primary`가 통합합니다.
+- custom agent TOML 또는 해당 역할의 고정 모델을 선택할 수 없으면 다른 모델로 대체하지 않고 중단 사유를 보고합니다.
 - 읽기 전용 역할은 서로의 미완료 결과에 의존하지 않을 때만 병렬로 실행합니다.
 
 | Role | Exact `task_name` | Configuration |
 | --- | --- | --- |
+| Designer | `designer` | `.codex/agents/designer.toml` |
 | Architecture Watcher | `architecture_watcher` | `.codex/agents/architecture_watcher.toml` |
 | Code Reviewer | `code_reviewer` | `.codex/agents/code_reviewer.toml` |
 | Verification Runner | `verification_runner` | `.codex/agents/verification_runner.toml` |
@@ -56,6 +60,7 @@ Project-scoped custom agent TOML은 `.codex/agents/`에 둡니다. `Lightweight`
 | --- | --- | --- |
 | Planner | Convert the request and current state into a task scope | None |
 | Implementer | Apply approved code, test, and documentation changes | Inside the task scope |
+| Designer | Analyze issues and design implementation boundaries before scope finalization | None |
 | Architecture Watcher | Review component ownership and dependency direction | None |
 | Code Reviewer | Review the final diff for defects and omissions | None |
 | Verification Runner | Run allowed checks and record evidence | None |
@@ -88,14 +93,14 @@ When work is split across roles, the Planner must prepare this packet:
 
 ## Role activation
 
-Use this packet when dispatching a `Lightweight` role.
+Use this packet when dispatching a connected read-only role.
 
 ```markdown
 You are the `<Role Name>` for the QALenz repository.
 
 Read `AGENTS.md` first. Then read `.agents/roles.md` and follow the `<Role Name>` section.
 
-Assigned model tier: `Lightweight`
+Assigned model tier: `<configured model tier>`
 Custom agent: `<configured custom agent name>`
 
 Task packet:
@@ -116,6 +121,7 @@ The Planner is a read-only role that converts the request and current repository
 Responsibilities:
 
 - Inspect current files, diffs, related documentation, and actually installed tools.
+- Use the `Designer` result when issue analysis or implementation design is required.
 - Define the goal, scope, exclusions, expected changed files, and verification.
 - Separate XcodeBuildMCP capabilities from QALenz implementation scope.
 - Identify whether app execution, Simulator execution, data changes, or external writes are required.
@@ -131,6 +137,41 @@ Output format:
 - Out of scope:
 - Required roles:
 - Verification:
+- User decision needed:
+```
+
+## Designer
+
+The Designer is a read-only connected role that analyzes issues and produces implementation designs before the Planner finalizes scope.
+
+Responsibilities:
+
+- Define the problem and current-state evidence from the issue, repository, and installed tools.
+- Identify constraints, component ownership, dependency direction, contracts, errors, verification, and execution permissions.
+- Compare alternatives and record the selected approach with its rationale.
+- Define changed and excluded boundaries, expected files, and independent minimal commit units.
+- Propose scope changes that require user approval without making the decision or changing files; the `Primary` stops and confirms with the user before scope finalization.
+
+Must not:
+
+- Edit files, stage, commit, push, create a PR, or change GitHub state.
+- Finalize the Task Packet, approve a scope expansion, or override a user decision.
+- Run an app or Simulator without explicit permission.
+
+Output format:
+
+```markdown
+## Designer Result
+
+- Problem:
+- Current-state evidence:
+- Constraints:
+- Alternatives and rationale:
+- Changed boundary:
+- Out of scope:
+- Verification plan:
+- Execution permission:
+- Minimal commit plan:
 - User decision needed:
 ```
 
