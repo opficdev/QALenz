@@ -69,6 +69,34 @@ struct ScenarioValidatorTests {
 		#expect(duplicateErrors.allSatisfy { $0.keyPath == "$.id" })
 	}
 
+	// 다른 의미 오류가 있는 scenario도 유효한 id의 중복 오류를 함께 반환하는지 검증합니다.
+	@Test
+	func 다른_의미_오류가_있는_scenario의_중복_id도_반환한다() throws {
+		let validDocument = try JSONDecoder().decode(ScenarioDocument.self, from: duplicateIDData())
+		let invalidDocument = try JSONDecoder().decode(
+			ScenarioDocument.self,
+			from: duplicateIDData(profile: "")
+		)
+		let firstURL = URL(fileURLWithPath: "/tmp/first-scenario.json")
+		let secondURL = URL(fileURLWithPath: "/tmp/second-scenario.json")
+		let result = ScenarioValidator().validate([
+			.init(document: validDocument, url: firstURL),
+			.init(document: invalidDocument, url: secondURL)
+		])
+
+		#expect(result.errors.map(\.code.rawValue) == [
+			"scenario.profile.empty",
+			"scenario.id.duplicate",
+			"scenario.id.duplicate"
+		])
+		#expect(result.errors.map(\.filePath) == [
+			secondURL.standardizedFileURL.path,
+			firstURL.standardizedFileURL.path,
+			secondURL.standardizedFileURL.path
+		])
+		#expect(result.errors.map(\.keyPath) == ["$.profile", "$.id", "$.id"])
+	}
+
 	// fixture 이름에 해당하는 Scenario JSON URL을 반환합니다.
 	private func fixtureURL(named name: String) throws -> URL {
 		try #require(
@@ -92,15 +120,15 @@ struct ScenarioValidatorTests {
 		return ScenarioValidator().validate(locations)
 	}
 
-	// 중복 scenario id 검증에 사용할 최소 유효 문서 JSON을 반환합니다.
-	private func duplicateIDData() -> Data {
+	// 중복 scenario id 검증에 사용할 최소 scenario 문서 JSON을 반환합니다.
+	private func duplicateIDData(profile: String = "default") -> Data {
 		Data(
 			"""
 			{
 			  "schemaVersion": 1,
 			  "id": "todo-completion",
 			  "name": "Todo completion",
-			  "profile": "default",
+			  "profile": "\(profile)",
 			  "matrix": {},
 			  "steps": [{"id": "launch", "action": "buildAndRun"}],
 			  "assertions": [],

@@ -49,14 +49,17 @@ package struct ScenarioValidator: Sendable {
 			let start = errors.count
 			validate(location.document, at: location.url, errors: &errors)
 
+			if let id = location.document.id, isValidIdentifier(id) {
+				if scenarioLocations[id] == nil {
+					orderedScenarioIDs.append(id)
+				}
+				scenarioLocations[id, default: []].append(location.url)
+			}
+
 			guard start == errors.count else { continue }
 			guard let scenario = makeScenario(from: location.document) else { continue }
 
 			scenarios.append(scenario)
-			if scenarioLocations[scenario.id] == nil {
-				orderedScenarioIDs.append(scenario.id)
-			}
-			scenarioLocations[scenario.id, default: []].append(location.url)
 		}
 
 		for id in orderedScenarioIDs {
