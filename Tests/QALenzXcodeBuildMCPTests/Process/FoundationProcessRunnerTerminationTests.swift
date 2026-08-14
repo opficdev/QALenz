@@ -41,7 +41,6 @@ struct FoundationProcessRunnerTerminationTests {
 			pidURL: pidURL
 		)
 		let runner = FoundationProcessRunner()
-		let start = Date()
 
 		let result = try await runner.run(.init(
 			executableURL: executableURL,
@@ -51,7 +50,7 @@ struct FoundationProcessRunnerTerminationTests {
 			timeout: .seconds(5)
 		))
 
-		#expect(Date().timeIntervalSince(start) < 2.5)
+		#expect(isProcessRunning(at: pidURL))
 		#expect(result.terminationStatus == 0)
 		#expect(result.standardOutput == Data("received-before-termination".utf8))
 	}
@@ -68,7 +67,6 @@ struct FoundationProcessRunnerTerminationTests {
 			pidURL: pidURL
 		)
 		let runner = FoundationProcessRunner()
-		let start = Date()
 		var events = [ProcessEvent]()
 
 		for try await event in runner.events(for: .init(
@@ -101,7 +99,7 @@ struct FoundationProcessRunnerTerminationTests {
 			return true
 		}
 
-		#expect(Date().timeIntervalSince(start) < 2.5)
+		#expect(isProcessRunning(at: pidURL))
 		#expect(standardOutput == Data("received-before-termination".utf8))
 		#expect(terminationStatuses == [0])
 		#expect(!hasOutputAfterTermination)
@@ -140,11 +138,21 @@ struct FoundationProcessRunnerTerminationTests {
 			in: directory,
 			script: """
 			#!/bin/sh
-			/bin/sh -c 'exec /bin/sleep 3' &
+			/bin/sh -c 'exec /bin/sleep 10' &
 			printf '%s' "$!" > "\(pidURL.path)"
 			printf '%s' 'received-before-termination'
 			"""
 		)
+	}
+
+	// PID 파일이 가리키는 하위 process의 실행 상태를 반환합니다.
+	private func isProcessRunning(at url: URL) -> Bool {
+		guard
+			let contents = try? String(contentsOf: url, encoding: .utf8),
+			let pid = Int32(contents)
+		else { return false }
+
+		return kill(pid, 0) == 0
 	}
 
 	// PID 파일이 가리키는 하위 process를 정리합니다.
