@@ -76,6 +76,54 @@ struct ScenarioStepValidatorTests {
 		])
 	}
 
+	// action 오류가 있어도 제공된 selector의 빈 값을 함께 반환하는지 검증합니다.
+	@Test
+	func action_오류와_selector의_빈_제공_값을_함께_반환한다() throws {
+		let steps = try decodeSteps(
+			"""
+			[
+			  {"id": "missing-action", "selector": {"identifier": ""}},
+			  {"id": "unsupported-action", "action": "unsupported", "selector": {"value": ""}},
+			  {"id": "missing-action-object", "selector": {}},
+			  {"id": "unsupported-action-object", "action": "unsupported", "selector": {}}
+			]
+			"""
+		)
+		var errors = [ScenarioValidationError]()
+		let stepIDs = ScenarioStepValidator().validate(
+			steps,
+			filePath: "/tmp/scenario.json",
+			errors: &errors
+		)
+
+		#expect(stepIDs == [
+			"missing-action",
+			"unsupported-action",
+			"missing-action-object",
+			"unsupported-action-object"
+		])
+		#expect(errors.map(\.code.rawValue) == [
+			"scenario.key.missing",
+			"scenario.step.selector.empty",
+			"scenario.step.action.unsupported",
+			"scenario.step.selector.empty",
+			"scenario.key.missing",
+			"scenario.step.selector.empty",
+			"scenario.step.action.unsupported",
+			"scenario.step.selector.empty"
+		])
+		#expect(errors.map(\.keyPath) == [
+			"$.steps[0].action",
+			"$.steps[0].selector.identifier",
+			"$.steps[1].action",
+			"$.steps[1].selector.value",
+			"$.steps[2].action",
+			"$.steps[2].selector",
+			"$.steps[3].action",
+			"$.steps[3].selector"
+		])
+	}
+
 	// step 배열을 포함한 최소 scenario JSON을 전용 decoder로 해석합니다.
 	private func decodeSteps(_ steps: String) throws -> [ScenarioStepDocument] {
 		let document = try ScenarioJSONDecoder().decode(

@@ -100,10 +100,12 @@ struct ScenarioStepValidator {
 		}
 
 		validateID(step.id, keyPath: keyPath, filePath: filePath, stepIDs: &stepIDs, errors: &errors)
-		guard let action = validateAction(step.action, keyPath: keyPath, filePath: filePath, errors: &errors) else {
-			return
+		let action = validateAction(step.action, keyPath: keyPath, filePath: filePath, errors: &errors)
+		validateProvidedSelector(step.selector, keyPath: keyPath, filePath: filePath, errors: &errors)
+
+		if let action {
+			validateRequiredSelector(step.selector, for: action, keyPath: keyPath, filePath: filePath, errors: &errors)
 		}
-		validateSelector(step.selector, for: action, keyPath: keyPath, filePath: filePath, errors: &errors)
 	}
 
 	// step id의 누락, 형식, 중복 여부를 검증합니다.
@@ -151,24 +153,15 @@ struct ScenarioStepValidator {
 		return action
 	}
 
-	// 필요한 selector의 존재와 제공된 selector 값의 비어 있음을 검증합니다.
-	private func validateSelector(
+	// 제공된 selector의 빈 값과 빈 object를 검증합니다.
+	private func validateProvidedSelector(
 		_ selector: ScenarioSelector?,
-		for action: ScenarioStepAction,
 		keyPath: String,
 		filePath: String,
 		errors: inout [ScenarioValidationError]
 	) {
-		guard let selector else {
-			guard action.requiresSelector else { return }
+		guard let selector else { return }
 
-			errors.append(.init(
-				code: .stepSelectorMissing,
-				filePath: filePath,
-				keyPath: "\(keyPath).selector"
-			))
-			return
-		}
 		let emptyValueKeyNames = selector.emptyValueKeyNames
 
 		guard emptyValueKeyNames.isEmpty else {
@@ -189,6 +182,23 @@ struct ScenarioStepValidator {
 			))
 			return
 		}
+	}
+
+	// action에 필요한 selector가 제공됐는지 검증합니다.
+	private func validateRequiredSelector(
+		_ selector: ScenarioSelector?,
+		for action: ScenarioStepAction,
+		keyPath: String,
+		filePath: String,
+		errors: inout [ScenarioValidationError]
+	) {
+		guard selector == nil, action.requiresSelector else { return }
+
+		errors.append(.init(
+			code: .stepSelectorMissing,
+			filePath: filePath,
+			keyPath: "\(keyPath).selector"
+		))
 	}
 
 	// step이 id, action, selector, parameter를 전혀 포함하지 않는지 반환합니다.
