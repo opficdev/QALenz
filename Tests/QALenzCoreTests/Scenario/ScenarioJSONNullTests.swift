@@ -90,6 +90,46 @@ struct ScenarioJSONNullTests {
 		])
 	}
 
+	// 누락한 parameter와 명시적 null parameter를 서로 다른 원본 값으로 보존하는지 검증합니다.
+	@Test
+	private func 누락과_명시적_null_parameter를_구분한다() throws {
+		let document = try ScenarioJSONDecoder().decode(
+			Data(
+				"""
+				{
+					"schemaVersion": 1,
+					"id": "null-parameter-distinction",
+					"name": "Null parameter distinction",
+					"profile": "default",
+					"matrix": {},
+					"steps": [
+						{"id": "without-parameter", "action": "buildAndRun"},
+						{"id": "with-parameter", "action": "buildAndRun", "parameters": null}
+					],
+					"assertions": [
+						{"afterStepID": "without-parameter"},
+						{"afterStepID": "with-parameter", "parameters": null}
+					],
+					"evidence": [
+						{"afterStepID": "without-parameter"},
+						{"afterStepID": "with-parameter", "parameters": null}
+					]
+				}
+				""".utf8
+			)
+		)
+		let steps = try #require(document.steps)
+		let assertions = try #require(document.assertions)
+		let evidence = try #require(document.evidence)
+
+		#expect(steps[0].parameters == nil)
+		#expect(steps[1].parameters == .null)
+		#expect(assertions[0].parameters == nil)
+		#expect(assertions[1].parameters == .null)
+		#expect(evidence[0].parameters == nil)
+		#expect(evidence[1].parameters == .null)
+	}
+
 	// 명시적 null을 넣은 key 외에는 기본 JSON 값을 반환합니다.
 	private func value(
 		for expectedKey: NullKey,
