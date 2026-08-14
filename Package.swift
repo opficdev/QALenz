@@ -21,7 +21,11 @@ let package = Package(
 		.target(
 			name: "QALenzCore",
 			path: "Sources/Core",
-			resources: [.copy("Resources/Schemas/qalenz-config.schema.json")],
+			resources: [.copy("Resources/Schemas/qalenz-config.schema.json")]
+		),
+		.target(
+			name: "QALenzLintSupport",
+			path: "Sources/LintSupport",
 			plugins: ["SwiftLintPlugin"]
 		),
 		.target(
