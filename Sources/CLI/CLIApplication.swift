@@ -111,6 +111,23 @@ package enum CLIApplication {
 		}
 	}
 
+	// DiscoveryResult를 요청한 출력 형식의 프로세스 결과로 변환합니다.
+	package static func result(
+		for discoveryResult: DiscoveryResult,
+		format: CLIOutputFormat
+	) -> CLIProcessResult {
+		switch format {
+		case .text:
+			return .init(
+				standardOutput: textOutput(for: discoveryResult),
+				standardError: nil,
+				exitStatus: .success
+			)
+		case .json:
+			return jsonResult(for: discoveryResult)
+		}
+	}
+
 	// 파싱 오류를 출력 형식에 맞는 프로세스 결과로 변환합니다.
 	private static func result(
 		for error: any Error,
@@ -239,6 +256,28 @@ package enum CLIApplication {
 		}
 	}
 
+	// DiscoveryResult를 정렬된 JSON 프로세스 결과로 변환합니다.
+	private static func jsonResult(for discoveryResult: DiscoveryResult) -> CLIProcessResult {
+		do {
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+			let data = try encoder.encode(discoveryResult)
+
+			return .init(
+				// swiftlint:disable:next optional_data_string_conversion
+				standardOutput: String(decoding: data, as: UTF8.self),
+				standardError: nil,
+				exitStatus: .success
+			)
+		} catch {
+			return .init(
+				standardOutput: nil,
+				standardError: "Discovery result encoding failed.",
+				exitStatus: .executionError
+			)
+		}
+	}
+
 	// DoctorReport의 항목을 사람이 읽을 수 있는 줄 단위 출력으로 변환합니다.
 	private static func textOutput(for report: DoctorReport) -> String {
 		var lines = report.diagnostics.map { diagnostic in
@@ -252,5 +291,38 @@ package enum CLIApplication {
 		}
 
 		return lines.joined(separator: "\n")
+	}
+
+	// DiscoveryResult의 후보를 사람이 읽을 수 있는 줄 단위 출력으로 변환합니다.
+	private static func textOutput(for discoveryResult: DiscoveryResult) -> String {
+		[
+			textSection(
+				named: "projects",
+				values: discoveryResult.projects.map(\.path)
+			),
+			textSection(
+				named: "workspaces",
+				values: discoveryResult.workspaces.map(\.path)
+			),
+			textSection(
+				named: "schemes",
+				values: discoveryResult.schemes.map(\.name)
+			),
+			textSection(
+				named: "simulators",
+				values: discoveryResult.simulators.map {
+					"\($0.name) | \($0.simulatorId) | \($0.state) | \($0.runtime) | \($0.isAvailable)"
+				}
+			)
+		].joined(separator: "\n")
+	}
+
+	// 후보 목록을 이름과 항목 줄로 구성합니다.
+	private static func textSection(named name: String, values: [String]) -> String {
+		guard !values.isEmpty else {
+			return "\(name): []"
+		}
+
+		return "\(name):\n\(values.map { "- \($0)" }.joined(separator: "\n"))"
 	}
 }

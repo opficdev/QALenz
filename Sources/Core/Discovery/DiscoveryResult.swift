@@ -8,7 +8,7 @@
 import Foundation
 
 // 조회한 실행 대상 후보를 정규화된 순서로 보관합니다.
-package struct DiscoveryResult: Sendable, Equatable {
+package struct DiscoveryResult: Encodable, Sendable, Equatable {
 	package let projects: [DiscoveryProject]
 	package let workspaces: [DiscoveryWorkspace]
 	package let schemes: [DiscoveryScheme]
@@ -73,7 +73,7 @@ package struct DiscoveryResult: Sendable, Equatable {
 }
 
 // 조회한 project 후보의 상대 경로를 표현합니다.
-package struct DiscoveryProject: Sendable, Equatable {
+package struct DiscoveryProject: Encodable, Sendable, Equatable {
 	package let path: String
 
 	// 정규화된 project 상대 경로로 후보를 구성합니다.
@@ -83,7 +83,7 @@ package struct DiscoveryProject: Sendable, Equatable {
 }
 
 // 조회한 workspace 후보의 상대 경로를 표현합니다.
-package struct DiscoveryWorkspace: Sendable, Equatable {
+package struct DiscoveryWorkspace: Encodable, Sendable, Equatable {
 	package let path: String
 
 	// 정규화된 workspace 상대 경로로 후보를 구성합니다.
@@ -93,7 +93,7 @@ package struct DiscoveryWorkspace: Sendable, Equatable {
 }
 
 // 조회한 scheme 후보의 이름을 표현합니다.
-package struct DiscoveryScheme: Sendable, Equatable {
+package struct DiscoveryScheme: Encodable, Sendable, Equatable {
 	package let name: String
 
 	// 중복이 제거된 scheme 이름으로 후보를 구성합니다.
@@ -103,7 +103,7 @@ package struct DiscoveryScheme: Sendable, Equatable {
 }
 
 // 조회한 Simulator 후보의 profile 입력값을 표현합니다.
-package struct DiscoverySimulator: Sendable, Equatable {
+package struct DiscoverySimulator: Encodable, Sendable, Equatable {
 	package let name: String
 	package let simulatorId: String
 	package let state: String

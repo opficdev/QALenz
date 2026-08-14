@@ -195,4 +195,102 @@ struct CLIApplicationTests {
 		#expect(!output.contains("secret-command"))
 		#expect(result.standardError == nil)
 	}
+
+	// discovery text와 JSON 출력이 같은 정규화 후보 값을 보존하는지 검증합니다.
+	@Test
+	func discovery_text와_JSON_출력이_같은_후보_값을_보존한다() throws {
+		let discoveryResult = populatedDiscoveryResult()
+		let text = CLIApplication.result(for: discoveryResult, format: .text)
+		let json = CLIApplication.result(for: discoveryResult, format: .json)
+		let jsonData = try #require(json.standardOutput?.data(using: .utf8))
+		let output = try #require(JSONSerialization.jsonObject(with: jsonData) as? [String: Any])
+		let projects = try #require(output["projects"] as? [[String: String]])
+		let workspaces = try #require(output["workspaces"] as? [[String: String]])
+		let schemes = try #require(output["schemes"] as? [[String: String]])
+		let simulators = try #require(output["simulators"] as? [[String: Any]])
+
+		#expect(text.standardOutput == """
+		projects:
+		- App/Alpha.xcodeproj
+		- App/Beta.xcodeproj
+		workspaces:
+		- App/App.xcworkspace
+		schemes:
+		- App
+		- AppTests
+		simulators:
+		- iPhone 16 | simulator-1 | Booted | iOS 26.0 | true
+		- iPhone 16 | simulator-2 | Shutdown | iOS 26.0 | false
+		""")
+		#expect(projects.map { $0["path"] } == ["App/Alpha.xcodeproj", "App/Beta.xcodeproj"])
+		#expect(workspaces.map { $0["path"] } == ["App/App.xcworkspace"])
+		#expect(schemes.map { $0["name"] } == ["App", "AppTests"])
+		#expect(simulators.map { $0["simulatorId"] as? String } == ["simulator-1", "simulator-2"])
+		#expect(simulators.map { $0["isAvailable"] as? Bool } == [true, false])
+		#expect(simulators.map { $0["name"] as? String } == ["iPhone 16", "iPhone 16"])
+		#expect(simulators.map { $0["state"] as? String } == ["Booted", "Shutdown"])
+		#expect(simulators.map { $0["runtime"] as? String } == ["iOS 26.0", "iOS 26.0"])
+		#expect(text.exitStatus == .success)
+		#expect(json.exitStatus == text.exitStatus)
+		#expect(text.standardError == nil)
+		#expect(json.standardError == nil)
+	}
+
+	// discovery의 빈 후보 목록을 text와 JSON에 명시하는지 검증합니다.
+	@Test
+	func discovery_빈_후보_목록을_text와_JSON에_명시한다() throws {
+		let rootURL = URL(fileURLWithPath: "/tmp/DiscoveryOutput")
+		let discoveryResult = DiscoveryResult(
+			projectURLs: [],
+			workspaceURLs: [],
+			schemeNames: [],
+			simulators: [],
+			relativeTo: rootURL
+		)
+		let text = CLIApplication.result(for: discoveryResult, format: .text)
+		let json = CLIApplication.result(for: discoveryResult, format: .json)
+		let jsonData = try #require(json.standardOutput?.data(using: .utf8))
+		let output = try #require(JSONSerialization.jsonObject(with: jsonData) as? [String: Any])
+
+		#expect(text.standardOutput == "projects: []\nworkspaces: []\nschemes: []\nsimulators: []")
+		#expect((output["projects"] as? [Any])?.isEmpty == true)
+		#expect((output["workspaces"] as? [Any])?.isEmpty == true)
+		#expect((output["schemes"] as? [Any])?.isEmpty == true)
+		#expect((output["simulators"] as? [Any])?.isEmpty == true)
+		#expect(text.exitStatus == .success)
+		#expect(json.exitStatus == .success)
+		#expect(text.standardError == nil)
+		#expect(json.standardError == nil)
+	}
+
+	// 정렬되지 않은 입력을 가진 discovery 결과를 만듭니다.
+	private func populatedDiscoveryResult() -> DiscoveryResult {
+		let rootURL = URL(fileURLWithPath: "/tmp/DiscoveryOutput")
+
+		return DiscoveryResult(
+			projectURLs: [
+				rootURL.appending(path: "App/Beta.xcodeproj"),
+				rootURL.appending(path: "App/Alpha.xcodeproj")
+			],
+			workspaceURLs: [rootURL.appending(path: "App/App.xcworkspace")],
+			schemeNames: ["AppTests", "App"],
+			simulators: [
+				.init(
+					name: "iPhone 16",
+					simulatorId: "simulator-2",
+					state: "Shutdown",
+					runtime: "iOS 26.0",
+					isAvailable: false
+				),
+				.init(
+					name: "iPhone 16",
+					simulatorId: "simulator-1",
+					state: "Booted",
+					runtime: "iOS 26.0",
+					isAvailable: true
+				)
+			],
+			relativeTo: rootURL
+		)
+	}
 }
