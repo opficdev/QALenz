@@ -126,7 +126,7 @@ package struct ScenarioStepReference: Codable, Sendable, Equatable {
 }
 
 // scenario 안의 app별 matrix와 parameter JSON 값을 손실 없이 표현합니다.
-package indirect enum ScenarioValue: Codable, Sendable, Equatable {
+package enum ScenarioValue: Codable, Sendable, Equatable {
 	case object([String: Self])
 	case array([Self])
 	case string(String)

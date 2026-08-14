@@ -8,7 +8,7 @@
 import Foundation
 
 // 검증된 XcodeBuildMCP 응답 data를 손실 없이 표현합니다.
-package indirect enum XcodeBuildMCPPayload: Decodable, Sendable, Equatable {
+package enum XcodeBuildMCPPayload: Decodable, Sendable, Equatable {
 	case object([String: Self])
 	case array([Self])
 	case string(String)
