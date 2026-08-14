@@ -60,6 +60,42 @@ struct RunCommandTests {
 		#expect(json.standardError == nil)
 	}
 
+	// fixture 파일을 읽은 dry-run이 실제 계획을 text와 JSON으로 출력하는지 검증합니다.
+	@Test
+	func fixture_기반_dryRun이_실제_계획을_출력한다() async throws {
+		let projectURL = try makeProjectDirectory()
+		defer { try? FileManager.default.removeItem(at: projectURL) }
+		try writeConfiguration(at: projectURL)
+		try writeScenario(at: projectURL)
+
+		let command = try runCommand()
+		let text = await command.execute(
+			format: .text,
+			loader: ExecutionPlanLoader(),
+			currentDirectoryURL: projectURL
+		)
+		let json = await command.execute(
+			format: .json,
+			loader: ExecutionPlanLoader(),
+			currentDirectoryURL: projectURL
+		)
+		let data = try #require(json.standardOutput?.data(using: .utf8))
+		let plan = try JSONDecoder().decode(ExecutionPlan.self, from: data)
+		let outputDirectoryURL = projectURL.appendingPathComponent("outputs", isDirectory: true)
+
+		#expect(text.exitStatus == .success)
+		#expect(json.exitStatus == text.exitStatus)
+		#expect(try #require(text.standardOutput).contains("scenario: todo-completion"))
+		#expect(try #require(text.standardOutput).contains("create | todo:incomplete"))
+		#expect(plan.scenarioID == "todo-completion")
+		#expect(plan.targets.map(\.target.device) == ["iPhone 17"])
+		#expect(plan.testDataRequirements == [.init(
+			operation: .create,
+			resource: "todo:incomplete"
+		)])
+		#expect(!FileManager.default.fileExists(atPath: outputDirectoryURL.path))
+	}
+
 	// dry-run 없이 run 명령을 해석하면 사용 오류로 차단하는지 검증합니다.
 	@Test
 	func dryRun_없이는_사용_오류로_차단한다() async {
@@ -106,6 +142,69 @@ struct RunCommandTests {
 		let command = try RootCommand.parseAsRoot(["run", "todo-completion", "--dry-run"])
 
 		return try #require(command as? RunCommand)
+	}
+
+	// fixture를 기록할 임시 project directory를 구성합니다.
+	private func makeProjectDirectory() throws -> URL {
+		let url = FileManager.default.temporaryDirectory
+			.appendingPathComponent(UUID().uuidString, isDirectory: true)
+		try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+
+		return url
+	}
+
+	// 현재 작업 경로 기준 dry-run config fixture를 기록합니다.
+	private func writeConfiguration(at projectURL: URL) throws {
+		let configurationURL = projectURL
+			.appendingPathComponent(".qalenz", isDirectory: true)
+			.appendingPathComponent("config.json", isDirectory: false)
+		try FileManager.default.createDirectory(
+			at: configurationURL.deletingLastPathComponent(),
+			withIntermediateDirectories: true
+		)
+		try Data(
+			"""
+			{
+			  "schemaVersion": 1,
+			  "projectRoot": ".",
+			  "xcodeBuildMCPProfile": "default",
+			  "scenariosDirectory": "../scenarios",
+			  "outputDirectory": "../outputs",
+			  "targetDefaults": {
+				"devices": ["iPhone 16"],
+				"operatingSystems": ["iOS 26.0"],
+				"appearances": ["light"]
+			  },
+			  "maximumTargetCount": 12
+			}
+			""".utf8
+		).write(to: configurationURL)
+	}
+
+	// 실행 계획을 생성할 scenario fixture를 기록합니다.
+	private func writeScenario(at projectURL: URL) throws {
+		let scenarioURL = projectURL
+			.appendingPathComponent("scenarios", isDirectory: true)
+			.appendingPathComponent("todo-completion.json", isDirectory: false)
+		try FileManager.default.createDirectory(
+			at: scenarioURL.deletingLastPathComponent(),
+			withIntermediateDirectories: true
+		)
+		try Data(
+			"""
+			{
+			  "schemaVersion": 1,
+			  "id": "todo-completion",
+			  "name": "Todo 완료 처리",
+			  "profile": "default",
+			  "matrix": {"devices": ["iPhone 17"]},
+			  "steps": [{"id": "launch", "action": "buildAndRun"}],
+			  "assertions": [],
+			  "evidence": [],
+			  "testDataRequirements": [{"operation": "create", "resource": "todo:incomplete"}]
+			}
+			""".utf8
+		).write(to: scenarioURL)
 	}
 
 	// 시험에서 사용할 고정 실행 계획을 반환합니다.
