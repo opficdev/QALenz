@@ -6,26 +6,21 @@
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
       buildArchitectures = "Automatic">
-      <PreActions>
-         <ExecutionAction
-            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
-            <ActionContent
-               title = "SwiftLint"
-               scriptText = "if [ &quot;${GITHUB_ACTIONS:-}&quot; = &quot;true&quot; ]; then&#10;&#9;exit 0&#10;fi&#10;&#10;repositoryRoot=&quot;$(cd &quot;$(dirname &quot;$WORKSPACE_PATH&quot;)/../..&quot; &amp;&amp; pwd)&quot;&#10;export PATH=&quot;/opt/homebrew/bin:/usr/local/bin:$PATH&quot;&#10;&quot;$repositoryRoot/Scripts/lint.sh&quot;&#10;"
-               shellToInvoke = "/bin/bash">
-               <EnvironmentBuildable>
-                  <BuildableReference
-                     BuildableIdentifier = "primary"
-                     BlueprintIdentifier = "QALenzCore"
-                     BuildableName = "QALenzCore"
-                     BlueprintName = "QALenzCore"
-                     ReferencedContainer = "container:">
-                  </BuildableReference>
-               </EnvironmentBuildable>
-            </ActionContent>
-         </ExecutionAction>
-      </PreActions>
       <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "QALenzLintSupport"
+               BuildableName = "QALenzLintSupport"
+               BlueprintName = "QALenzLintSupport"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
             buildForRunning = "YES"

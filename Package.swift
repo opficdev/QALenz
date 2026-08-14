@@ -24,6 +24,11 @@ let package = Package(
 			resources: [.copy("Resources/Schemas/qalenz-config.schema.json")]
 		),
 		.target(
+			name: "QALenzLintSupport",
+			path: "Sources/LintSupport",
+			plugins: ["SwiftLintPlugin"]
+		),
+		.target(
 			name: "QALenzXcodeBuildMCP",
 			dependencies: ["QALenzCore"],
 			path: "Sources/XcodeBuildMCP"
@@ -58,6 +63,10 @@ let package = Package(
 		.testTarget(
 			name: "QALenzCLITests",
 			dependencies: ["QALenzCLI", "QALenzCore"]
+		),
+		.plugin(
+			name: "SwiftLintPlugin",
+			capability: .buildTool()
 		),
 	]
 )

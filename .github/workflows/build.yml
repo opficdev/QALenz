@@ -40,6 +40,19 @@ jobs:
           set -e
           exit "$checkStatus"
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          SWIFTLINT_STRICT=true ./Scripts/lint.sh 2>&1 | tee lint.log
+          lintStatus=${PIPESTATUS[0]}
+          set -e
+          exit "$lintStatus"
+
       - name: Build
         shell: bash
         run: |
@@ -57,6 +70,7 @@ jobs:
           name: build-log
           path: |
             whitespace.log
+            lint.log
             build.log
           if-no-files-found: ignore
 
