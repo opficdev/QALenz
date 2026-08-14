@@ -54,9 +54,11 @@ package struct TargetValidator: Sendable {
 		policy: TargetPolicy
 	) throws {
 		guard let allowedPairs = policy.allowedDeviceOperatingSystems else { return }
+		let devices = uniqueValues(in: definition.devices)
+		let operatingSystems = uniqueValues(in: definition.operatingSystems)
 
-		for device in definition.devices {
-			for operatingSystem in definition.operatingSystems {
+		for device in devices {
+			for operatingSystem in operatingSystems {
 				let pair = TargetDeviceOperatingSystem(
 					device: device,
 					operatingSystem: operatingSystem
@@ -69,5 +71,12 @@ package struct TargetValidator: Sendable {
 				}
 			}
 		}
+	}
+
+	// 최초 등장 순서를 보존하며 허용 조합 검사 대상의 중복을 제거합니다.
+	private func uniqueValues(in values: [String]) -> [String] {
+		var knownValues = Set<String>()
+
+		return values.filter { knownValues.insert($0).inserted }
 	}
 }

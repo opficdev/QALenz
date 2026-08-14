@@ -78,6 +78,36 @@ struct TargetValidatorTests {
 		}
 	}
 
+	// 중복 입력을 보존하면서 최초 미지원 조합을 같은 순서로 반환하는지 검증합니다.
+	@Test
+	func 중복_허용_조합_검사에서_입력과_첫_오류_순서를_보존한다() throws {
+		let resolved = try TargetValidator().validate(
+			.init(
+				devices: ["iPhone 17", "iPhone 17", "iPhone 16"],
+				operatingSystems: ["iOS 26.0", "iOS 26.0"]
+			),
+			defaults: defaults(),
+			policy: policy()
+		)
+
+		#expect(resolved.devices == ["iPhone 17", "iPhone 17", "iPhone 16"])
+		#expect(resolved.operatingSystems == ["iOS 26.0", "iOS 26.0"])
+
+		#expect(throws: TargetValidationError.deviceOperatingSystemUnsupported(
+			device: "iPhone 17",
+			operatingSystem: "iOS 25.0"
+		)) {
+			try TargetValidator().validate(
+				.init(
+					devices: ["iPhone 17", "iPhone 16", "iPhone 17"],
+					operatingSystems: ["iOS 25.0", "iOS 26.0", "iOS 25.0"]
+				),
+				defaults: defaults(),
+				policy: policy()
+			)
+		}
+	}
+
 	// project 기본값을 반환합니다.
 	private func defaults() -> TargetDefaults {
 		.init(
