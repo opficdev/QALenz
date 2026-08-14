@@ -16,6 +16,8 @@ package struct QALenzConfiguration: Sendable, Equatable {
 	package let xcodeBuildMCPProfile: String
 	package let scenariosDirectoryURL: URL
 	package let outputDirectoryURL: URL
+	package let targetDefaults: TargetDefaults
+	package let targetPolicy: TargetPolicy
 
 	// 검증과 경로 정규화를 마친 설정 값으로 초기화합니다.
 	package init(
@@ -23,12 +25,16 @@ package struct QALenzConfiguration: Sendable, Equatable {
 		projectRootURL: URL,
 		xcodeBuildMCPProfile: String,
 		scenariosDirectoryURL: URL,
-		outputDirectoryURL: URL
+		outputDirectoryURL: URL,
+		targetDefaults: TargetDefaults,
+		targetPolicy: TargetPolicy
 	) {
 		self.schemaVersion = schemaVersion
 		self.projectRootURL = projectRootURL
 		self.xcodeBuildMCPProfile = xcodeBuildMCPProfile
 		self.scenariosDirectoryURL = scenariosDirectoryURL
 		self.outputDirectoryURL = outputDirectoryURL
+		self.targetDefaults = targetDefaults
+		self.targetPolicy = targetPolicy
 	}
 }

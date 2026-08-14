@@ -33,6 +33,12 @@ struct QALenzConfigurationDecoderTests {
 		#expect(configuration.outputDirectoryURL == baseURL
 			.appendingPathComponent("outputs", isDirectory: true)
 			.standardizedFileURL)
+		#expect(configuration.targetDefaults == .init(
+			devices: ["iPhone 16"],
+			operatingSystems: ["iOS 26.0"],
+			appearances: ["light"]
+		))
+		#expect(configuration.targetPolicy.maximumTargetCount == 12)
 	}
 
 	// outputDirectory가 없으면 repository 밖의 기본 경로를 반환하는지 검증합니다.

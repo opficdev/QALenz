@@ -77,7 +77,9 @@ package struct QALenzConfigurationDecoder: Sendable {
 				for: document.scenariosDirectory,
 				configurationURL: configurationURL
 			),
-			outputDirectoryURL: outputDirectoryURL
+			outputDirectoryURL: outputDirectoryURL,
+			targetDefaults: document.targetDefaults,
+			targetPolicy: .init(maximumTargetCount: document.maximumTargetCount)
 		)
 	}
 
@@ -174,7 +176,9 @@ package struct QALenzConfigurationDocument: Decodable {
 		"schemaVersion",
 		"projectRoot",
 		"xcodeBuildMCPProfile",
-		"scenariosDirectory"
+		"scenariosDirectory",
+		"targetDefaults",
+		"maximumTargetCount"
 	]
 
 	package static let keyNames = requiredKeyNames + ["outputDirectory"]
@@ -186,6 +190,8 @@ package struct QALenzConfigurationDocument: Decodable {
 		case xcodeBuildMCPProfile
 		case scenariosDirectory
 		case outputDirectory
+		case targetDefaults
+		case maximumTargetCount
 	}
 
 	let schemaVersion: Int
@@ -193,6 +199,8 @@ package struct QALenzConfigurationDocument: Decodable {
 	let xcodeBuildMCPProfile: String
 	let scenariosDirectory: String
 	let outputDirectory: String?
+	let targetDefaults: TargetDefaults
+	let maximumTargetCount: Int
 
 	// 필수 key와 선택 key의 JSON 값 형식을 분리해 해석합니다.
 	package init(from decoder: any Decoder) throws {
@@ -208,6 +216,8 @@ package struct QALenzConfigurationDocument: Decodable {
 			String.self,
 			forKey: .scenariosDirectory
 		)
+		targetDefaults = try container.decode(TargetDefaults.self, forKey: .targetDefaults)
+		maximumTargetCount = try container.decode(Int.self, forKey: .maximumTargetCount)
 		outputDirectory = if container.contains(.outputDirectory) {
 			try container.decode(String.self, forKey: .outputDirectory)
 		} else {

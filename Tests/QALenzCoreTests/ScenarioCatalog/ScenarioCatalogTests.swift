@@ -127,7 +127,13 @@ struct ScenarioCatalogTests {
 			  "schemaVersion": 1,
 			  "projectRoot": ".",
 			  "xcodeBuildMCPProfile": "default",
-			  "scenariosDirectory": "../scenarios"
+			  "scenariosDirectory": "../scenarios",
+			  "targetDefaults": {
+				"devices": ["iPhone 16"],
+				"operatingSystems": ["iOS 26.0"],
+				"appearances": ["light"]
+			  },
+			  "maximumTargetCount": 12
 			}
 			""".utf8
 		).write(to: url)
@@ -150,7 +156,8 @@ struct ScenarioCatalogTests {
 			  "matrix": {},
 			  "steps": [{"id": "launch", "action": "buildAndRun"}],
 			  "assertions": [],
-			  "evidence": []
+			  "evidence": [],
+			  "testDataRequirements": []
 			}
 			""".utf8
 		).write(to: url)
@@ -158,7 +165,7 @@ struct ScenarioCatalogTests {
 
 	// 필수 scenario key가 없는 파일에서 기대하는 오류를 반환합니다.
 	private func brokenScenarioErrors(at url: URL) -> [ScenarioValidationError] {
-		["id", "name", "profile", "matrix", "steps", "assertions", "evidence"].map {
+		["id", "name", "profile", "matrix", "steps", "assertions", "evidence", "testDataRequirements"].map {
 			.init(code: .keyMissing, filePath: url.path, keyPath: "$.\($0)")
 		}
 	}
