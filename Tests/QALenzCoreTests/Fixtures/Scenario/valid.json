@@ -4,8 +4,7 @@
 	"name": "Todo 완료 처리",
 	"profile": "default",
 	"matrix": {
-		"devices": ["iPhone 17 Pro"],
-		"language": "ko-KR"
+		"devices": ["iPhone 17 Pro"]
 	},
 	"steps": [
 		{

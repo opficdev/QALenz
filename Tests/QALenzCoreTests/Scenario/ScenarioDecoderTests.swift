@@ -50,8 +50,7 @@ struct ScenarioDecoderTests {
 		#expect(selector.label == "Profile")
 		#expect(selector.role == "button")
 		#expect(scenario.matrix == .object([
-			"devices": .array([.string("iPhone 17 Pro")]),
-			"language": .string("ko-KR")
+			"devices": .array([.string("iPhone 17 Pro")])
 		]))
 	}
 
