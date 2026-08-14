@@ -10,18 +10,20 @@ struct SwiftLintPlugin: BuildToolPlugin {
 		target _: Target
 	) async throws -> [Command] {
 		let script = context.package.directoryURL.appendingPathComponent("Scripts/lint.sh")
-		let githubActions = ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] ?? ""
+		var environment = [
+			"PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+		]
+
+		if ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true" {
+			environment["SWIFTLINT_PLUGIN_SKIP"] = "true"
+		}
 
 		return [
 			.prebuildCommand(
 				displayName: "SwiftLint",
 				executable: URL(filePath: "/bin/bash"),
 				arguments: [script.path()],
-				environment: [
-					"PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
-					"SWIFTLINT_STRICT": "false",
-					"GITHUB_ACTIONS": githubActions,
-				],
+				environment: environment,
 				outputFilesDirectory: context.pluginWorkDirectoryURL
 			),
 		]

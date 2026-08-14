@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+if [ "${SWIFTLINT_PLUGIN_SKIP:-}" = "true" ]; then
 	exit 0
 fi
 
