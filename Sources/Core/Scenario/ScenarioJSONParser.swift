@@ -21,10 +21,12 @@ indirect enum ScenarioJSONValue: Equatable {
 enum ScenarioJSONSyntaxError: Error, Equatable {
 	case invalid
 	case duplicateMember(keyPath: String)
+	case nestingLimitExceeded
 }
 
 // Scenario JSON bytes를 숫자 원문 보존 중간 값으로 해석합니다.
 struct ScenarioJSONParser {
+	private static let maximumNestingDepth = 128
 	private let bytes: [UInt8]
 	private var index = 0
 
@@ -36,7 +38,7 @@ struct ScenarioJSONParser {
 	// JSON 문서 전체를 하나의 중간 값으로 해석합니다.
 	mutating func parse() throws -> ScenarioJSONValue {
 		skipWhitespace()
-		let value = try parseValue(at: "$")
+		let value = try parseValue(at: "$", depth: 0)
 		skipWhitespace()
 		guard index == bytes.count else { throw ScenarioJSONSyntaxError.invalid }
 
@@ -44,14 +46,17 @@ struct ScenarioJSONParser {
 	}
 
 	// 현재 위치의 JSON 값 하나를 해석합니다.
-	private mutating func parseValue(at keyPath: String) throws -> ScenarioJSONValue {
+	private mutating func parseValue(
+		at keyPath: String,
+		depth: Int
+	) throws -> ScenarioJSONValue {
 		guard let current else { throw ScenarioJSONSyntaxError.invalid }
 
 		switch current {
 		case 0x7B:
-			return try parseObject(at: keyPath)
+			return try parseObject(at: keyPath, depth: try nextDepth(from: depth))
 		case 0x5B:
-			return try parseArray(at: keyPath)
+			return try parseArray(at: keyPath, depth: try nextDepth(from: depth))
 		case 0x22:
 			return .string(try parseString())
 		case 0x74:
@@ -71,7 +76,10 @@ struct ScenarioJSONParser {
 	}
 
 	// JSON object를 key와 값의 dictionary로 해석합니다.
-	private mutating func parseObject(at keyPath: String) throws -> ScenarioJSONValue {
+	private mutating func parseObject(
+		at keyPath: String,
+		depth: Int
+	) throws -> ScenarioJSONValue {
 		try consume(0x7B)
 		skipWhitespace()
 		var object = [String: ScenarioJSONValue]()
@@ -92,7 +100,10 @@ struct ScenarioJSONParser {
 			skipWhitespace()
 			try consume(0x3A)
 			skipWhitespace()
-			object[key] = try parseValue(at: memberKeyPath(for: key, in: keyPath))
+			object[key] = try parseValue(
+				at: memberKeyPath(for: key, in: keyPath),
+				depth: depth
+			)
 			skipWhitespace()
 
 			if consumeIf(0x2C) {
@@ -105,7 +116,10 @@ struct ScenarioJSONParser {
 	}
 
 	// JSON array를 입력 순서의 값 배열로 해석합니다.
-	private mutating func parseArray(at keyPath: String) throws -> ScenarioJSONValue {
+	private mutating func parseArray(
+		at keyPath: String,
+		depth: Int
+	) throws -> ScenarioJSONValue {
 		try consume(0x5B)
 		skipWhitespace()
 		var array = [ScenarioJSONValue]()
@@ -116,7 +130,7 @@ struct ScenarioJSONParser {
 
 		while true {
 			skipWhitespace()
-			array.append(try parseValue(at: "\(keyPath)[\(array.count)]"))
+			array.append(try parseValue(at: "\(keyPath)[\(array.count)]", depth: depth))
 			skipWhitespace()
 
 			if consumeIf(0x2C) {
@@ -126,6 +140,16 @@ struct ScenarioJSONParser {
 
 			return .array(array)
 		}
+	}
+
+	// 다음 object 또는 array의 중첩 깊이가 한계 안인지 검증합니다.
+	private func nextDepth(from depth: Int) throws -> Int {
+		let nextDepth = depth + 1
+		guard nextDepth <= Self.maximumNestingDepth else {
+			throw ScenarioJSONSyntaxError.nestingLimitExceeded
+		}
+
+		return nextDepth
 	}
 
 	// JSON object member 이름을 모호하지 않은 JSON path 문맥으로 변환합니다.

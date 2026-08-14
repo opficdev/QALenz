@@ -12,6 +12,66 @@ import Testing
 // ScenarioJSONParser의 숫자 문법 검증을 확인합니다.
 @Suite
 struct ScenarioJSONParserTests {
+	// 최대 중첩 깊이 경계를 구성할 JSON container 종류를 표현합니다.
+	private enum NestedJSONKind: CaseIterable {
+		case object
+		case array
+		case mixed
+	}
+
+	// object와 array의 최대 중첩 깊이까지는 해석하는지 검증합니다.
+	@Test(arguments: NestedJSONKind.allCases)
+	private func 최대_중첩_깊이까지_JSON을_해석한다(_ kind: NestedJSONKind) throws {
+		var parser = ScenarioJSONParser(data: Data(nestedJSON(kind: kind, depth: 128).utf8))
+
+		_ = try parser.parse()
+	}
+
+	// object와 array의 최대 중첩 깊이를 넘으면 거부하는지 검증합니다.
+	@Test(arguments: NestedJSONKind.allCases)
+	private func 최대_중첩_깊이를_넘는_JSON을_거부한다(_ kind: NestedJSONKind) throws {
+		let error = try #require(throws: ScenarioJSONSyntaxError.self) {
+			var parser = ScenarioJSONParser(data: Data(nestedJSON(kind: kind, depth: 129).utf8))
+
+			_ = try parser.parse()
+		}
+
+		#expect(error == .nestingLimitExceeded)
+	}
+
+	// 중첩 깊이 초과를 root JSON path의 scenario 구문 오류로 정규화하는지 검증합니다.
+	@Test
+	func 중첩_깊이_초과를_root_JSON_key_path와_함께_반환한다() throws {
+		let scenarioURL = URL(fileURLWithPath: "/tmp/nesting-limit.json")
+		let errors = try requireValidationErrors {
+			try ScenarioDecoder().decode(
+				Data(
+					"""
+					{
+						"matrix": \(nestedJSON(kind: .mixed, depth: 128)),
+						"schemaVersion": 1,
+						"id": "nesting-limit",
+						"name": "Nesting limit",
+						"profile": "default",
+						"steps": [{"id": "launch", "action": "buildAndRun"}],
+						"assertions": [],
+						"evidence": []
+					}
+					""".utf8
+				),
+				at: scenarioURL
+			)
+		}
+
+		#expect(errors.errors == [
+			.init(
+				code: .jsonInvalid,
+				filePath: scenarioURL.standardizedFileURL.path,
+				keyPath: "$"
+			)
+		])
+	}
+
 	// 중복 JSON object member를 정확한 JSON path와 함께 거부하는지 검증합니다.
 	@Test(arguments: [
 		("{\"id\": \"first\", \"id\": \"second\"}", "$.id"),
@@ -98,5 +158,23 @@ struct ScenarioJSONParserTests {
 		try #require(throws: ScenarioValidationErrors.self) {
 			try operation()
 		}
+	}
+
+	// 요청한 깊이만큼 JSON object와 array를 중첩한 원문을 반환합니다.
+	private func nestedJSON(kind: NestedJSONKind, depth: Int) -> String {
+		var json = "null"
+
+		for index in 0..<depth {
+			switch kind {
+			case .object:
+				json = "{\"value\":\(json)}"
+			case .array:
+				json = "[\(json)]"
+			case .mixed:
+				json = index.isMultiple(of: 2) ? "{\"value\":\(json)}" : "[\(json)]"
+			}
+		}
+
+		return json
 	}
 }
