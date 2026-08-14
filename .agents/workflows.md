@@ -10,10 +10,10 @@ Use `.agents/roles.md` for role permissions and output formats.
 
 1. Read `AGENTS.md` and every routed document for the current task.
 2. Compare the user request with the current repository state.
-3. Create the `Designer` side task when issue analysis or implementation design is required.
-4. Create a Task Packet from the `Designer` result with required roles, model assignment, exact `task_name`, and execution permissions.
+3. When issue analysis or implementation design is required, prepare a `Design Brief` and create the `Designer` side task.
+4. Have the Planner finalize the Task Packet from the `Designer` result with required roles, model assignment, exact `task_name`, and execution permissions.
 5. Keep `Primary` roles with the active main agent.
-6. Create each required `Designer` or `Lightweight` role as a connected side task through its exact configured `task_name`.
+6. Create each required `Lightweight` role as a connected side task through its exact configured `task_name`.
 7. Apply changes only through the assigned writing role after required preflight results pass.
 8. Reuse the existing agent with `followup_task` for later work in the same role.
 9. Integrate every delegated result, inspect the final diff and all not-run checks, and report only evidence-backed results.

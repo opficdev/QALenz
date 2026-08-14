@@ -67,6 +67,23 @@ Project-scoped custom agent TOML은 `.codex/agents/`에 둡니다. `Designer`와
 | GitHub/CI Analyst | Inspect live issue, PR, review thread, and CI state | None |
 | Documentation Writer | Write documentation aligned with actual behavior and diff | Assigned documents only |
 
+## Design brief
+
+When issue analysis or implementation design is required, the `Primary` prepares this brief before dispatching `Designer`:
+
+```markdown
+## Design Brief
+
+- Source:
+- Request:
+- Known current-state evidence:
+- Constraints:
+- Open questions:
+- Execution permission:
+```
+
+`Design Brief` is an initial analysis input. It does not finalize scope, required roles, expected changed files, or verification.
+
 ## Task packet
 
 When work is split across roles, the Planner must prepare this packet:
@@ -93,7 +110,7 @@ When work is split across roles, the Planner must prepare this packet:
 
 ## Role activation
 
-Use this packet when dispatching a connected read-only role.
+Use `Design Brief` when dispatching `Designer`. Use the final `Task Packet` when dispatching every other connected read-only role.
 
 ```markdown
 You are the `<Role Name>` for the QALenz repository.
@@ -103,8 +120,9 @@ Read `AGENTS.md` first. Then read `.agents/roles.md` and follow the `<Role Name>
 Assigned model tier: `<configured model tier>`
 Custom agent: `<configured custom agent name>`
 
-Task packet:
-<paste Task Packet here>
+Input:
+- `Designer`: <paste Design Brief here>
+- every other connected read-only role: <paste final Task Packet here>
 
 Rules:
 - Stay inside the role permissions.
