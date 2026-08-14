@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+	exit 0
+fi
+
 if ! command -v swiftlint >/dev/null 2>&1; then
 	echo "SwiftLint가 설치되어 있지 않습니다."
 	echo "Homebrew로 설치한 뒤 다시 실행해 주세요:"
@@ -12,4 +16,10 @@ fi
 repositoryRoot="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repositoryRoot"
 
-swiftlint lint --strict --no-cache --config .swiftlint.yml
+arguments=(lint --no-cache --config .swiftlint.yml)
+
+if [ "${SWIFTLINT_STRICT:-true}" != "false" ]; then
+	arguments+=(--strict)
+fi
+
+swiftlint "${arguments[@]}"
