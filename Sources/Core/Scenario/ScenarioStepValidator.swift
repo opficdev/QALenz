@@ -151,7 +151,7 @@ struct ScenarioStepValidator {
 		return action
 	}
 
-	// selector가 필요한 action의 selector 내용을 검증합니다.
+	// 필요한 selector의 존재와 제공된 selector 값의 비어 있음을 검증합니다.
 	private func validateSelector(
 		_ selector: ScenarioSelector?,
 		for action: ScenarioStepAction,
@@ -159,13 +159,26 @@ struct ScenarioStepValidator {
 		filePath: String,
 		errors: inout [ScenarioValidationError]
 	) {
-		guard action.requiresSelector else { return }
 		guard let selector else {
+			guard action.requiresSelector else { return }
+
 			errors.append(.init(
 				code: .stepSelectorMissing,
 				filePath: filePath,
 				keyPath: "\(keyPath).selector"
 			))
+			return
+		}
+		let emptyValueKeyNames = selector.emptyValueKeyNames
+
+		guard emptyValueKeyNames.isEmpty else {
+			for keyName in emptyValueKeyNames {
+				errors.append(.init(
+					code: .stepSelectorEmpty,
+					filePath: filePath,
+					keyPath: "\(keyPath).selector.\(keyName)"
+				))
+			}
 			return
 		}
 		guard !selector.isEmpty else {

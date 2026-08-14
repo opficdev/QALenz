@@ -49,4 +49,36 @@ struct ScenarioStepValidatorTests {
 			"$.steps[3].selector"
 		])
 	}
+
+	// 제공된 selector의 빈 값이 action 종류와 무관하게 해당 key path로 반환되는지 검증합니다.
+	@Test
+	func selector의_빈_제공_값을_key_path로_반환한다() throws {
+		let steps = try JSONDecoder().decode(
+			[ScenarioStepDocument].self,
+			from: Data(
+				"""
+				[
+				  {"id": "tap-profile", "action": "tap", "selector": {"identifier": "", "label": "Profile"}},
+				  {"id": "capture", "action": "screenshot", "selector": {"value": ""}}
+				]
+				""".utf8
+			)
+		)
+		var errors = [ScenarioValidationError]()
+		let stepIDs = ScenarioStepValidator().validate(
+			steps,
+			filePath: "/tmp/scenario.json",
+			errors: &errors
+		)
+
+		#expect(stepIDs == ["tap-profile", "capture"])
+		#expect(errors.map(\.code.rawValue) == [
+			"scenario.step.selector.empty",
+			"scenario.step.selector.empty"
+		])
+		#expect(errors.map(\.keyPath) == [
+			"$.steps[0].selector.identifier",
+			"$.steps[1].selector.value"
+		])
+	}
 }

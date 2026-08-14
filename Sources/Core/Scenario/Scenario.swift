@@ -111,6 +111,21 @@ package struct ScenarioSelector: Codable, Sendable, Equatable {
 			$0?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
 		}
 	}
+
+	// 빈 문자열 또는 공백만 제공한 selector key 이름을 반환합니다.
+	package var emptyValueKeyNames: [String] {
+		[
+			("identifier", identifier),
+			("label", label),
+			("role", role),
+			("value", value)
+		].compactMap { pair in
+			guard let value = pair.1 else { return nil }
+			guard value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+
+			return pair.0
+		}
+	}
 }
 
 // assertion과 evidence가 완료된 step을 참조하는 값을 표현합니다.
