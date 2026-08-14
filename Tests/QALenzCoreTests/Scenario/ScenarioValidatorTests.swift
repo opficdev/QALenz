@@ -50,7 +50,7 @@ struct ScenarioValidatorTests {
 	// 여러 scenario의 최상위 id 중복이 각각의 파일과 key path로 반환되는지 검증합니다.
 	@Test
 	func 여러_scenario의_중복_id를_각_파일_문맥으로_반환한다() throws {
-		let document = try JSONDecoder().decode(ScenarioDocument.self, from: duplicateIDData())
+		let document = try ScenarioJSONDecoder().decode(duplicateIDData())
 		let firstURL = URL(fileURLWithPath: "/tmp/first-scenario.json")
 		let secondURL = URL(fileURLWithPath: "/tmp/second-scenario.json")
 		let result = ScenarioValidator().validate([
@@ -72,11 +72,8 @@ struct ScenarioValidatorTests {
 	// 다른 의미 오류가 있는 scenario도 유효한 id의 중복 오류를 함께 반환하는지 검증합니다.
 	@Test
 	func 다른_의미_오류가_있는_scenario의_중복_id도_반환한다() throws {
-		let validDocument = try JSONDecoder().decode(ScenarioDocument.self, from: duplicateIDData())
-		let invalidDocument = try JSONDecoder().decode(
-			ScenarioDocument.self,
-			from: duplicateIDData(profile: "")
-		)
+		let validDocument = try ScenarioJSONDecoder().decode(duplicateIDData())
+		let invalidDocument = try ScenarioJSONDecoder().decode(duplicateIDData(profile: ""))
 		let firstURL = URL(fileURLWithPath: "/tmp/first-scenario.json")
 		let secondURL = URL(fileURLWithPath: "/tmp/second-scenario.json")
 		let result = ScenarioValidator().validate([
@@ -112,7 +109,7 @@ struct ScenarioValidatorTests {
 	private func validateDocuments(at scenarioURLs: [URL]) throws -> ScenarioValidationResult {
 		let locations = try scenarioURLs.map { scenarioURL in
 			let data = try Data(contentsOf: scenarioURL)
-			let document = try JSONDecoder().decode(ScenarioDocument.self, from: data)
+			let document = try ScenarioJSONDecoder().decode(data)
 
 			return ScenarioDocumentLocation(document: document, url: scenarioURL)
 		}

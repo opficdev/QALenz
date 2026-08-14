@@ -12,7 +12,7 @@ import Testing
 // Scenario 도메인 값의 JSON 계약을 검증합니다.
 @Suite
 struct ScenarioTests {
-	// Scenario와 불투명 app별 data가 JSON 왕복 변환 후에도 유지되는지 검증합니다.
+	// Scenario와 불투명 app별 data가 전용 JSON codec 왕복 변환 후에도 유지되는지 검증합니다.
 	@Test
 	func Scenario와_앱별_data를_JSON_왕복_변환한다() throws {
 		let scenario = Scenario(
@@ -29,7 +29,7 @@ struct ScenarioTests {
 					action: .tap,
 					selector: .init(identifier: "todo-complete"),
 					parameters: .object([
-						"retryCount": .integer(1)
+						"retryCount": .number("1")
 					])
 				)
 			],
@@ -40,8 +40,13 @@ struct ScenarioTests {
 				.init(afterStepID: "tap-complete", parameters: .boolean(true))
 			]
 		)
-		let data = try JSONEncoder().encode(scenario)
-		let decoded = try JSONDecoder().decode(Scenario.self, from: data)
+		let data = try ScenarioJSONEncoder().encode(scenario)
+		let decoded = try #require(
+			ScenarioDecoder().decode(
+				data,
+				at: URL(fileURLWithPath: "/tmp/scenario-codec.json")
+			).first
+		)
 
 		#expect(decoded == scenario)
 	}

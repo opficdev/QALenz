@@ -18,7 +18,7 @@ struct ScenarioDecoderTests {
 		let scenarioURL = try fixtureURL(named: "valid")
 		let decoder = ScenarioDecoder()
 		let scenario = try #require(decoder.decode(at: scenarioURL).first)
-		let data = try JSONEncoder().encode(scenario)
+		let data = try ScenarioJSONEncoder().encode(scenario)
 		let decoded = try #require(
 			decoder.decode(data, at: URL(fileURLWithPath: "/tmp/round-trip.json")).first
 		)
@@ -83,7 +83,7 @@ struct ScenarioDecoderTests {
 		#expect(scenario.assertions.first?.parameters == .null)
 		#expect(scenario.evidence.first?.parameters == .null)
 
-		let encoded = try JSONEncoder().encode(scenario)
+		let encoded = try ScenarioJSONEncoder().encode(scenario)
 		let object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
 		let steps = try #require(object["steps"] as? [[String: Any]])
 		let assertions = try #require(object["assertions"] as? [[String: Any]])
@@ -92,6 +92,80 @@ struct ScenarioDecoderTests {
 		#expect(steps.first?["parameters"] is NSNull)
 		#expect(assertions.first?["parameters"] is NSNull)
 		#expect(evidence.first?["parameters"] is NSNull)
+	}
+
+	// 큰 지수의 JSON 숫자가 원문과 숫자 종류를 유지한 채 왕복 변환되는지 검증합니다.
+	@Test
+	func 큰_지수_숫자_원문을_보존한다() throws {
+		let decoder = ScenarioDecoder()
+		let scenario = try #require(
+			decoder.decode(
+				Data(
+					"""
+					{
+					  "schemaVersion": 1,
+					  "id": "large-numbers",
+					  "name": "Large numbers",
+					  "profile": "default",
+					  "matrix": {"large": 1e200, "small": 1e-200},
+					  "steps": [{"id": "launch", "action": "buildAndRun", "parameters": {"large": 1e200}}],
+					  "assertions": [{"afterStepID": "launch", "parameters": 1e-200}],
+					  "evidence": [{"afterStepID": "launch", "parameters": [1e200, 1e-200]}]
+					}
+					""".utf8
+				),
+				at: URL(fileURLWithPath: "/tmp/large-numbers.json")
+			).first
+		)
+
+		#expect(scenario.matrix == .object([
+			"large": .number("1e200"),
+			"small": .number("1e-200")
+		]))
+		#expect(scenario.steps.first?.parameters == .object(["large": .number("1e200")]))
+		#expect(scenario.assertions.first?.parameters == .number("1e-200"))
+		#expect(scenario.evidence.first?.parameters == .array([
+			.number("1e200"),
+			.number("1e-200")
+		]))
+
+		let encoded = try ScenarioJSONEncoder().encode(scenario)
+		let encodedJSON = try #require(String(data: encoded, encoding: .utf8))
+		let decoded = try #require(
+			decoder.decode(encoded, at: URL(fileURLWithPath: "/tmp/large-numbers-round-trip.json")).first
+		)
+
+		#expect(encodedJSON.contains("1e200"))
+		#expect(encodedJSON.contains("1e-200"))
+		#expect(!encodedJSON.contains("\"1e200\""))
+		#expect(!encodedJSON.contains("\"1e-200\""))
+		#expect(decoded == scenario)
+	}
+
+	// 정수 값을 나타내는 지수 표기 schemaVersion을 기존 계약대로 해석하는지 검증합니다.
+	@Test
+	func 정수_지수_표기의_schemaVersion을_해석한다() throws {
+		let scenario = try #require(
+			ScenarioDecoder().decode(
+				Data(
+					"""
+					{
+					  "schemaVersion": 1e0,
+					  "id": "exponent-schema-version",
+					  "name": "Exponent schema version",
+					  "profile": "default",
+					  "matrix": {},
+					  "steps": [{"id": "launch", "action": "buildAndRun"}],
+					  "assertions": [],
+					  "evidence": []
+					}
+					""".utf8
+				),
+				at: URL(fileURLWithPath: "/tmp/exponent-schema-version.json")
+			).first
+		)
+
+		#expect(scenario.schemaVersion == 1)
 	}
 
 	// 구문이 잘못된 scenario JSON이 파일 문맥과 함께 거부되는지 검증합니다.

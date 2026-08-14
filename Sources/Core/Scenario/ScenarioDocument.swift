@@ -5,8 +5,8 @@
 //  Created by opfic on 8/14/26.
 //
 
-// JSONDecoder가 해석할 scenario 파일의 원본 구조를 표현합니다.
-package struct ScenarioDocument: Decodable, Sendable {
+// scenario JSON을 검증 전에 보존하는 원본 구조를 표현합니다.
+package struct ScenarioDocument: Sendable {
 	package static let requiredKeyNames = [
 		"schemaVersion",
 		"id",
@@ -29,85 +29,60 @@ package struct ScenarioDocument: Decodable, Sendable {
 	package let assertions: [ScenarioStepReferenceDocument]?
 	package let evidence: [ScenarioStepReferenceDocument]?
 
-	// 누락된 key를 의미 검증 단계에서 함께 수집하도록 선택 값으로 해석합니다.
-	package init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-
-		schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
-		id = try container.decodeIfPresent(String.self, forKey: .id)
-		name = try container.decodeIfPresent(String.self, forKey: .name)
-		profile = try container.decodeIfPresent(String.self, forKey: .profile)
-		matrix = try container.decodeIfPresent(ScenarioValue.self, forKey: .matrix)
-		steps = try container.decodeIfPresent([ScenarioStepDocument].self, forKey: .steps)
-		assertions = try container.decodeIfPresent(
-			[ScenarioStepReferenceDocument].self,
-			forKey: .assertions
-		)
-		evidence = try container.decodeIfPresent(
-			[ScenarioStepReferenceDocument].self,
-			forKey: .evidence
-		)
+	// Scenario JSON codec이 해석한 원본 값으로 문서를 구성합니다.
+	package init(
+		schemaVersion: Int?,
+		id: String?,
+		name: String?,
+		profile: String?,
+		matrix: ScenarioValue?,
+		steps: [ScenarioStepDocument]?,
+		assertions: [ScenarioStepReferenceDocument]?,
+		evidence: [ScenarioStepReferenceDocument]?
+	) {
+		self.schemaVersion = schemaVersion
+		self.id = id
+		self.name = name
+		self.profile = profile
+		self.matrix = matrix
+		self.steps = steps
+		self.assertions = assertions
+		self.evidence = evidence
 	}
 
-	// scenario JSON key를 decoding에 사용합니다.
-	private enum CodingKeys: String, CodingKey {
-		case schemaVersion
-		case id
-		case name
-		case profile
-		case matrix
-		case steps
-		case assertions
-		case evidence
-	}
 }
 
 // 검증 전 step의 raw action tag와 선택 payload를 표현합니다.
-package struct ScenarioStepDocument: Decodable, Sendable {
+package struct ScenarioStepDocument: Sendable {
 	package let id: String?
 	package let action: String?
 	package let selector: ScenarioSelector?
 	package let parameters: ScenarioValue?
 
-	// 누락된 step key를 의미 검증 단계에서 수집하도록 선택 값으로 해석합니다.
-	package init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-
-		id = try container.decodeIfPresent(String.self, forKey: .id)
-		action = try container.decodeIfPresent(String.self, forKey: .action)
-		selector = try container.decodeIfPresent(ScenarioSelector.self, forKey: .selector)
-		parameters = container.contains(.parameters)
-			? try container.decode(ScenarioValue.self, forKey: .parameters)
-			: nil
+	// Scenario JSON codec이 해석한 step 원본 값으로 문서를 구성합니다.
+	package init(
+		id: String?,
+		action: String?,
+		selector: ScenarioSelector?,
+		parameters: ScenarioValue?
+	) {
+		self.id = id
+		self.action = action
+		self.selector = selector
+		self.parameters = parameters
 	}
 
-	// step JSON key를 decoding에 사용합니다.
-	private enum CodingKeys: String, CodingKey {
-		case id
-		case action
-		case selector
-		case parameters
-	}
 }
 
 // 검증 전 assertion과 evidence의 step 참조를 표현합니다.
-package struct ScenarioStepReferenceDocument: Decodable, Sendable {
+package struct ScenarioStepReferenceDocument: Sendable {
 	package let afterStepID: String?
 	package let parameters: ScenarioValue?
 
-	// 누락된 참조 key를 의미 검증 단계에서 수집하도록 선택 값으로 해석합니다.
-	package init(from decoder: any Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-
-		afterStepID = try container.decodeIfPresent(String.self, forKey: .afterStepID)
-		parameters = container.contains(.parameters)
-			? try container.decode(ScenarioValue.self, forKey: .parameters)
-			: nil
+	// Scenario JSON codec이 해석한 step 참조 원본 값으로 문서를 구성합니다.
+	package init(afterStepID: String?, parameters: ScenarioValue?) {
+		self.afterStepID = afterStepID
+		self.parameters = parameters
 	}
 
-	// step 참조 JSON key를 decoding에 사용합니다.
-	private enum CodingKeys: String, CodingKey {
-		case afterStepID
-		case parameters
-	}
 }

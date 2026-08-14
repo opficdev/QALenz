@@ -52,7 +52,7 @@ package struct ScenarioDecoder: Sendable {
 
 		for source in sources {
 			do {
-				let document = try JSONDecoder().decode(ScenarioDocument.self, from: source.data)
+				let document = try ScenarioJSONDecoder().decode(source.data)
 				locations.append(.init(document: document, url: source.url))
 			} catch {
 				errors.append(decodingError(for: error, scenarioURL: source.url))
@@ -69,11 +69,19 @@ package struct ScenarioDecoder: Sendable {
 		return result.scenarios
 	}
 
-	// JSONDecoder 오류를 scenario 오류 계약으로 정규화합니다.
+	// Scenario JSON 해석 오류를 scenario 오류 계약으로 정규화합니다.
 	private func decodingError(
 		for error: any Error,
 		scenarioURL: URL
 	) -> ScenarioValidationError {
+		if let error = error as? ScenarioJSONDecodingError {
+			return .init(
+				code: .jsonInvalid,
+				filePath: scenarioURL.standardizedFileURL.path,
+				keyPath: error.keyPath
+			)
+		}
+
 		guard let error = error as? DecodingError else {
 			return .init(
 				code: .jsonInvalid,
