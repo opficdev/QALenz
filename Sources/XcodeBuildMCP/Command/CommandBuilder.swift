@@ -29,6 +29,19 @@ package struct CommandBuilder: Sendable {
 			)
 		}
 
+		let requestedArgumentNames = Set(request.arguments.map(\.name))
+		guard descriptor.requiredArgumentGroups.allSatisfy({
+			!requestedArgumentNames.isDisjoint(with: $0)
+		}), descriptor.exclusiveArgumentGroups.allSatisfy({
+			requestedArgumentNames.intersection($0).count <= 1
+		}) else {
+			throw RunError(
+				kind: .adapter,
+				code: .init(rawValue: "adapter.xcodebuildmcp.argument.unsupported"),
+				context: .init(command: request.operation.rawValue)
+			)
+		}
+
 		var arguments = [descriptor.workflow, descriptor.tool]
 
 		for argument in request.arguments {

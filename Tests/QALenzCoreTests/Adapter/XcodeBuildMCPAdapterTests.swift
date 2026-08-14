@@ -28,6 +28,14 @@ struct XcodeBuildMCPAdapterTests {
 		])
 	}
 
+	// discovery 작업 식별자가 XcodeBuildMCP 명령 세부 정보와 분리되는지 검증합니다.
+	@Test
+	func discovery_작업_식별자가_의미를_보존한다() {
+		#expect(XcodeBuildMCPOperation.discoverProjects.rawValue == "discover.projects")
+		#expect(XcodeBuildMCPOperation.discoverSchemes.rawValue == "discover.schemes")
+		#expect(XcodeBuildMCPOperation.discoverSimulators.rawValue == "discover.simulators")
+	}
+
 	// adapter 계약이 정규화된 결과를 노출하는지 검증합니다.
 	@Test
 	func 어댑터_계약이_정규화된_결과를_반환한다() async {

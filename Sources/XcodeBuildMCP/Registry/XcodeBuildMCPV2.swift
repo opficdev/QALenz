@@ -20,6 +20,24 @@ enum XcodeBuildMCPV2 {
 			tool: "list",
 			argumentFlags: [:]
 		),
+		XcodeBuildMCPOperation.discoverProjects: .init(
+			workflow: "project-discovery",
+			tool: "discover-projects",
+			argumentFlags: [
+				"workspace.root": "--workspace-root"
+			],
+			requiredArgumentGroups: [["workspace.root"]]
+		),
+		XcodeBuildMCPOperation.discoverSchemes: .init(
+			workflow: "project-discovery",
+			tool: "list-schemes",
+			argumentFlags: [
+				"project.path": "--project-path",
+				"workspace.path": "--workspace-path"
+			],
+			requiredArgumentGroups: [["project.path", "workspace.path"]],
+			exclusiveArgumentGroups: [["project.path", "workspace.path"]]
+		),
 		XcodeBuildMCPOperation.buildSimulator: .init(
 			workflow: "simulator",
 			tool: "build",
@@ -64,6 +82,39 @@ enum XcodeBuildMCPV2 {
 				)
 			)
 		],
+		XcodeBuildMCPOperation.discoverProjects: [
+			"xcodebuildmcp.output.project-list": .init(
+				versions: ["2"],
+				payload: .init(
+					isRequired: true,
+					schema: .object(
+						fields: [
+							"projects": .array(element: .object(
+								fields: ["path": .string],
+								requiredFields: ["path"]
+							)),
+							"workspaces": .array(element: .object(
+								fields: ["path": .string],
+								requiredFields: ["path"]
+							))
+						],
+						requiredFields: ["projects", "workspaces"]
+					)
+				)
+			)
+		],
+		XcodeBuildMCPOperation.discoverSchemes: [
+			"xcodebuildmcp.output.scheme-list": .init(
+				versions: ["2"],
+				payload: .init(
+					isRequired: true,
+					schema: .object(
+						fields: ["schemes": .array(element: .string)],
+						requiredFields: ["schemes"]
+					)
+				)
+			)
+		],
 		XcodeBuildMCPOperation.buildSimulator: [
 			"xcodebuildmcp.output.build-result": .init(
 				versions: ["1", "2", "3"],
@@ -94,6 +145,5 @@ enum XcodeBuildMCPV2 {
 
 // XcodeBuildMCP 2.x 명세가 지원하는 의미 기반 operation을 보관합니다.
 private extension XcodeBuildMCPOperation {
-	static let discoverSimulators = Self(rawValue: "discover.simulators")
 	static let buildSimulator = Self(rawValue: "build.simulator")
 }

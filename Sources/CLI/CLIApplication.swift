@@ -27,6 +27,15 @@ package enum CLIApplication {
 				)
 			}
 
+			if let discoverCommand = parsedCommand as? DiscoverCommand {
+				return await discoverCommand.execute(
+					format: discoverOutputFormat(
+						arguments: arguments,
+						command: discoverCommand
+					)
+				)
+			}
+
 			var command = parsedCommand
 			try command.run()
 
@@ -41,27 +50,32 @@ package enum CLIApplication {
 		arguments: [String],
 		command: DoctorCommand
 	) -> CLIOutputFormat {
-		guard let commandName = DoctorCommand.configuration.commandName,
-			let commandIndex = arguments.firstIndex(of: commandName) else {
-			return command.options.output
-		}
-
-		let commandArguments = arguments.suffix(
-			from: arguments.index(after: commandIndex)
+		outputFormat(
+			arguments: arguments,
+			commandName: DoctorCommand.configuration.commandName,
+			commandOutputFormat: command.options.output
 		)
-		guard !containsOutputOption(in: commandArguments) else {
-			return command.options.output
-		}
+	}
 
-		return CLIOutputFormat.requested(in: Array(arguments[..<commandIndex]))
+	// root와 discover 옵션의 우선순위에 맞는 출력 형식을 반환합니다.
+	package static func discoverOutputFormat(
+		arguments: [String],
+		command: DiscoverCommand
+	) -> CLIOutputFormat {
+		outputFormat(
+			arguments: arguments,
+			commandName: DiscoverCommand.configuration.commandName,
+			commandOutputFormat: command.options.output
+		)
 	}
 
 	// doctor 사용 오류에서 root와 하위 명령 옵션의 우선순위를 반환합니다.
 	private static func usageErrorOutputFormat(in arguments: [String]) -> CLIOutputFormat {
 		let parsingArguments = arguments.prefix { $0 != "--" }
-		guard let commandName = DoctorCommand.configuration.commandName else {
-			return CLIOutputFormat.requested(in: arguments)
-		}
+		let commandNames = [
+			DoctorCommand.configuration.commandName,
+			DiscoverCommand.configuration.commandName
+		].compactMap { $0 }
 		var index = parsingArguments.startIndex
 
 		while index != parsingArguments.endIndex {
@@ -82,7 +96,7 @@ package enum CLIApplication {
 				continue
 			}
 
-			guard argument == commandName else {
+			guard commandNames.contains(argument) else {
 				return CLIOutputFormat.requested(in: arguments)
 			}
 
@@ -94,21 +108,25 @@ package enum CLIApplication {
 		return CLIOutputFormat.requested(in: arguments)
 	}
 
-	// DoctorReport를 요청한 출력 형식의 프로세스 결과로 변환합니다.
-	package static func result(
-		for report: DoctorReport,
-		format: CLIOutputFormat
-	) -> CLIProcessResult {
-		switch format {
-		case .text:
-			return .init(
-				standardOutput: textOutput(for: report),
-				standardError: nil,
-				exitStatus: .init(result: report.result)
-			)
-		case .json:
-			return jsonResult(for: report)
+	// root와 하위 명령 옵션의 우선순위에 맞는 출력 형식을 반환합니다.
+	private static func outputFormat(
+		arguments: [String],
+		commandName: String?,
+		commandOutputFormat: CLIOutputFormat
+	) -> CLIOutputFormat {
+		guard let commandName,
+			let commandIndex = arguments.firstIndex(of: commandName) else {
+			return commandOutputFormat
 		}
+
+		let commandArguments = arguments.suffix(
+			from: arguments.index(after: commandIndex)
+		)
+		guard !containsOutputOption(in: commandArguments) else {
+			return commandOutputFormat
+		}
+
+		return CLIOutputFormat.requested(in: Array(arguments[..<commandIndex]))
 	}
 
 	// 파싱 오류를 출력 형식에 맞는 프로세스 결과로 변환합니다.
@@ -217,40 +235,4 @@ package enum CLIApplication {
 		}
 	}
 
-	// DoctorReport를 정렬된 JSON 프로세스 결과로 변환합니다.
-	private static func jsonResult(for report: DoctorReport) -> CLIProcessResult {
-		do {
-			let encoder = JSONEncoder()
-			encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-			let data = try encoder.encode(report)
-
-			return .init(
-				// swiftlint:disable:next optional_data_string_conversion
-				standardOutput: String(decoding: data, as: UTF8.self),
-				standardError: nil,
-				exitStatus: .init(result: report.result)
-			)
-		} catch {
-			return .init(
-				standardOutput: nil,
-				standardError: "Doctor report encoding failed.",
-				exitStatus: .executionError
-			)
-		}
-	}
-
-	// DoctorReport의 항목을 사람이 읽을 수 있는 줄 단위 출력으로 변환합니다.
-	private static func textOutput(for report: DoctorReport) -> String {
-		var lines = report.diagnostics.map { diagnostic in
-			let recommendation = diagnostic.recommendation.map { "\n  \($0)" } ?? ""
-
-			return "[\(diagnostic.status.rawValue)] [\(diagnostic.requirement.rawValue)] \(diagnostic.id.rawValue): \(diagnostic.message)\(recommendation)"
-		}
-
-		if case let .errored(error) = report.result {
-			lines.append("[errored] [\(error.kind.rawValue)] \(error.code.rawValue)")
-		}
-
-		return lines.joined(separator: "\n")
-	}
 }

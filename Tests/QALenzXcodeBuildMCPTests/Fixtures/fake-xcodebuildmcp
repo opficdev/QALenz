@@ -44,6 +44,12 @@ if [ "$scheme" = "failure" ]; then
 fi
 
 case "$workflow:$tool:$output" in
+	project-discovery:discover-projects:json)
+		printf '%s\n' '{"schema":"xcodebuildmcp.output.project-list","schemaVersion":"2","didError":false,"error":null,"data":{"summary":{"status":"SUCCEEDED"},"projects":[{"path":"/tmp/Fixture.xcodeproj"}],"workspaces":[{"path":"/tmp/Fixture.xcworkspace"}],"secretToken":"secret-token-value"}}'
+		;;
+	project-discovery:list-schemes:json)
+		printf '%s\n' '{"schema":"xcodebuildmcp.output.scheme-list","schemaVersion":"2","didError":false,"error":null,"data":{"artifacts":{"projectPath":"/tmp/Fixture.xcodeproj"},"schemes":["Fixture"],"secretToken":"secret-token-value"}}'
+		;;
 	simulator:list:json)
 		printf '%s\n' '{"schema":"xcodebuildmcp.output.simulator-list","schemaVersion":"2","didError":false,"error":null,"data":{"simulators":[{"name":"Fixture Phone","simulatorId":"fixture-id","state":"Booted","isAvailable":true,"runtime":"iOS 26.0","secretToken":"secret-token-value"}]}}'
 		;;

@@ -13,7 +13,7 @@ package struct RootCommand: ParsableCommand {
 		commandName: "qalenz",
 		abstract: "여러 iOS 프로젝트의 Simulator QA 실행을 조율합니다.",
 		version: CLIVersion.current,
-		subcommands: [DoctorCommand.self]
+		subcommands: [DoctorCommand.self, DiscoverCommand.self]
 	)
 	@OptionGroup
 	package var options: CLIOptions
