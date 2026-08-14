@@ -102,8 +102,8 @@ Completion conditions:
 
 Role order:
 
-1. Designer (`designer`, `Design`)
-2. Planner (`Primary`)
+1. Designer (`designer`, `Design`) when issue analysis or implementation design is required
+2. Planner (`Primary`), or the first step when `Designer` is not required
 3. Documentation Writer (`documentation_writer`, `Lightweight`)
 4. Code Reviewer (`code_reviewer`, `Lightweight`)
 5. Verification Runner (`verification_runner`, `Lightweight`)
