@@ -1,0 +1,182 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "QALenz Scenario",
+	"type": "object",
+	"required": [
+		"schemaVersion",
+		"id",
+		"name",
+		"profile",
+		"matrix",
+		"steps",
+		"assertions",
+		"evidence"
+	],
+	"properties": {
+		"schemaVersion": {
+			"type": "integer",
+			"const": 1
+		},
+		"id": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+		},
+		"name": {
+			"type": "string",
+			"minLength": 1
+		},
+		"profile": {
+			"type": "string",
+			"minLength": 1
+		},
+		"matrix": {
+			"type": "object"
+		},
+		"steps": {
+			"type": "array",
+			"minItems": 1,
+			"items": {
+				"type": "object",
+				"required": [
+					"id",
+					"action"
+				],
+				"properties": {
+					"id": {
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+					},
+					"action": {
+						"type": "string"
+					},
+					"selector": {
+						"type": "object",
+						"minProperties": 1,
+						"properties": {
+							"identifier": {
+								"type": "string",
+								"minLength": 1
+							},
+							"label": {
+								"type": "string",
+								"minLength": 1
+							},
+							"role": {
+								"type": "string",
+								"minLength": 1
+							},
+							"value": {
+								"type": "string",
+								"minLength": 1
+							}
+						},
+						"additionalProperties": false
+					},
+					"parameters": {}
+				},
+				"oneOf": [
+					{
+						"properties": {
+							"action": {
+								"const": "buildAndRun"
+							}
+						}
+					},
+					{
+						"properties": {
+							"action": {
+								"const": "waitForUI"
+							}
+						},
+						"required": [
+							"selector"
+						]
+					},
+					{
+						"properties": {
+							"action": {
+								"const": "tap"
+							}
+						},
+						"required": [
+							"selector"
+						]
+					},
+					{
+						"properties": {
+							"action": {
+								"const": "longPress"
+							}
+						},
+						"required": [
+							"selector"
+						]
+					},
+					{
+						"properties": {
+							"action": {
+								"const": "swipe"
+							}
+						}
+					},
+					{
+						"properties": {
+							"action": {
+								"const": "typeText"
+							}
+						},
+						"required": [
+							"selector"
+						]
+					},
+					{
+						"properties": {
+							"action": {
+								"const": "screenshot"
+							}
+						}
+					},
+					{
+						"properties": {
+							"action": {
+								"const": "recordVideo"
+							}
+						}
+					}
+				]
+			}
+		},
+		"assertions": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": [
+					"afterStepID"
+				],
+				"properties": {
+					"afterStepID": {
+						"type": "string",
+						"minLength": 1
+					},
+					"parameters": {}
+				}
+			}
+		},
+		"evidence": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": [
+					"afterStepID"
+				],
+				"properties": {
+					"afterStepID": {
+						"type": "string",
+						"minLength": 1
+					},
+					"parameters": {}
+				}
+			}
+		}
+	}
+}
