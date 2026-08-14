@@ -1,5 +1,5 @@
 //
-//  ExecutionMatrixGeneratorTests.swift
+//  TargetGeneratorTests.swift
 //  QALenz
 //
 //  Created by opfic on 8/14/26.
@@ -10,11 +10,11 @@ import Testing
 
 // 실행 target 조합과 재현 가능한 identifier 계약을 검증합니다.
 @Suite
-struct ExecutionMatrixGeneratorTests {
+struct TargetGeneratorTests {
 	// 모든 dimension의 Cartesian product를 고정 순서로 생성하는지 검증합니다.
 	@Test
 	func 모든_dimension의_Cartesian_product를_고정_순서로_생성한다() throws {
-		let targets = try ExecutionMatrixGenerator().generate(
+		let targets = try TargetGenerator().generate(
 			.init(
 				devices: ["iPhone 17", "iPhone 16"],
 				operatingSystems: ["iOS 26.0"],
@@ -46,11 +46,11 @@ struct ExecutionMatrixGeneratorTests {
 	// 중복 dimension 값을 최초 등장 순서로 제거하고 같은 입력에 같은 target을 생성하는지 검증합니다.
 	@Test
 	func 중복_dimension을_제거하고_재현_가능한_target을_생성한다() throws {
-		let definition = ExecutionMatrixDefinition(
+		let definition = TargetSelection(
 			devices: ["iPhone 17", "iPhone 16", "iPhone 17"],
 			languages: ["ko", "en", "ko"]
 		)
-		let generator = ExecutionMatrixGenerator()
+		let generator = TargetGenerator()
 		let first = try generator.generate(
 			definition,
 			defaults: defaults(),
@@ -70,15 +70,15 @@ struct ExecutionMatrixGeneratorTests {
 	// target 수 상한과 곱셈 overflow를 생성 전에 거부하는지 검증합니다.
 	@Test
 	func target_수_상한과_overflow를_생성_전에_거부한다() {
-		#expect(throws: ExecutionMatrixValidationError.targetCountExceeded(maximum: 3)) {
-			try ExecutionMatrixGenerator().generate(
+		#expect(throws: TargetValidationError.targetCountExceeded(maximum: 3)) {
+			try TargetGenerator().generate(
 				.init(devices: ["iPhone 17", "iPhone 16"], languages: ["ko", "en"]),
 				defaults: defaults(),
 				policy: .init(maximumTargetCount: 3)
 			)
 		}
-		#expect(throws: ExecutionMatrixValidationError.targetCountExceeded(maximum: .max)) {
-			try ExecutionMatrixTargetCountCalculator().calculate(
+		#expect(throws: TargetValidationError.targetCountExceeded(maximum: .max)) {
+			try TargetCountCalculator().calculate(
 				dimensionCounts: [.max, 2],
 				maximumTargetCount: .max
 			)
@@ -86,7 +86,7 @@ struct ExecutionMatrixGeneratorTests {
 	}
 
 	// project 기본값을 반환합니다.
-	private func defaults() -> ExecutionMatrixDefaults {
+	private func defaults() -> TargetDefaults {
 		.init(
 			devices: ["iPhone 16"],
 			operatingSystems: ["iOS 26.0"],

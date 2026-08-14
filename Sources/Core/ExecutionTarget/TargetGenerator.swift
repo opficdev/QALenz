@@ -1,22 +1,22 @@
 //
-//  ExecutionMatrixGenerator.swift
+//  TargetGenerator.swift
 //  QALenz
 //
 //  Created by opfic on 8/14/26.
 //
 
 // 검증한 실행 matrix를 중복 없는 순서의 실행 target으로 변환합니다.
-package struct ExecutionMatrixGenerator: Sendable {
+package struct TargetGenerator: Sendable {
 	// 기본 생성기를 구성합니다.
 	package init() {}
 
 	// 정의, 기본값, 정책을 실행 target 배열로 변환합니다.
 	package func generate(
-		_ definition: ExecutionMatrixDefinition,
-		defaults: ExecutionMatrixDefaults,
-		policy: ExecutionMatrixPolicy
-	) throws -> [ExecutionTarget] {
-		let resolved = try ExecutionMatrixValidator().validate(
+		_ definition: TargetSelection,
+		defaults: TargetDefaults,
+		policy: TargetPolicy
+	) throws -> [Target] {
+		let resolved = try TargetValidator().validate(
 			definition,
 			defaults: defaults,
 			policy: policy
@@ -26,7 +26,7 @@ package struct ExecutionMatrixGenerator: Sendable {
 		let languages = uniqueValues(in: resolved.languages)
 		let appearances = uniqueValues(in: resolved.appearances)
 
-		_ = try ExecutionMatrixTargetCountCalculator().calculate(
+		_ = try TargetCountCalculator().calculate(
 			dimensionCounts: [
 				devices.count,
 				operatingSystems.count,
@@ -40,7 +40,7 @@ package struct ExecutionMatrixGenerator: Sendable {
 			operatingSystems.flatMap { operatingSystem in
 				languages.flatMap { language in
 					appearances.map { appearance in
-						ExecutionTarget(
+						Target(
 							device: device,
 							operatingSystem: operatingSystem,
 							language: language,

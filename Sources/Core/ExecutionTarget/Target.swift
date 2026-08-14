@@ -1,12 +1,12 @@
 //
-//  ExecutionTarget.swift
+//  Target.swift
 //  QALenz
 //
 //  Created by opfic on 8/14/26.
 //
 
 // 하나의 device, operatingSystem, language, appearance 조합을 표현합니다.
-package struct ExecutionTarget: Sendable, Equatable {
+package struct Target: Sendable, Equatable {
 	package let device: String
 	package let operatingSystem: String
 	package let language: String

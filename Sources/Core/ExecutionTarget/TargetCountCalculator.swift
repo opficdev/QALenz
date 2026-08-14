@@ -1,12 +1,12 @@
 //
-//  ExecutionMatrixTargetCountCalculator.swift
+//  TargetCountCalculator.swift
 //  QALenz
 //
 //  Created by opfic on 8/14/26.
 //
 
 // 실행 target 수를 overflow 없이 계산하고 상한을 검증합니다.
-package struct ExecutionMatrixTargetCountCalculator: Sendable {
+package struct TargetCountCalculator: Sendable {
 	// 기본 계산기를 구성합니다.
 	package init() {}
 
@@ -16,7 +16,7 @@ package struct ExecutionMatrixTargetCountCalculator: Sendable {
 		maximumTargetCount: Int
 	) throws -> Int {
 		guard 0 < maximumTargetCount else {
-			throw ExecutionMatrixValidationError.maximumTargetCountInvalid(maximumTargetCount)
+			throw TargetValidationError.maximumTargetCountInvalid(maximumTargetCount)
 		}
 
 		var targetCount = 1
@@ -24,7 +24,7 @@ package struct ExecutionMatrixTargetCountCalculator: Sendable {
 		for dimensionCount in dimensionCounts {
 			let product = targetCount.multipliedReportingOverflow(by: dimensionCount)
 			guard !product.overflow, product.partialValue <= maximumTargetCount else {
-				throw ExecutionMatrixValidationError.targetCountExceeded(
+				throw TargetValidationError.targetCountExceeded(
 					maximum: maximumTargetCount
 				)
 			}

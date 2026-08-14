@@ -1,12 +1,12 @@
 //
-//  ExecutionMatrixDefaults.swift
+//  TargetDefaults.swift
 //  QALenz
 //
 //  Created by opfic on 8/14/26.
 //
 
 // 누락한 실행 dimension에 적용할 project 기본값을 표현합니다.
-package struct ExecutionMatrixDefaults: Sendable, Equatable {
+package struct TargetDefaults: Sendable, Equatable {
 	package let devices: [String]
 	package let operatingSystems: [String]
 	package let languages: [String]
