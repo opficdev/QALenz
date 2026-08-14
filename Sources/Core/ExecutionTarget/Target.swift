@@ -5,11 +5,10 @@
 //  Created by opfic on 8/14/26.
 //
 
-// 하나의 device, operatingSystem, language, appearance 조합을 표현합니다.
+// 하나의 device, operatingSystem, appearance 조합을 표현합니다.
 package struct Target: Sendable, Equatable {
 	package let device: String
 	package let operatingSystem: String
-	package let language: String
 	package let appearance: String
 	package let identifier: String
 
@@ -17,17 +16,14 @@ package struct Target: Sendable, Equatable {
 	package init(
 		device: String,
 		operatingSystem: String,
-		language: String,
 		appearance: String
 	) {
 		self.device = device
 		self.operatingSystem = operatingSystem
-		self.language = language
 		self.appearance = appearance
 		identifier = [
 			Self.identifierComponent(name: "device", value: device),
 			Self.identifierComponent(name: "operatingSystem", value: operatingSystem),
-			Self.identifierComponent(name: "language", value: language),
 			Self.identifierComponent(name: "appearance", value: appearance)
 		].joined(separator: "|")
 	}

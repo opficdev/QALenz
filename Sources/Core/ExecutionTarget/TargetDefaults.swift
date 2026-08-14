@@ -9,19 +9,16 @@
 package struct TargetDefaults: Sendable, Equatable {
 	package let devices: [String]
 	package let operatingSystems: [String]
-	package let languages: [String]
 	package let appearances: [String]
 
 	// 각 dimension의 project 기본값으로 초기화합니다.
 	package init(
 		devices: [String],
 		operatingSystems: [String],
-		languages: [String],
 		appearances: [String]
 	) {
 		self.devices = devices
 		self.operatingSystems = operatingSystems
-		self.languages = languages
 		self.appearances = appearances
 	}
 }

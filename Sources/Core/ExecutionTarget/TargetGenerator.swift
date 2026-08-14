@@ -23,14 +23,12 @@ package struct TargetGenerator: Sendable {
 		)
 		let devices = uniqueValues(in: resolved.devices)
 		let operatingSystems = uniqueValues(in: resolved.operatingSystems)
-		let languages = uniqueValues(in: resolved.languages)
 		let appearances = uniqueValues(in: resolved.appearances)
 
 		_ = try TargetCountCalculator().calculate(
 			dimensionCounts: [
 				devices.count,
 				operatingSystems.count,
-				languages.count,
 				appearances.count
 			],
 			maximumTargetCount: policy.maximumTargetCount
@@ -38,15 +36,12 @@ package struct TargetGenerator: Sendable {
 
 		return devices.flatMap { device in
 			operatingSystems.flatMap { operatingSystem in
-				languages.flatMap { language in
-					appearances.map { appearance in
-						Target(
-							device: device,
-							operatingSystem: operatingSystem,
-							language: language,
-							appearance: appearance
-						)
-					}
+				appearances.map { appearance in
+					Target(
+						device: device,
+						operatingSystem: operatingSystem,
+						appearance: appearance
+					)
 				}
 			}
 		}

@@ -18,28 +18,19 @@ struct TargetGeneratorTests {
 			.init(
 				devices: ["iPhone 17", "iPhone 16"],
 				operatingSystems: ["iOS 26.0"],
-				languages: ["ko", "en"],
 				appearances: ["dark", "light"]
 			),
 			defaults: defaults(),
 			policy: .init(maximumTargetCount: 12)
 		)
 
-		#expect(targets.map(\.device) == [
-			"iPhone 17", "iPhone 17", "iPhone 17", "iPhone 17",
-			"iPhone 16", "iPhone 16", "iPhone 16", "iPhone 16"
-		])
-		#expect(targets.map(\.language) == ["ko", "ko", "en", "en", "ko", "ko", "en", "en"])
-		#expect(targets.map(\.appearance) == ["dark", "light", "dark", "light", "dark", "light", "dark", "light"])
+		#expect(targets.map(\.device) == ["iPhone 17", "iPhone 17", "iPhone 16", "iPhone 16"])
+		#expect(targets.map(\.appearance) == ["dark", "light", "dark", "light"])
 		#expect(targets.map(\.identifier) == [
-			"device=9:iPhone 17|operatingSystem=8:iOS 26.0|language=2:ko|appearance=4:dark",
-			"device=9:iPhone 17|operatingSystem=8:iOS 26.0|language=2:ko|appearance=5:light",
-			"device=9:iPhone 17|operatingSystem=8:iOS 26.0|language=2:en|appearance=4:dark",
-			"device=9:iPhone 17|operatingSystem=8:iOS 26.0|language=2:en|appearance=5:light",
-			"device=9:iPhone 16|operatingSystem=8:iOS 26.0|language=2:ko|appearance=4:dark",
-			"device=9:iPhone 16|operatingSystem=8:iOS 26.0|language=2:ko|appearance=5:light",
-			"device=9:iPhone 16|operatingSystem=8:iOS 26.0|language=2:en|appearance=4:dark",
-			"device=9:iPhone 16|operatingSystem=8:iOS 26.0|language=2:en|appearance=5:light"
+			"device=9:iPhone 17|operatingSystem=8:iOS 26.0|appearance=4:dark",
+			"device=9:iPhone 17|operatingSystem=8:iOS 26.0|appearance=5:light",
+			"device=9:iPhone 16|operatingSystem=8:iOS 26.0|appearance=4:dark",
+			"device=9:iPhone 16|operatingSystem=8:iOS 26.0|appearance=5:light"
 		])
 	}
 
@@ -48,7 +39,7 @@ struct TargetGeneratorTests {
 	func 중복_dimension을_제거하고_재현_가능한_target을_생성한다() throws {
 		let definition = TargetSelection(
 			devices: ["iPhone 17", "iPhone 16", "iPhone 17"],
-			languages: ["ko", "en", "ko"]
+			appearances: ["dark", "light", "dark"]
 		)
 		let generator = TargetGenerator()
 		let first = try generator.generate(
@@ -64,7 +55,7 @@ struct TargetGeneratorTests {
 
 		#expect(first == second)
 		#expect(first.map(\.device) == ["iPhone 17", "iPhone 17", "iPhone 16", "iPhone 16"])
-		#expect(first.map(\.language) == ["ko", "en", "ko", "en"])
+		#expect(first.map(\.appearance) == ["dark", "light", "dark", "light"])
 	}
 
 	// target 수 상한과 곱셈 overflow를 생성 전에 거부하는지 검증합니다.
@@ -72,7 +63,7 @@ struct TargetGeneratorTests {
 	func target_수_상한과_overflow를_생성_전에_거부한다() {
 		#expect(throws: TargetValidationError.targetCountExceeded(maximum: 3)) {
 			try TargetGenerator().generate(
-				.init(devices: ["iPhone 17", "iPhone 16"], languages: ["ko", "en"]),
+				.init(devices: ["iPhone 17", "iPhone 16"], appearances: ["dark", "light"]),
 				defaults: defaults(),
 				policy: .init(maximumTargetCount: 3)
 			)
@@ -90,7 +81,6 @@ struct TargetGeneratorTests {
 		.init(
 			devices: ["iPhone 16"],
 			operatingSystems: ["iOS 26.0"],
-			languages: ["en"],
 			appearances: ["light"]
 		)
 	}

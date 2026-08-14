@@ -15,8 +15,7 @@ struct TargetValidatorTests {
 	@Test
 	func 명시한_dimension과_기본값을_정규화한다() throws {
 		let definition = try TargetSelectionDecoder().decode(.object([
-			"devices": .array([.string("iPhone 17")]),
-			"languages": .array([.string("ko")])
+			"devices": .array([.string("iPhone 17")])
 		]))
 		let resolved = try TargetValidator().validate(
 			definition,
@@ -26,7 +25,6 @@ struct TargetValidatorTests {
 
 		#expect(resolved.devices == ["iPhone 17"])
 		#expect(resolved.operatingSystems == ["iOS 26.0"])
-		#expect(resolved.languages == ["ko"])
 		#expect(resolved.appearances == ["light"])
 	}
 
@@ -43,9 +41,9 @@ struct TargetValidatorTests {
 	// 배열이 아닌 dimension 값과 빈 배열을 구분해 거부하는지 검증합니다.
 	@Test
 	func 잘못된_dimension_형식과_빈_배열을_거부한다() {
-		#expect(throws: TargetValidationError.dimensionInvalid(.languages)) {
+		#expect(throws: TargetValidationError.dimensionInvalid(.operatingSystems)) {
 			try TargetSelectionDecoder().decode(.object([
-				"languages": .string("ko")
+				"operatingSystems": .string("iOS 26.0")
 			]))
 		}
 		#expect(throws: TargetValidationError.dimensionEmpty(.appearances)) {
@@ -85,7 +83,6 @@ struct TargetValidatorTests {
 		.init(
 			devices: ["iPhone 16"],
 			operatingSystems: ["iOS 26.0"],
-			languages: ["en"],
 			appearances: ["light"]
 		)
 	}

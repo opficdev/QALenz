@@ -9,19 +9,16 @@
 package struct TargetSelection: Sendable, Equatable {
 	package let devices: [String]?
 	package let operatingSystems: [String]?
-	package let languages: [String]?
 	package let appearances: [String]?
 
 	// 선택한 dimension 값으로 실행 대상 조합 정의를 구성합니다.
 	package init(
 		devices: [String]? = nil,
 		operatingSystems: [String]? = nil,
-		languages: [String]? = nil,
 		appearances: [String]? = nil
 	) {
 		self.devices = devices
 		self.operatingSystems = operatingSystems
-		self.languages = languages
 		self.appearances = appearances
 	}
 }
@@ -30,7 +27,6 @@ package struct TargetSelection: Sendable, Equatable {
 package enum TargetDimension: String, CaseIterable, Sendable, Equatable {
 	case devices
 	case operatingSystems
-	case languages
 	case appearances
 }
 
@@ -38,19 +34,16 @@ package enum TargetDimension: String, CaseIterable, Sendable, Equatable {
 package struct ResolvedTargetSelection: Sendable, Equatable {
 	package let devices: [String]
 	package let operatingSystems: [String]
-	package let languages: [String]
 	package let appearances: [String]
 
 	// 모든 dimension의 검증된 값으로 초기화합니다.
 	package init(
 		devices: [String],
 		operatingSystems: [String],
-		languages: [String],
 		appearances: [String]
 	) {
 		self.devices = devices
 		self.operatingSystems = operatingSystems
-		self.languages = languages
 		self.appearances = appearances
 	}
 }

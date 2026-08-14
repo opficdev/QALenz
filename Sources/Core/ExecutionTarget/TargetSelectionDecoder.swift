@@ -25,7 +25,6 @@ package struct TargetSelectionDecoder: Sendable {
 		return .init(
 			devices: try values(for: .devices, in: matrixValues),
 			operatingSystems: try values(for: .operatingSystems, in: matrixValues),
-			languages: try values(for: .languages, in: matrixValues),
 			appearances: try values(for: .appearances, in: matrixValues)
 		)
 	}

@@ -17,23 +17,19 @@ struct TargetSelectionTests {
 		let definition = TargetSelection(
 			devices: ["iPhone 17 Pro", "iPhone 17"],
 			operatingSystems: ["iOS 26.0"],
-			languages: ["ko", "en"],
 			appearances: ["dark", "light"]
 		)
 		let defaults = TargetDefaults(
 			devices: ["iPhone 16"],
 			operatingSystems: ["iOS 25.0"],
-			languages: ["en"],
 			appearances: ["light"]
 		)
 
 		#expect(definition.devices == ["iPhone 17 Pro", "iPhone 17"])
 		#expect(definition.operatingSystems == ["iOS 26.0"])
-		#expect(definition.languages == ["ko", "en"])
 		#expect(definition.appearances == ["dark", "light"])
 		#expect(defaults.devices == ["iPhone 16"])
 		#expect(defaults.operatingSystems == ["iOS 25.0"])
-		#expect(defaults.languages == ["en"])
 		#expect(defaults.appearances == ["light"])
 	}
 
