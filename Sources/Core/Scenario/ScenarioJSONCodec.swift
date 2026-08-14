@@ -122,14 +122,14 @@ private struct ScenarioJSONDocumentDecoder {
 		}
 	}
 
-	// 최상위 matrix의 null을 누락 값으로 해석합니다.
+	// 최상위 matrix를 선택 JSON 값으로 해석하고 명시적 null을 거부합니다.
 	private func optionalMatrix(
 		in object: [String: ScenarioJSONValue],
 		forKey key: String,
 		at keyPath: String
 	) throws -> ScenarioValue? {
 		guard let value = object[key] else { return nil }
-		guard value != .null else { return nil }
+		guard value != .null else { throw ScenarioJSONDecodingError(keyPath: keyPath) }
 
 		return try scenarioValue(from: value)
 	}
@@ -182,14 +182,14 @@ private struct ScenarioJSONDocumentDecoder {
 		return try selector(from: value, at: keyPath)
 	}
 
-	// JSON string 또는 null을 선택 문자열로 해석합니다.
+	// JSON string을 선택 문자열로 해석하고 명시적 null을 거부합니다.
 	private func optionalString(
 		in object: [String: ScenarioJSONValue],
 		forKey key: String,
 		at keyPath: String
 	) throws -> String? {
 		guard let value = object[key] else { return nil }
-		guard value != .null else { return nil }
+		guard value != .null else { throw ScenarioJSONDecodingError(keyPath: keyPath) }
 		guard case .string(let string) = value else {
 			throw ScenarioJSONDecodingError(keyPath: keyPath)
 		}
@@ -197,14 +197,14 @@ private struct ScenarioJSONDocumentDecoder {
 		return string
 	}
 
-	// JSON 정수 또는 null을 선택 정수로 해석합니다.
+	// JSON 정수를 선택 정수로 해석하고 명시적 null을 거부합니다.
 	private func optionalInteger(
 		in object: [String: ScenarioJSONValue],
 		forKey key: String,
 		at keyPath: String
 	) throws -> Int? {
 		guard let value = object[key] else { return nil }
-		guard value != .null else { return nil }
+		guard value != .null else { throw ScenarioJSONDecodingError(keyPath: keyPath) }
 		guard case .number(let literal) = value, let integer = integer(from: literal) else {
 			throw ScenarioJSONDecodingError(keyPath: keyPath)
 		}
@@ -259,14 +259,14 @@ private struct ScenarioJSONDocumentDecoder {
 		return Int(negative ? "-\(normalized)" : normalized)
 	}
 
-	// JSON array 또는 null을 선택 배열로 해석합니다.
+	// JSON array를 선택 배열로 해석하고 명시적 null을 거부합니다.
 	private func optionalArray(
 		in object: [String: ScenarioJSONValue],
 		forKey key: String,
 		at keyPath: String
 	) throws -> [ScenarioJSONValue]? {
 		guard let value = object[key] else { return nil }
-		guard value != .null else { return nil }
+		guard value != .null else { throw ScenarioJSONDecodingError(keyPath: keyPath) }
 		guard case .array(let array) = value else {
 			throw ScenarioJSONDecodingError(keyPath: keyPath)
 		}

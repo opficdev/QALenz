@@ -18,12 +18,15 @@ indirect enum ScenarioJSONValue: Equatable {
 }
 
 // Scenario JSON 구문 해석 실패를 구분합니다.
-enum ScenarioJSONSyntaxError: Error {
+enum ScenarioJSONSyntaxError: Error, Equatable {
 	case invalid
+	case duplicateMember(keyPath: String)
+	case nestingLimitExceeded
 }
 
 // Scenario JSON bytes를 숫자 원문 보존 중간 값으로 해석합니다.
 struct ScenarioJSONParser {
+	private static let maximumNestingDepth = 128
 	private let bytes: [UInt8]
 	private var index = 0
 
@@ -35,7 +38,7 @@ struct ScenarioJSONParser {
 	// JSON 문서 전체를 하나의 중간 값으로 해석합니다.
 	mutating func parse() throws -> ScenarioJSONValue {
 		skipWhitespace()
-		let value = try parseValue()
+		let value = try parseValue(at: "$", depth: 0)
 		skipWhitespace()
 		guard index == bytes.count else { throw ScenarioJSONSyntaxError.invalid }
 
@@ -43,14 +46,17 @@ struct ScenarioJSONParser {
 	}
 
 	// 현재 위치의 JSON 값 하나를 해석합니다.
-	private mutating func parseValue() throws -> ScenarioJSONValue {
+	private mutating func parseValue(
+		at keyPath: String,
+		depth: Int
+	) throws -> ScenarioJSONValue {
 		guard let current else { throw ScenarioJSONSyntaxError.invalid }
 
 		switch current {
 		case 0x7B:
-			return try parseObject()
+			return try parseObject(at: keyPath, depth: try nextDepth(from: depth))
 		case 0x5B:
-			return try parseArray()
+			return try parseArray(at: keyPath, depth: try nextDepth(from: depth))
 		case 0x22:
 			return .string(try parseString())
 		case 0x74:
@@ -70,7 +76,10 @@ struct ScenarioJSONParser {
 	}
 
 	// JSON object를 key와 값의 dictionary로 해석합니다.
-	private mutating func parseObject() throws -> ScenarioJSONValue {
+	private mutating func parseObject(
+		at keyPath: String,
+		depth: Int
+	) throws -> ScenarioJSONValue {
 		try consume(0x7B)
 		skipWhitespace()
 		var object = [String: ScenarioJSONValue]()
@@ -83,10 +92,18 @@ struct ScenarioJSONParser {
 			skipWhitespace()
 			guard current == 0x22 else { throw ScenarioJSONSyntaxError.invalid }
 			let key = try parseString()
+			guard object[key] == nil else {
+				throw ScenarioJSONSyntaxError.duplicateMember(
+					keyPath: try memberKeyPath(for: key, in: keyPath)
+				)
+			}
 			skipWhitespace()
 			try consume(0x3A)
 			skipWhitespace()
-			object[key] = try parseValue()
+			object[key] = try parseValue(
+				at: memberKeyPath(for: key, in: keyPath),
+				depth: depth
+			)
 			skipWhitespace()
 
 			if consumeIf(0x2C) {
@@ -99,7 +116,10 @@ struct ScenarioJSONParser {
 	}
 
 	// JSON array를 입력 순서의 값 배열로 해석합니다.
-	private mutating func parseArray() throws -> ScenarioJSONValue {
+	private mutating func parseArray(
+		at keyPath: String,
+		depth: Int
+	) throws -> ScenarioJSONValue {
 		try consume(0x5B)
 		skipWhitespace()
 		var array = [ScenarioJSONValue]()
@@ -110,7 +130,7 @@ struct ScenarioJSONParser {
 
 		while true {
 			skipWhitespace()
-			array.append(try parseValue())
+			array.append(try parseValue(at: "\(keyPath)[\(array.count)]", depth: depth))
 			skipWhitespace()
 
 			if consumeIf(0x2C) {
@@ -120,6 +140,30 @@ struct ScenarioJSONParser {
 
 			return .array(array)
 		}
+	}
+
+	// 다음 object 또는 array의 중첩 깊이가 한계 안인지 검증합니다.
+	private func nextDepth(from depth: Int) throws -> Int {
+		let nextDepth = depth + 1
+		guard nextDepth <= Self.maximumNestingDepth else {
+			throw ScenarioJSONSyntaxError.nestingLimitExceeded
+		}
+
+		return nextDepth
+	}
+
+	// JSON object member 이름을 모호하지 않은 JSON path 문맥으로 변환합니다.
+	private func memberKeyPath(for key: String, in keyPath: String) throws -> String {
+		guard isIdentifier(key) else {
+			let data = try JSONEncoder().encode(key)
+			guard let encoded = String(data: data, encoding: .utf8) else {
+				throw ScenarioJSONSyntaxError.invalid
+			}
+
+			return "\(keyPath)[\(encoded)]"
+		}
+
+		return "\(keyPath).\(key)"
 	}
 
 	// JSON string bytes를 Foundation JSONDecoder로 검증하고 복원합니다.
@@ -251,5 +295,25 @@ struct ScenarioJSONParser {
 	// 0이 아닌 ASCII 숫자인지 반환합니다.
 	private func isNonzeroDigit(_ value: UInt8) -> Bool {
 		(0x31...0x39).contains(value)
+	}
+
+	// JSON path의 점 표기에 사용할 member 이름인지 반환합니다.
+	private func isIdentifier(_ value: String) -> Bool {
+		guard let first = value.utf8.first else { return false }
+		guard isIdentifierHead(first) else { return false }
+
+		return value.utf8.dropFirst().allSatisfy(isIdentifierTail)
+	}
+
+	// JSON path member 이름의 첫 byte가 허용 범위인지 반환합니다.
+	private func isIdentifierHead(_ value: UInt8) -> Bool {
+		(0x41...0x5A).contains(value)
+			|| (0x61...0x7A).contains(value)
+			|| value == 0x5F
+	}
+
+	// JSON path member 이름의 이후 byte가 허용 범위인지 반환합니다.
+	private func isIdentifierTail(_ value: UInt8) -> Bool {
+		isIdentifierHead(value) || isDigit(value)
 	}
 }

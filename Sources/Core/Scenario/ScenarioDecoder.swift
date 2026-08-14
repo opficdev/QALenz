@@ -106,6 +106,14 @@ package struct ScenarioDecoder: Sendable {
 		for error: any Error,
 		scenarioURL: URL
 	) -> ScenarioValidationError {
+		if case .duplicateMember(let keyPath) = error as? ScenarioJSONSyntaxError {
+			return .init(
+				code: .jsonInvalid,
+				filePath: scenarioURL.standardizedFileURL.path,
+				keyPath: keyPath
+			)
+		}
+
 		if let error = error as? ScenarioJSONDecodingError {
 			return .init(
 				code: .jsonInvalid,
