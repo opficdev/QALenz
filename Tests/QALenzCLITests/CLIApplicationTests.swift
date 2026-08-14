@@ -30,10 +30,10 @@ struct CLIApplicationTests {
 		#expect(result.standardOutput == nil)
 	}
 
-	// 등록한 discover 하위 명령이 공통 CLI 실행 경로에서 성공으로 종료하는지 검증합니다.
+	// 등록한 discover 하위 명령의 도움말을 공통 CLI 실행 경로에서 반환하는지 검증합니다.
 	@Test
-	func 등록한_discover_하위_명령을_실행한다() async throws {
-		let result = await CLIApplication.execute(arguments: ["discover"])
+	func 등록한_discover_하위_명령의_도움말을_반환한다() async throws {
+		let result = await CLIApplication.execute(arguments: ["discover", "--help"])
 
 		#expect(result.exitStatus == .success)
 		#expect(try #require(result.standardOutput).contains("qalenz discover"))
