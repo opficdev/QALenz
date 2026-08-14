@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 2,
+	"id": "Todo Completion",
+	"name": "잘못된 Scenario",
+	"profile": " ",
+	"matrix": [],
+	"steps": [
+		{},
+		{
+			"id": "tap-profile",
+			"action": "tap",
+			"selector": {
+				"identifier": "profile-button"
+			}
+		},
+		{
+			"id": "tap-profile",
+			"action": "unsupportedAction"
+		},
+		{
+			"id": "wait-home",
+			"action": "waitForUI",
+			"selector": {}
+		}
+	],
+	"assertions": [
+		{
+			"afterStepID": "missing-step"
+		}
+	],
+	"evidence": [
+		{
+			"afterStepID": "missing-step"
+		}
+	]
+}

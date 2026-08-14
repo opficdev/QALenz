@@ -1,0 +1,112 @@
+//
+//  ScenarioValidatorTests.swift
+//  QALenz
+//
+//  Created by opfic on 8/14/26.
+//
+
+import Foundation
+import Testing
+@testable import QALenzCore
+
+// ScenarioValidator의 의미 검증 계약을 검증합니다.
+@Suite
+struct ScenarioValidatorTests {
+	// 한 scenario의 여러 의미 오류가 파일 경로와 JSON key path를 포함해 함께 반환되는지 검증합니다.
+	@Test
+	func 여러_의미_오류를_파일_경로와_JSON_key_path로_함께_반환한다() throws {
+		let scenarioURL = try fixtureURL(named: "invalid-validation")
+		let result = try validateDocuments(at: [scenarioURL])
+
+		#expect(result.errors.map(\.code.rawValue) == [
+			"scenario.schema.unsupported",
+			"scenario.id.invalid",
+			"scenario.profile.empty",
+			"scenario.matrix.invalid",
+			"scenario.step.empty",
+			"scenario.step.id.duplicate",
+			"scenario.step.action.unsupported",
+			"scenario.step.selector.empty",
+			"scenario.assertion.step.unresolved",
+			"scenario.evidence.step.unresolved"
+		])
+		#expect(result.errors.allSatisfy {
+			$0.filePath == scenarioURL.standardizedFileURL.path
+		})
+		#expect(result.errors.map(\.keyPath) == [
+			"$.schemaVersion",
+			"$.id",
+			"$.profile",
+			"$.matrix",
+			"$.steps[0]",
+			"$.steps[2].id",
+			"$.steps[2].action",
+			"$.steps[3].selector",
+			"$.assertions[0].afterStepID",
+			"$.evidence[0].afterStepID"
+		])
+	}
+
+	// 여러 scenario의 최상위 id 중복이 각각의 파일과 key path로 반환되는지 검증합니다.
+	@Test
+	func 여러_scenario의_중복_id를_각_파일_문맥으로_반환한다() throws {
+		let document = try JSONDecoder().decode(ScenarioDocument.self, from: duplicateIDData())
+		let firstURL = URL(fileURLWithPath: "/tmp/first-scenario.json")
+		let secondURL = URL(fileURLWithPath: "/tmp/second-scenario.json")
+		let result = ScenarioValidator().validate([
+			.init(document: document, url: firstURL),
+			.init(document: document, url: secondURL)
+		])
+		let duplicateErrors = result.errors.filter {
+			$0.code.rawValue == "scenario.id.duplicate"
+		}
+
+		#expect(duplicateErrors.count == 2)
+		#expect(Set(duplicateErrors.map(\.filePath)) == [
+			firstURL.standardizedFileURL.path,
+			secondURL.standardizedFileURL.path
+		])
+		#expect(duplicateErrors.allSatisfy { $0.keyPath == "$.id" })
+	}
+
+	// fixture 이름에 해당하는 Scenario JSON URL을 반환합니다.
+	private func fixtureURL(named name: String) throws -> URL {
+		try #require(
+			Bundle.module.url(
+				forResource: name,
+				withExtension: "json",
+				subdirectory: "Fixtures/Scenario"
+			)
+		)
+	}
+
+	// fixture의 JSON을 raw scenario 문서와 파일 위치로 변환합니다.
+	private func validateDocuments(at scenarioURLs: [URL]) throws -> ScenarioValidationResult {
+		let locations = try scenarioURLs.map { scenarioURL in
+			let data = try Data(contentsOf: scenarioURL)
+			let document = try JSONDecoder().decode(ScenarioDocument.self, from: data)
+
+			return ScenarioDocumentLocation(document: document, url: scenarioURL)
+		}
+
+		return ScenarioValidator().validate(locations)
+	}
+
+	// 중복 scenario id 검증에 사용할 최소 유효 문서 JSON을 반환합니다.
+	private func duplicateIDData() -> Data {
+		Data(
+			"""
+			{
+			  "schemaVersion": 1,
+			  "id": "todo-completion",
+			  "name": "Todo completion",
+			  "profile": "default",
+			  "matrix": {},
+			  "steps": [{"id": "launch", "action": "buildAndRun"}],
+			  "assertions": [],
+			  "evidence": []
+			}
+			""".utf8
+		)
+	}
+}
