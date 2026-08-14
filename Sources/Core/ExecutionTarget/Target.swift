@@ -6,7 +6,7 @@
 //
 
 // 하나의 device, operatingSystem, appearance 조합을 표현합니다.
-package struct Target: Sendable, Equatable {
+package struct Target: Codable, Sendable, Equatable {
 	package let device: String
 	package let operatingSystem: String
 	package let appearance: String
