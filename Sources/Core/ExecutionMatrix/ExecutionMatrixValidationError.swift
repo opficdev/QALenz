@@ -13,4 +13,6 @@ package enum ExecutionMatrixValidationError: Error, Sendable, Equatable {
 	case dimensionEmpty(ExecutionMatrixDimension)
 	case valueEmpty(ExecutionMatrixDimension, Int)
 	case deviceOperatingSystemUnsupported(device: String, operatingSystem: String)
+	case maximumTargetCountInvalid(Int)
+	case targetCountExceeded(maximum: Int)
 }
