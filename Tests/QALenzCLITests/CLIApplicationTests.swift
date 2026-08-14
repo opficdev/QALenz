@@ -30,6 +30,16 @@ struct CLIApplicationTests {
 		#expect(result.standardOutput == nil)
 	}
 
+	// 등록한 discover 하위 명령이 공통 CLI 실행 경로에서 성공으로 종료하는지 검증합니다.
+	@Test
+	func 등록한_discover_하위_명령을_실행한다() async throws {
+		let result = await CLIApplication.execute(arguments: ["discover"])
+
+		#expect(result.exitStatus == .success)
+		#expect(try #require(result.standardOutput).contains("qalenz discover"))
+		#expect(result.standardError == nil)
+	}
+
 	@Test
 	func JSON_출력을_요청한_잘못된_옵션은_구조화된_CLIUsageError를_standardError에_쓴다() async throws {
 		let result = await CLIApplication.execute(
