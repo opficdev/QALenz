@@ -34,19 +34,51 @@ package struct ScenarioDecoder: Sendable {
 			}
 		}
 
-		return try decode(sources, initialErrors: errors)
+		let result = decode(sources, initialErrors: errors)
+
+		guard result.errors.isEmpty else {
+			throw ScenarioValidationErrors(errors: result.errors)
+		}
+
+		return result.scenarios
 	}
 
 	// 메모리에 있는 scenario JSON을 지정한 파일 문맥으로 해석하고 검증합니다.
 	package func decode(_ data: Data, at scenarioURL: URL) throws -> [Scenario] {
-		try decode([.init(data: data, url: scenarioURL)], initialErrors: [])
+		let result = decode([.init(data: data, url: scenarioURL)], initialErrors: [])
+
+		guard result.errors.isEmpty else {
+			throw ScenarioValidationErrors(errors: result.errors)
+		}
+
+		return result.scenarios
+	}
+
+	// scenario 파일을 해석하고 유효한 문서와 오류를 함께 반환합니다.
+	package func decodeResult(at scenarioURLs: [URL]) -> ScenarioDecodingResult {
+		var sources = [ScenarioDataSource]()
+		var errors = [ScenarioValidationError]()
+
+		for url in scenarioURLs {
+			do {
+				sources.append(.init(data: try Data(contentsOf: url), url: url))
+			} catch {
+				errors.append(.init(
+					code: .fileUnreadable,
+					filePath: url.standardizedFileURL.path,
+					keyPath: "$"
+				))
+			}
+		}
+
+		return decode(sources, initialErrors: errors)
 	}
 
 	// JSON 해석 오류와 의미 검증 오류를 하나의 오류 집합으로 반환합니다.
 	private func decode(
 		_ sources: [ScenarioDataSource],
 		initialErrors: [ScenarioValidationError]
-	) throws -> [Scenario] {
+	) -> ScenarioDecodingResult {
 		var errors = initialErrors
 		var locations = [ScenarioDocumentLocation]()
 
@@ -62,11 +94,11 @@ package struct ScenarioDecoder: Sendable {
 		let result = ScenarioValidator().validate(locations)
 		errors.append(contentsOf: result.errors)
 
-		guard errors.isEmpty else {
-			throw ScenarioValidationErrors(errors: errors)
-		}
-
-		return result.scenarios
+		return .init(
+			documents: locations,
+			scenarios: result.scenarios,
+			errors: errors
+		)
 	}
 
 	// Scenario JSON 해석 오류를 scenario 오류 계약으로 정규화합니다.
@@ -123,6 +155,24 @@ package struct ScenarioDecoder: Sendable {
 				path += ".\(key.stringValue)"
 			}
 		}
+	}
+}
+
+// scenario 해석에서 보존한 문서와 검증 결과를 함께 전달합니다.
+package struct ScenarioDecodingResult: Sendable {
+	package let documents: [ScenarioDocumentLocation]
+	package let scenarios: [Scenario]
+	package let errors: [ScenarioValidationError]
+
+	// 해석 문서와 정상 scenario, 오류를 함께 구성합니다.
+	package init(
+		documents: [ScenarioDocumentLocation],
+		scenarios: [Scenario],
+		errors: [ScenarioValidationError]
+	) {
+		self.documents = documents
+		self.scenarios = scenarios
+		self.errors = errors
 	}
 }
 
