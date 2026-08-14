@@ -14,7 +14,7 @@ import Testing
 @Suite
 struct XcodeBuildMCPCLIAdapterTests {
 	private let operation = XcodeBuildMCPOperation(rawValue: "fixture.list")
-	private let discoverSimulatorsOperation = XcodeBuildMCPOperation(rawValue: "discover.simulators")
+	private let discoverSimulatorsOperation = XcodeBuildMCPOperation.discoverSimulators
 	private let buildSimulatorOperation = XcodeBuildMCPOperation(rawValue: "build.simulator")
 
 	// 기본 registry가 simulator 목록 JSON 결과를 정규화하는지 검증합니다.

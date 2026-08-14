@@ -14,7 +14,9 @@ import Testing
 @Suite
 struct XcodeBuildMCPOutputDecoderTests {
 	private let operation = XcodeBuildMCPOperation(rawValue: "fixture.list")
-	private let discoverSimulatorsOperation = XcodeBuildMCPOperation(rawValue: "discover.simulators")
+	private let discoverProjectsOperation = XcodeBuildMCPOperation.discoverProjects
+	private let discoverSchemesOperation = XcodeBuildMCPOperation.discoverSchemes
+	private let discoverSimulatorsOperation = XcodeBuildMCPOperation.discoverSimulators
 
 	// 정상 envelope가 허용된 payload만 포함한 결과로 변환되는지 검증합니다.
 	@Test
@@ -107,6 +109,94 @@ struct XcodeBuildMCPOutputDecoderTests {
 		let error = try #require(result.error)
 
 		#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+	}
+
+	// project 후보 path 필드의 형식이 계약과 다르면 거부되는지 검증합니다.
+	@Test
+	func project_후보_path_필드의_형식이_계약과_다르면_거부한다() throws {
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.project-list",
+			"schemaVersion": "2",
+			"didError": false,
+			"error": null,
+			"data": {"projects": [{"path": true}], "workspaces": []}
+		}
+		"""
+
+		let result = XcodeBuildMCPV2.outputDecoder.decode(
+			Data(json.utf8),
+			operation: discoverProjectsOperation
+		)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+	}
+
+	// scheme 항목의 형식이 계약과 다르면 거부되는지 검증합니다.
+	@Test
+	func scheme_항목의_형식이_계약과_다르면_거부한다() throws {
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.scheme-list",
+			"schemaVersion": "2",
+			"didError": false,
+			"error": null,
+			"data": {"schemes": [1]}
+		}
+		"""
+
+		let result = XcodeBuildMCPV2.outputDecoder.decode(
+			Data(json.utf8),
+			operation: discoverSchemesOperation
+		)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.output.invalid")
+	}
+
+	// project 목록 응답의 지원하지 않는 schemaVersion이 거부되는지 검증합니다.
+	@Test
+	func project_목록_응답의_지원하지_않는_schemaVersion이_거부된다() throws {
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.project-list",
+			"schemaVersion": "1",
+			"didError": false,
+			"error": null,
+			"data": {"projects": [], "workspaces": []}
+		}
+		"""
+
+		let result = XcodeBuildMCPV2.outputDecoder.decode(
+			Data(json.utf8),
+			operation: discoverProjectsOperation
+		)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.schema.unsupported")
+	}
+
+	// scheme 목록 응답의 지원하지 않는 schemaVersion이 거부되는지 검증합니다.
+	@Test
+	func scheme_목록_응답의_지원하지_않는_schemaVersion이_거부된다() throws {
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.scheme-list",
+			"schemaVersion": "1",
+			"didError": false,
+			"error": null,
+			"data": {"schemes": []}
+		}
+		"""
+
+		let result = XcodeBuildMCPV2.outputDecoder.decode(
+			Data(json.utf8),
+			operation: discoverSchemesOperation
+		)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.schema.unsupported")
 	}
 
 	// simulator payload 필드의 형식이 계약과 다르면 거부되는지 검증합니다.
