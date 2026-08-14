@@ -1,0 +1,89 @@
+{
+	"schemaVersion": 1,
+	"id": "todo-completion",
+	"name": "Todo 완료 처리",
+	"profile": "default",
+	"matrix": {
+		"devices": ["iPhone 17 Pro"],
+		"language": "ko-KR"
+	},
+	"steps": [
+		{
+			"id": "launch",
+			"action": "buildAndRun"
+		},
+		{
+			"id": "wait-home",
+			"action": "waitForUI",
+			"selector": {
+				"identifier": "home-view"
+			}
+		},
+		{
+			"id": "tap-profile",
+			"action": "tap",
+			"selector": {
+				"identifier": "profile-button",
+				"label": "Profile",
+				"role": "button"
+			}
+		},
+		{
+			"id": "long-press-todo",
+			"action": "longPress",
+			"selector": {
+				"identifier": "todo-row"
+			},
+			"parameters": {
+				"durationMilliseconds": 600
+			}
+		},
+		{
+			"id": "swipe-list",
+			"action": "swipe",
+			"parameters": {
+				"direction": "up"
+			}
+		},
+		{
+			"id": "type-note",
+			"action": "typeText",
+			"selector": {
+				"identifier": "note-input"
+			},
+			"parameters": {
+				"text": "완료"
+			}
+		},
+		{
+			"id": "capture-home",
+			"action": "screenshot",
+			"parameters": {
+				"name": "home"
+			}
+		},
+		{
+			"id": "record-flow",
+			"action": "recordVideo",
+			"parameters": {
+				"name": "todo-flow"
+			}
+		}
+	],
+	"assertions": [
+		{
+			"afterStepID": "tap-profile",
+			"parameters": {
+				"kind": "visible"
+			}
+		}
+	],
+	"evidence": [
+		{
+			"afterStepID": "capture-home",
+			"parameters": {
+				"kind": "screenshot"
+			}
+		}
+	]
+}
