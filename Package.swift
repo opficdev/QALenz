@@ -21,7 +21,10 @@ let package = Package(
 		.target(
 			name: "QALenzCore",
 			path: "Sources/Core",
-			resources: [.copy("Resources/Schemas/qalenz-config.schema.json")]
+			resources: [
+				.copy("Resources/Schemas/qalenz-config.schema.json"),
+				.copy("Resources/Schemas/qalenz-scenario.schema.json")
+			]
 		),
 		.target(
 			name: "QALenzLintSupport",
