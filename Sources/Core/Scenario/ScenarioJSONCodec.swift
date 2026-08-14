@@ -171,14 +171,13 @@ private struct ScenarioJSONDocumentDecoder {
 		}
 	}
 
-	// selector의 null을 누락 값으로 해석하고 object만 허용합니다.
+	// selector JSON object를 선택 값으로 해석하고 명시적 null을 거부합니다.
 	private func optionalSelector(
 		in object: [String: ScenarioJSONValue],
 		forKey key: String,
 		at keyPath: String
 	) throws -> ScenarioSelector? {
 		guard let value = object[key] else { return nil }
-		guard value != .null else { return nil }
 
 		return try selector(from: value, at: keyPath)
 	}

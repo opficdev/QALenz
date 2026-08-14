@@ -88,6 +88,39 @@ struct ScenarioDecoderTests {
 		])
 	}
 
+	// 명시적 null selector가 파일 문맥과 함께 거부되는지 검증합니다.
+	@Test
+	func 명시적_null_selector를_파일_문맥으로_반환한다() throws {
+		let scenarioURL = URL(fileURLWithPath: "/tmp/null-selector.json")
+		let errors = try requireValidationErrors {
+			try ScenarioDecoder().decode(
+				Data(
+					"""
+					{
+					  "schemaVersion": 1,
+					  "id": "null-selector",
+					  "name": "Null selector",
+					  "profile": "default",
+					  "matrix": {},
+					  "steps": [{"id": "capture", "action": "screenshot", "selector": null}],
+					  "assertions": [],
+					  "evidence": []
+					}
+					""".utf8
+				),
+				at: scenarioURL
+			)
+		}
+
+		#expect(errors.errors == [
+			.init(
+				code: .jsonInvalid,
+				filePath: scenarioURL.standardizedFileURL.path,
+				keyPath: "$.steps[0].selector"
+			)
+		])
+	}
+
 	// step과 step 참조의 명시적 null parameter가 JSON 왕복 변환 후에도 유지되는지 검증합니다.
 	@Test
 	func 명시적_null_parameter를_보존한다() throws {
