@@ -20,6 +20,9 @@ struct ScenarioSchemaTests {
 		let properties = try #require(schema["properties"] as? [String: [String: Any]])
 		let steps = try #require(properties["steps"])
 		let items = try #require(steps["items"] as? [String: Any])
+		let stepProperties = try #require(items["properties"] as? [String: [String: Any]])
+		let selector = try #require(stepProperties["selector"])
+		let selectorProperties = try #require(selector["properties"] as? [String: [String: Any]])
 		let actionVariants = try #require(items["oneOf"] as? [[String: Any]])
 		let actionTags = try actionVariants.map { variant in
 			let properties = try #require(variant["properties"] as? [String: [String: Any]])
@@ -31,6 +34,8 @@ struct ScenarioSchemaTests {
 		#expect(schema["type"] as? String == "object")
 		#expect(requiredKeyNames == ScenarioDocument.requiredKeyNames)
 		#expect(Set(properties.keys) == Set(ScenarioDocument.keyNames))
+		#expect(selector["additionalProperties"] as? Bool == false)
+		#expect(Set(selectorProperties.keys) == Set(ScenarioSelector.keyNames))
 		#expect(actionTags == ScenarioStepAction.allCases.map(\.rawValue))
 	}
 

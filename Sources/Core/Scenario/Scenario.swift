@@ -87,6 +87,8 @@ package enum ScenarioStepAction: String, CaseIterable, Sendable, Equatable {
 
 // app별 UI 요소를 scenario data로 한정해 표현합니다.
 package struct ScenarioSelector: Sendable, Equatable {
+	package static let keyNames = ["identifier", "label", "role", "value"]
+
 	package let identifier: String?
 	package let label: String?
 	package let role: String?

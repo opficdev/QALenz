@@ -55,6 +55,39 @@ struct ScenarioDecoderTests {
 		]))
 	}
 
+	// schema에 없는 selector key가 파일 문맥과 함께 거부되는지 검증합니다.
+	@Test
+	func 미지정_selector_key를_파일_문맥으로_반환한다() throws {
+		let scenarioURL = URL(fileURLWithPath: "/tmp/unknown-selector-key.json")
+		let errors = try requireValidationErrors {
+			try ScenarioDecoder().decode(
+				Data(
+					"""
+					{
+					  "schemaVersion": 1,
+					  "id": "unknown-selector-key",
+					  "name": "Unknown selector key",
+					  "profile": "default",
+					  "matrix": {},
+					  "steps": [{"id": "tap-profile", "action": "tap", "selector": {"identifier": "profile-button", "identifer": "typo"}}],
+					  "assertions": [],
+					  "evidence": []
+					}
+					""".utf8
+				),
+				at: scenarioURL
+			)
+		}
+
+		#expect(errors.errors == [
+			.init(
+				code: .jsonInvalid,
+				filePath: scenarioURL.standardizedFileURL.path,
+				keyPath: "$.steps[0].selector.identifer"
+			)
+		])
+	}
+
 	// step과 step 참조의 명시적 null parameter가 JSON 왕복 변환 후에도 유지되는지 검증합니다.
 	@Test
 	func 명시적_null_parameter를_보존한다() throws {

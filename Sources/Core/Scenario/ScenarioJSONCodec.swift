@@ -88,6 +88,13 @@ private struct ScenarioJSONDocumentDecoder {
 	// selector JSON 값을 ScenarioSelector로 변환합니다.
 	private func selector(from value: ScenarioJSONValue, at keyPath: String) throws -> ScenarioSelector {
 		let object = try object(from: value, at: keyPath)
+		let unknownKeyName = object.keys.sorted().first {
+			!ScenarioSelector.keyNames.contains($0)
+		}
+
+		if let unknownKeyName {
+			throw ScenarioJSONDecodingError(keyPath: "\(keyPath).\(unknownKeyName)")
+		}
 
 		return try .init(
 			identifier: optionalString(in: object, forKey: "identifier", at: "\(keyPath).identifier"),
