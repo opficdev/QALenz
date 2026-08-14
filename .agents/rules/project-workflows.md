@@ -49,6 +49,7 @@
 - Start commit messages with a prefix such as `feat`, `fix`, `refactor`, `chore`, `test`, or `docs`.
 - Write commit-message descriptions in Korean noun-phrase form.
 - Do not write a commit-message body.
+- When inspecting recent history for commit-message conventions, do not treat a squash merge title or its trailing `(#issue-number)` as an individual commit message; use `git show -s --format=fuller <commit>` and infer the format from the `* <prefix>: <description>` entries preserved by GitHub in the squash commit body.
 - Commit, push, or change branches only when the user explicitly requests that action.
 - Before committing, inspect the staged diff and whitespace errors.
 - After committing, verify the commit hash and working-tree state.
