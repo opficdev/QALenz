@@ -26,6 +26,7 @@
 - Documentation changes must distinguish current behavior from approved future design and must not present unimplemented behavior as current.
 - Do not leave unresolved placeholders in completed documents or present unverified commands or nonexistent paths as current interfaces; label approved future contracts explicitly.
 - Get user approval before adding dependencies, performing external writes, or deleting data.
+- For non-trivial work that needs issue analysis or implementation design, use the `Designer` result before the `Planner` finalizes scope and the Task Packet.
 
 ## Sensitive information
 

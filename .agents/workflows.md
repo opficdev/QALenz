@@ -10,12 +10,13 @@ Use `.agents/roles.md` for role permissions and output formats.
 
 1. Read `AGENTS.md` and every routed document for the current task.
 2. Compare the user request with the current repository state.
-3. Create a Task Packet with required roles, model assignment, exact `task_name`, and execution permissions.
-4. Keep `Primary` roles with the active main agent.
-5. Create each required `Lightweight` role as a connected side task through its exact configured `task_name`.
-6. Apply changes only through the assigned writing role after required preflight results pass.
-7. Reuse the existing agent with `followup_task` for later work in the same role.
-8. Integrate every delegated result, inspect the final diff and all not-run checks, and report only evidence-backed results.
+3. When issue analysis or implementation design is required, prepare a `Design Brief` and create the `Designer` side task.
+4. Have the Planner finalize the Task Packet from the `Designer` result with required roles, model assignment, exact `task_name`, and execution permissions.
+5. Keep `Primary` roles with the active main agent.
+6. Create each required `Lightweight` role as a connected side task through its exact configured `task_name`.
+7. Apply changes only through the assigned writing role after required preflight results pass.
+8. Reuse the existing agent with `followup_task` for later work in the same role.
+9. Integrate every delegated result, inspect the final diff and all not-run checks, and report only evidence-backed results.
 
 ## Universal stop conditions
 
@@ -26,7 +27,8 @@ Use `.agents/roles.md` for role permissions and output formats.
 - Progress requires placing app-specific conditions in shared implementation.
 - Sensitive-information exposure cannot be mitigated through redaction or output scoping.
 - A required tool or runtime is not available in the actual environment.
-- A required `Lightweight` custom agent TOML or its pinned `gpt-5.3-codex-spark` model cannot be selected.
+- A required connected read-only role custom agent TOML or its pinned model cannot be selected.
+- The `Designer` reports a required user decision before the Planner finalizes scope.
 
 ## Architecture, review, and verification completion gate
 
@@ -56,15 +58,17 @@ Selection rules:
 - When multiple workflows match, use the workflow with the strictest role and stop-condition requirements as the primary workflow, then add any roles and verification requirements from the other matching workflows.
 - Use Documentation-only change only when the document does not change architecture, QA contracts, execution permissions, or product behavior.
 - Review follow-up controls feedback scope but does not replace the workflow required by the accepted change.
+- Run `Designer` before `Planner` in every non-trivial workflow that needs issue analysis or implementation design. QA execution with an already-defined scenario does not require `Designer`.
 
 ## Scoped implementation
 
 Role order:
 
-1. Planner (`Primary`)
-2. Implementer (`Primary`)
-3. Code Reviewer (`code_reviewer`, `Lightweight`)
-4. Verification Runner (`verification_runner`, `Lightweight`)
+1. Designer (`designer`, `Design`)
+2. Planner (`Primary`)
+3. Implementer (`Primary`)
+4. Code Reviewer (`code_reviewer`, `Lightweight`)
+5. Verification Runner (`verification_runner`, `Lightweight`)
 
 Completion conditions:
 
@@ -77,12 +81,13 @@ Completion conditions:
 
 Role order:
 
-1. Planner (`Primary`)
-2. Architecture Watcher preflight (`architecture_watcher`, `Lightweight`)
-3. Implementer (`Primary`)
-4. Architecture Watcher final review (`architecture_watcher`, `Lightweight`)
-5. Code Reviewer (`code_reviewer`, `Lightweight`)
-6. Verification Runner (`verification_runner`, `Lightweight`)
+1. Designer (`designer`, `Design`)
+2. Planner (`Primary`)
+3. Architecture Watcher preflight (`architecture_watcher`, `Lightweight`)
+4. Implementer (`Primary`)
+5. Architecture Watcher final review (`architecture_watcher`, `Lightweight`)
+6. Code Reviewer (`code_reviewer`, `Lightweight`)
+7. Verification Runner (`verification_runner`, `Lightweight`)
 
 Stop before implementation when the Architecture Watcher returns `Block` or `Needs Owner Decision`.
 
@@ -97,10 +102,11 @@ Completion conditions:
 
 Role order:
 
-1. Planner (`Primary`)
-2. Documentation Writer (`documentation_writer`, `Lightweight`)
-3. Code Reviewer (`code_reviewer`, `Lightweight`)
-4. Verification Runner (`verification_runner`, `Lightweight`)
+1. Designer (`designer`, `Design`) when issue analysis or implementation design is required
+2. Planner (`Primary`), or the first step when `Designer` is not required
+3. Documentation Writer (`documentation_writer`, `Lightweight`)
+4. Code Reviewer (`code_reviewer`, `Lightweight`)
+5. Verification Runner (`verification_runner`, `Lightweight`)
 
 Required checks:
 
@@ -115,12 +121,13 @@ For documentation-only changes, record source builds as not run instead of runni
 
 Role order:
 
-1. Planner (`Primary`)
-2. Architecture Watcher preflight (`architecture_watcher`, `Lightweight`)
-3. Implementer (`Primary`)
-4. Architecture Watcher final review (`architecture_watcher`, `Lightweight`)
-5. Code Reviewer (`code_reviewer`, `Lightweight`)
-6. Verification Runner (`verification_runner`, `Lightweight`)
+1. Designer (`designer`, `Design`)
+2. Planner (`Primary`)
+3. Architecture Watcher preflight (`architecture_watcher`, `Lightweight`)
+4. Implementer (`Primary`)
+5. Architecture Watcher final review (`architecture_watcher`, `Lightweight`)
+6. Code Reviewer (`code_reviewer`, `Lightweight`)
+7. Verification Runner (`verification_runner`, `Lightweight`)
 
 Stop before implementation when the Architecture Watcher returns `Block` or `Needs Owner Decision`.
 
@@ -156,10 +163,11 @@ Do not expand execution to unrequested devices, OS versions, scenarios, or data 
 Role order:
 
 1. GitHub/CI Analyst (`github_ci_analyst`, `Lightweight`) inspects current review state.
-2. Planner (`Primary`) defines the accepted change scope.
-3. Implementer (`Primary`) applies only selected changes.
-4. Code Reviewer (`code_reviewer`, `Lightweight`) reviews the final diff.
-5. Verification Runner (`verification_runner`, `Lightweight`) performs related checks.
+2. Designer (`designer`, `Design`) analyzes the accepted change design.
+3. Planner (`Primary`) defines the accepted change scope.
+4. Implementer (`Primary`) applies only selected changes.
+5. Code Reviewer (`code_reviewer`, `Lightweight`) reviews the final diff.
+6. Verification Runner (`verification_runner`, `Lightweight`) performs related checks.
 
 Validate review feedback against current code and contracts before accepting it. Exclude unrelated cleanup.
 
@@ -169,16 +177,17 @@ Use for `AGENTS.md`, `.agents/roles.md`, `.agents/workflows.md`, `.agents/rules/
 
 Role order:
 
-1. Planner (`Primary`)
-2. Implementer (`Primary`)
-3. Code Reviewer (`code_reviewer`, `Lightweight`)
-4. Verification Runner (`verification_runner`, `Lightweight`)
+1. Designer (`designer`, `Design`)
+2. Planner (`Primary`)
+3. Implementer (`Primary`)
+4. Code Reviewer (`code_reviewer`, `Lightweight`)
+5. Verification Runner (`verification_runner`, `Lightweight`)
 
 Required checks:
 
 ```sh
 git diff --check -- AGENTS.md .agents .codex/agents
-rg -n "gpt-5\\.6-terra|gpt-5\\.3-codex-spark|Lightweight|task_name" AGENTS.md .agents .codex/agents
+rg -n "gpt-5\\.6-terra|gpt-5\\.6-sol|gpt-5\\.3-codex-spark|Designer|designer|Lightweight|task_name" AGENTS.md .agents .codex/agents
 ```
 
 Do not modify QALenz source, tests, manifests, CI, or public documentation as part of this workflow unless the user separately requests it.
@@ -189,7 +198,7 @@ Use only connected side tasks created through the exact configured `task_name`.
 
 Parallelize only read-only roles without unfinished dependencies:
 
-- GitHub/CI Analyst and Planner while a live issue or PR is being scoped.
+- GitHub/CI Analyst and Designer while a live issue or PR is being scoped.
 - Architecture Watcher and Code Reviewer only after the final diff is stable and their review scopes do not overlap.
 - Documentation Writer after the diff is stable; Verification Runner after documentation changes are saved.
 

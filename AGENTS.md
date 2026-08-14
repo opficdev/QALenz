@@ -22,9 +22,9 @@
 - Before architecture work, also read `README.md`, the current manifests, and the relevant source and tests.
 - For role-based work, follow the permissions and output formats in `.agents/roles.md`.
 - Use `.agents/workflows.md` when the task matches a defined repeatable workflow.
-- Use the exact custom agent `task_name` in `.agents/roles.md` to dispatch every required `Lightweight` role as a connected side task.
+- Use the exact custom agent `task_name` in `.agents/roles.md` to dispatch every required connected read-only role as a side task.
 - Keep `Primary` planning, implementation, integration, and final decision roles with the active main agent.
-- Do not perform a required `Lightweight` role in `Primary` and present the result as delegated work.
+- Do not perform a required connected read-only role in `Primary` and present the result as delegated work.
 - Stop and report the unavailable role when its custom agent TOML or pinned model cannot be selected.
 - If repository instructions conflict with external records, follow the current repository instructions.
 
