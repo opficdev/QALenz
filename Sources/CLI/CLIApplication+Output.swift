@@ -63,6 +63,23 @@ extension CLIApplication {
 		}
 	}
 
+	// ScenarioCatalog를 요청한 출력 형식의 프로세스 결과로 변환합니다.
+	package static func result(
+		for catalog: ScenarioCatalog,
+		format: CLIOutputFormat
+	) -> CLIProcessResult {
+		switch format {
+		case .text:
+			return .init(
+				standardOutput: textOutput(for: catalog),
+				standardError: nil,
+				exitStatus: .init(result: catalog.result)
+			)
+		case .json:
+			return jsonResult(for: catalog)
+		}
+	}
+
 	// DoctorReport를 정렬된 JSON 프로세스 결과로 변환합니다.
 	private static func jsonResult(for report: DoctorReport) -> CLIProcessResult {
 		do {
@@ -102,6 +119,28 @@ extension CLIApplication {
 			return .init(
 				standardOutput: nil,
 				standardError: "Discovery result encoding failed.",
+				exitStatus: .executionError
+			)
+		}
+	}
+
+	// ScenarioCatalog를 정렬된 JSON 프로세스 결과로 변환합니다.
+	private static func jsonResult(for catalog: ScenarioCatalog) -> CLIProcessResult {
+		do {
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+			let data = try encoder.encode(catalog)
+
+			return .init(
+				// swiftlint:disable:next optional_data_string_conversion
+				standardOutput: String(decoding: data, as: UTF8.self),
+				standardError: nil,
+				exitStatus: .init(result: catalog.result)
+			)
+		} catch {
+			return .init(
+				standardOutput: nil,
+				standardError: "Scenario catalog encoding failed.",
 				exitStatus: .executionError
 			)
 		}
@@ -173,6 +212,22 @@ extension CLIApplication {
 				}
 			)
 		].joined(separator: "\n")
+	}
+
+	// ScenarioCatalog의 항목과 validation 오류를 사람이 읽을 수 있는 줄로 변환합니다.
+	private static func textOutput(for catalog: ScenarioCatalog) -> String {
+		guard !catalog.entries.isEmpty else {
+			return "scenarios: []"
+		}
+
+		return catalog.entries.map { entry in
+			let summary = "[\(entry.status.rawValue)] \(entry.id ?? "-") | \(entry.name ?? "-") | \(entry.profile ?? "-")"
+			let errors = entry.errors.map {
+				"  \($0.code.rawValue) | \($0.filePath) | \($0.keyPath)"
+			}
+
+			return ([summary] + errors).joined(separator: "\n")
+		}.joined(separator: "\n")
 	}
 
 	// 후보 목록을 이름과 항목 줄로 구성합니다.

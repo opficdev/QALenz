@@ -6,8 +6,8 @@
 //
 
 // scenario 검증에서 발견한 한 건의 파일 및 JSON key path 오류를 표현합니다.
-package struct ScenarioValidationError: Sendable, Equatable {
-	package enum Code: String, Sendable, Equatable {
+package struct ScenarioValidationError: Codable, Sendable, Equatable {
+	package enum Code: String, Codable, Sendable, Equatable {
 		case fileUnreadable = "scenario.file.unreadable"
 		case jsonInvalid = "scenario.json.invalid"
 		case keyMissing = "scenario.key.missing"
