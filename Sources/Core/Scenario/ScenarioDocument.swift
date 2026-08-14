@@ -76,7 +76,9 @@ package struct ScenarioStepDocument: Decodable, Sendable {
 		id = try container.decodeIfPresent(String.self, forKey: .id)
 		action = try container.decodeIfPresent(String.self, forKey: .action)
 		selector = try container.decodeIfPresent(ScenarioSelector.self, forKey: .selector)
-		parameters = try container.decodeIfPresent(ScenarioValue.self, forKey: .parameters)
+		parameters = container.contains(.parameters)
+			? try container.decode(ScenarioValue.self, forKey: .parameters)
+			: nil
 	}
 
 	// step JSON key를 decoding에 사용합니다.
@@ -98,7 +100,9 @@ package struct ScenarioStepReferenceDocument: Decodable, Sendable {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
 
 		afterStepID = try container.decodeIfPresent(String.self, forKey: .afterStepID)
-		parameters = try container.decodeIfPresent(ScenarioValue.self, forKey: .parameters)
+		parameters = container.contains(.parameters)
+			? try container.decode(ScenarioValue.self, forKey: .parameters)
+			: nil
 	}
 
 	// step 참조 JSON key를 decoding에 사용합니다.

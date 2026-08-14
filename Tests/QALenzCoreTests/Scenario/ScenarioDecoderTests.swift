@@ -55,6 +55,45 @@ struct ScenarioDecoderTests {
 		]))
 	}
 
+	// step과 step 참조의 명시적 null parameter가 JSON 왕복 변환 후에도 유지되는지 검증합니다.
+	@Test
+	func 명시적_null_parameter를_보존한다() throws {
+		let decoder = ScenarioDecoder()
+		let scenario = try #require(
+			decoder.decode(
+				Data(
+					"""
+					{
+					  "schemaVersion": 1,
+					  "id": "null-parameters",
+					  "name": "Null parameters",
+					  "profile": "default",
+					  "matrix": {},
+					  "steps": [{"id": "launch", "action": "buildAndRun", "parameters": null}],
+					  "assertions": [{"afterStepID": "launch", "parameters": null}],
+					  "evidence": [{"afterStepID": "launch", "parameters": null}]
+					}
+					""".utf8
+				),
+				at: URL(fileURLWithPath: "/tmp/null-parameters.json")
+			).first
+		)
+
+		#expect(scenario.steps.first?.parameters == .null)
+		#expect(scenario.assertions.first?.parameters == .null)
+		#expect(scenario.evidence.first?.parameters == .null)
+
+		let encoded = try JSONEncoder().encode(scenario)
+		let object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+		let steps = try #require(object["steps"] as? [[String: Any]])
+		let assertions = try #require(object["assertions"] as? [[String: Any]])
+		let evidence = try #require(object["evidence"] as? [[String: Any]])
+
+		#expect(steps.first?["parameters"] is NSNull)
+		#expect(assertions.first?["parameters"] is NSNull)
+		#expect(evidence.first?["parameters"] is NSNull)
+	}
+
 	// 구문이 잘못된 scenario JSON이 파일 문맥과 함께 거부되는지 검증합니다.
 	@Test
 	func 구문이_잘못된_JSON을_파일_문맥으로_반환한다() throws {
