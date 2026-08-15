@@ -11,6 +11,8 @@ import Foundation
 package struct ExecutionPlan: Codable, Sendable, Equatable {
 	package let scenarioID: String
 	package let profile: String
+	package let projectRootPath: String
+	package let xcodeBuildMCPProfile: String
 	package let outputDirectoryPath: String
 	package let testDataRequirements: [TestDataRequirement]
 	package let targets: [ExecutionPlanTarget]
@@ -19,12 +21,16 @@ package struct ExecutionPlan: Codable, Sendable, Equatable {
 	package init(
 		scenarioID: String,
 		profile: String,
+		projectRootPath: String = "",
+		xcodeBuildMCPProfile: String = "",
 		outputDirectoryPath: String,
 		testDataRequirements: [TestDataRequirement],
 		targets: [ExecutionPlanTarget]
 	) {
 		self.scenarioID = scenarioID
 		self.profile = profile
+		self.projectRootPath = projectRootPath
+		self.xcodeBuildMCPProfile = xcodeBuildMCPProfile
 		self.outputDirectoryPath = outputDirectoryPath
 		self.testDataRequirements = testDataRequirements
 		self.targets = targets
@@ -112,9 +118,11 @@ package struct ExecutionPlanBuilder: Sendable {
 		let outputDirectoryURL = configuration.outputDirectoryURL.standardizedFileURL
 
 		return .init(
-			scenarioID: scenario.id,
-			profile: scenario.profile,
-			outputDirectoryPath: outputDirectoryURL.path,
+				scenarioID: scenario.id,
+				profile: scenario.profile,
+				projectRootPath: configuration.projectRootURL.path,
+				xcodeBuildMCPProfile: configuration.xcodeBuildMCPProfile,
+				outputDirectoryPath: outputDirectoryURL.path,
 			testDataRequirements: scenario.testDataRequirements,
 			targets: targets.map { target in
 				.init(

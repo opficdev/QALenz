@@ -33,6 +33,8 @@ struct RunCommandTests {
 				.appendingPathComponent("config.json", isDirectory: false)
 		])
 		#expect(try #require(result.standardOutput).contains("testDataRequirements:"))
+		#expect(try #require(result.standardOutput).contains("projectRoot: "))
+		#expect(try #require(result.standardOutput).contains("xcodeBuildMCPProfile: "))
 		#expect(try #require(result.standardOutput).contains("selector: -"))
 		#expect(try #require(result.standardOutput).contains("evidence | launch"))
 		#expect(result.standardError == nil)

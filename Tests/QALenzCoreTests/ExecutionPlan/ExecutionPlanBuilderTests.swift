@@ -24,6 +24,8 @@ struct ExecutionPlanBuilderTests {
 
 		#expect(!FileManager.default.fileExists(atPath: outputDirectoryURL.path))
 		#expect(plan.scenarioID == "todo-completion")
+		#expect(plan.projectRootPath == "/tmp/Project")
+		#expect(plan.xcodeBuildMCPProfile == "default")
 		#expect(plan.testDataRequirements == [.init(
 			operation: .create,
 			resource: "todo:incomplete"

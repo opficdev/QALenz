@@ -331,6 +331,8 @@ extension CLIApplication {
 		return [
 			"scenario: \(plan.scenarioID)",
 			"profile: \(plan.profile)",
+			"projectRoot: \(plan.projectRootPath)",
+			"xcodeBuildMCPProfile: \(plan.xcodeBuildMCPProfile)",
 			"outputDirectory: \(plan.outputDirectoryPath)",
 			textSection(named: "testDataRequirements", values: requirements),
 			textSection(named: "targets", values: targets)
