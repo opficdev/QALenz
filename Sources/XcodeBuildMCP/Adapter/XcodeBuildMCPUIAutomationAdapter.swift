@@ -17,13 +17,17 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 	}
 
 	// 현재 화면의 runtime snapshot 식별 정보를 반환합니다.
-	package func snapshotUI(profile: String) async -> Result<UIAutomationSnapshot, RunError> {
-		let result = await execute(.init(
+	package func snapshotUI(
+		profile: String,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationSnapshot, RunError> {
+		let result = await adapter.execute(.init(
 			operation: .snapshotUI,
-			arguments: [.init(name: "profile", value: profile)]
+			arguments: [.init(name: "profile", value: profile)],
+			timeout: .milliseconds(timeoutMilliseconds)
 		))
 
-		return result.flatMap(snapshot)
+		return payload(from: result).flatMap(snapshot)
 	}
 
 	// selector가 가리키는 단일 element 참조와 현재 snapshot을 반환합니다.
@@ -32,39 +36,43 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		selector: ScenarioSelector,
 		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationWaitResult, RunError> {
-		let result = await execute(.init(
+		let result = await adapter.execute(.init(
 			operation: .waitForUI,
 			arguments: waitArguments(
 				profile: profile,
 				selector: selector,
 				timeoutMilliseconds: timeoutMilliseconds
-			)
+			),
+			timeout: waitProcessTimeout(timeoutMilliseconds)
 		))
 
-		return result.flatMap(waitResult)
+		return payload(from: result).flatMap(waitResult)
 	}
 
 	// 현재 element 참조를 tap하고 후속 snapshot 정보를 반환합니다.
 	package func tap(
 		profile: String,
-		elementReference: UIElementReference
+		elementReference: UIElementReference,
+		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError> {
-		let result = await execute(.init(
+		let result = await adapter.execute(.init(
 			operation: .tapUI,
 			arguments: [
 				.init(name: "profile", value: profile),
 				.init(name: "element.reference", value: elementReference.rawValue)
-			]
+			],
+			timeout: .milliseconds(timeoutMilliseconds)
 		))
 
-		return result.flatMap(actionResult)
+		return payload(from: result).flatMap(actionResult)
 	}
 
 	// 현재 element 참조를 지정한 시간만큼 누르고 후속 snapshot 정보를 반환합니다.
 	package func longPress(
 		profile: String,
 		elementReference: UIElementReference,
-		durationMilliseconds: Int?
+		durationMilliseconds: Int?,
+		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError> {
 		var arguments = [
 			XcodeBuildMCPArgument(name: "profile", value: profile),
@@ -77,37 +85,43 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 			))
 		}
 
-		let result = await execute(.init(operation: .longPressUI, arguments: arguments))
+		let result = await adapter.execute(.init(
+			operation: .longPressUI,
+			arguments: arguments,
+			timeout: .milliseconds(timeoutMilliseconds)
+		))
 
-		return result.flatMap(actionResult)
+		return payload(from: result).flatMap(actionResult)
 	}
 
 	// 현재 element 범위에서 swipe하고 후속 snapshot 정보를 반환합니다.
 	package func swipe(
 		profile: String,
 		elementReference: UIElementReference,
-		direction: UISwipeDirection,
-		durationMilliseconds: Int?,
-		distance: Double?
+		request: UIAutomationSwipeRequest
 	) async -> Result<UIAutomationActionResult, RunError> {
 		var arguments = [
 			XcodeBuildMCPArgument(name: "profile", value: profile),
 			.init(name: "element.reference", value: elementReference.rawValue),
-			.init(name: "direction", value: direction.argumentValue)
+			.init(name: "direction", value: request.direction.argumentValue)
 		]
-		if let durationMilliseconds {
+		if let durationMilliseconds = request.durationMilliseconds {
 			arguments.append(.init(
 				name: "duration.seconds",
 				value: String(Double(durationMilliseconds) / 1_000)
 			))
 		}
-		if let distance {
+		if let distance = request.distance {
 			arguments.append(.init(name: "distance", value: String(distance)))
 		}
 
-		let result = await execute(.init(operation: .swipeUI, arguments: arguments))
+		let result = await adapter.execute(.init(
+			operation: .swipeUI,
+			arguments: arguments,
+			timeout: .milliseconds(request.timeoutMilliseconds)
+		))
 
-		return result.flatMap(actionResult)
+		return payload(from: result).flatMap(actionResult)
 	}
 
 	// 현재 element 참조에 text를 입력하고 후속 snapshot 정보를 반환합니다.
@@ -115,25 +129,25 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		profile: String,
 		elementReference: UIElementReference,
 		text: String,
-		replaceExisting: Bool
+		replaceExisting: Bool,
+		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError> {
-		let result = await execute(.init(
+		let result = await adapter.execute(.init(
 			operation: .typeTextUI,
 			arguments: [
 				.init(name: "profile", value: profile),
 				.init(name: "element.reference", value: elementReference.rawValue),
 				.init(name: "text", value: text),
 				.init(name: "replace.existing", value: String(replaceExisting))
-			]
+			],
+			timeout: .milliseconds(timeoutMilliseconds)
 		))
 
-		return result.flatMap(actionResult)
+		return payload(from: result).flatMap(actionResult)
 	}
 
-	// UI operation을 실행하고 검증된 payload 또는 정규화된 오류를 반환합니다.
-	private func execute(_ request: XcodeBuildMCPRequest) async -> Result<XcodeBuildMCPPayload, RunError> {
-		let result = await adapter.execute(request)
-
+	// UI operation 결과에서 검증된 payload 또는 snapshot을 보존한 오류를 반환합니다.
+	private func payload(from result: XcodeBuildMCPResult) -> Result<XcodeBuildMCPPayload, RunError> {
 		switch result.result {
 		case .passed:
 			guard let payload = result.payload else {
@@ -144,7 +158,7 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		case .failed:
 			return .failure(failure(code: "adapter.xcodebuildmcp.command.failed"))
 		case let .errored(error):
-			return .failure(error)
+			return .failure(contextual(error, payload: result.payload))
 		}
 	}
 
@@ -175,6 +189,11 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		return arguments
 	}
 
+	// 도구의 selector 대기 결과를 수집할 수 있도록 process 시간 제한에 유예 시간을 더합니다.
+	private func waitProcessTimeout(_ timeoutMilliseconds: Int) -> Duration {
+		.milliseconds(timeoutMilliseconds) + .seconds(1)
+	}
+
 	// capture payload에서 현재 runtime snapshot 식별 정보를 추출합니다.
 	private func snapshot(_ payload: XcodeBuildMCPPayload) -> Result<UIAutomationSnapshot, RunError> {
 		guard let capture = payload.objectValue(for: "capture"),
@@ -185,20 +204,21 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		return .success(snapshot)
 	}
 
-	// wait-for-ui payload에서 단일 element 참조와 snapshot을 추출합니다.
+	// wait-for-ui payload에서 존재 여부와 단일 element 참조를 추출합니다.
 	private func waitResult(_ payload: XcodeBuildMCPPayload) -> Result<UIAutomationWaitResult, RunError> {
 		guard let capture = payload.objectValue(for: "capture"),
 			let snapshot = snapshot(from: capture),
 			let waitMatch = payload.objectValue(for: "waitMatch"),
 			let matches = waitMatch.arrayValue(for: "matches"),
-			matches.count == 1,
-			let reference = matches[0].stringValue(for: "ref") else {
-			return .failure(failure(code: "adapter.xcodebuildmcp.ui.selector.ambiguous"))
+			!matches.isEmpty else {
+			return .failure(failure(code: "adapter.xcodebuildmcp.ui.output.invalid"))
 		}
 
 		return .success(.init(
 			snapshot: snapshot,
-			elementReference: .init(rawValue: reference)
+			elementReference: matches.count == 1
+				? matches[0].stringValue(for: "ref").map(UIElementReference.init(rawValue:))
+				: nil
 		))
 	}
 
@@ -231,6 +251,30 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 			kind: .adapter,
 			code: .init(rawValue: code),
 			context: .init(command: "ui-automation")
+		)
+	}
+
+	// UI 오류 payload의 코드와 snapshot을 정규화된 오류 문맥에 보존합니다.
+	private func contextual(_ error: RunError, payload: XcodeBuildMCPPayload?) -> RunError {
+		let code = payload?
+			.objectValue(for: "uiError")?
+			.stringValue(for: "code")
+		let snapshot = payload?
+			.objectValue(for: "capture")
+			.flatMap(snapshot)
+
+		return .init(
+			kind: error.kind,
+			code: .init(rawValue: code.map { "adapter.xcodebuildmcp.ui.\($0)" } ?? error.code.rawValue),
+			context: .init(
+				command: error.context.command,
+				target: error.context.target,
+				step: error.context.step,
+				assertion: error.context.assertion,
+				filePath: error.context.filePath,
+				keyPath: error.context.keyPath,
+				uiSnapshot: snapshot ?? error.context.uiSnapshot
+			)
 		)
 	}
 }

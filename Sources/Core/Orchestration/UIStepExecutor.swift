@@ -12,12 +12,19 @@ package struct UIStepExecution: Sendable, Equatable {
 	package let result: RunResult
 	package let attempts: Int
 	package let snapshot: UIAutomationSnapshot?
+	package let isRetryable: Bool
 
-	// 실행 결과, 시도 횟수, 최신 snapshot으로 값을 구성합니다.
-	package init(result: RunResult, attempts: Int, snapshot: UIAutomationSnapshot?) {
+	// 실행 결과, 시도 횟수, 최신 snapshot과 재시도 가능 여부로 값을 구성합니다.
+	package init(
+		result: RunResult,
+		attempts: Int,
+		snapshot: UIAutomationSnapshot?,
+		isRetryable: Bool = false
+	) {
 		self.result = result
 		self.attempts = attempts
 		self.snapshot = snapshot
+		self.isRetryable = isRetryable
 	}
 }
 
@@ -83,6 +90,13 @@ package struct UIStepExecutor: Sendable {
 					return .init(result: .passed, attempts: attempt, snapshot: execution.snapshot)
 				}
 				lastResult = execution.result
+				guard execution.isRetryable else {
+					return .init(
+						result: execution.result,
+						attempts: attempt,
+						snapshot: execution.snapshot
+					)
+				}
 			}
 		}
 
@@ -112,7 +126,10 @@ package struct UIStepExecutor: Sendable {
 
 		switch step.action {
 		case .snapshotUI:
-			let result = await adapter.snapshotUI(profile: profile)
+			let result = await adapter.snapshotUI(
+				profile: profile,
+				timeoutMilliseconds: configuration.timeoutMilliseconds
+			)
 			return capture(result, step: step, lastSnapshot: &lastSnapshot)
 		case .waitForUI:
 			guard let selector = step.selector else {
@@ -159,10 +176,17 @@ package struct UIStepExecutor: Sendable {
 			return wait(waitResult, step: step, lastSnapshot: &lastSnapshot)
 		}
 		lastSnapshot = waitResult.snapshot
+		guard let elementReference = waitResult.elementReference else {
+			return .init(
+				result: .errored(failure(step: step, code: "execution.ui.selector.ambiguous")),
+				attempts: 1,
+				snapshot: lastSnapshot
+			)
+		}
 		let actionResult = await action(
 			step.action,
 			profile: profile,
-			elementReference: waitResult.elementReference,
+			elementReference: elementReference,
 			configuration: configuration
 		)
 		return action(actionResult, step: step, lastSnapshot: &lastSnapshot)
@@ -177,12 +201,17 @@ package struct UIStepExecutor: Sendable {
 	) async -> Result<UIAutomationActionResult, RunError> {
 		switch action {
 		case .tap:
-			return await adapter.tap(profile: profile, elementReference: elementReference)
+			return await adapter.tap(
+				profile: profile,
+				elementReference: elementReference,
+				timeoutMilliseconds: configuration.timeoutMilliseconds
+			)
 		case .longPress:
 			return await adapter.longPress(
 				profile: profile,
 				elementReference: elementReference,
-				durationMilliseconds: configuration.durationMilliseconds
+				durationMilliseconds: configuration.durationMilliseconds,
+				timeoutMilliseconds: configuration.timeoutMilliseconds
 			)
 		case .swipe:
 			guard let direction = configuration.swipeDirection else {
@@ -191,9 +220,12 @@ package struct UIStepExecutor: Sendable {
 			return await adapter.swipe(
 				profile: profile,
 				elementReference: elementReference,
-				direction: direction,
-				durationMilliseconds: configuration.durationMilliseconds,
-				distance: configuration.distance
+				request: .init(
+					direction: direction,
+					durationMilliseconds: configuration.durationMilliseconds,
+					distance: configuration.distance,
+					timeoutMilliseconds: configuration.timeoutMilliseconds
+				)
 			)
 		case .typeText:
 			guard let text = configuration.text else {
@@ -203,13 +235,18 @@ package struct UIStepExecutor: Sendable {
 				profile: profile,
 				elementReference: elementReference,
 				text: text,
-				replaceExisting: configuration.replaceExisting
+				replaceExisting: configuration.replaceExisting,
+				timeoutMilliseconds: configuration.timeoutMilliseconds
 			)
 		case .buildAndRun, .waitForUI, .snapshotUI, .screenshot, .recordVideo:
 			return .failure(failure(step: nil, code: "execution.ui.step.unsupported"))
 		}
 	}
 
+}
+
+// UI step 결과 정규화와 시간 제한 보조 동작을 구현합니다.
+private extension UIStepExecutor {
 	// snapshot 요청 성공 또는 오류를 UI step 실행 결과로 변환합니다.
 	private func capture(
 		_ result: Result<UIAutomationSnapshot, RunError>,
@@ -221,7 +258,14 @@ package struct UIStepExecutor: Sendable {
 			lastSnapshot = snapshot
 			return .init(result: .passed, attempts: 1, snapshot: snapshot)
 		case let .failure(error):
-			return .init(result: .errored(contextual(error, step: step)), attempts: 1, snapshot: lastSnapshot)
+			let snapshot = error.context.uiSnapshot ?? lastSnapshot
+			lastSnapshot = snapshot
+			return .init(
+				result: .errored(contextual(error, step: step)),
+				attempts: 1,
+				snapshot: snapshot,
+				isRetryable: error.code.rawValue != "execution.cancelled"
+			)
 		}
 	}
 
@@ -236,7 +280,14 @@ package struct UIStepExecutor: Sendable {
 			lastSnapshot = waitResult.snapshot
 			return .init(result: .passed, attempts: 1, snapshot: waitResult.snapshot)
 		case let .failure(error):
-			return .init(result: .errored(contextual(error, step: step)), attempts: 1, snapshot: lastSnapshot)
+			let snapshot = error.context.uiSnapshot ?? lastSnapshot
+			lastSnapshot = snapshot
+			return .init(
+				result: .errored(contextual(error, step: step)),
+				attempts: 1,
+				snapshot: snapshot,
+				isRetryable: error.code.rawValue != "execution.cancelled"
+			)
 		}
 	}
 
@@ -251,7 +302,9 @@ package struct UIStepExecutor: Sendable {
 			lastSnapshot = actionResult.snapshot ?? lastSnapshot
 			return .init(result: .passed, attempts: 1, snapshot: lastSnapshot)
 		case let .failure(error):
-			return .init(result: .errored(contextual(error, step: step)), attempts: 1, snapshot: lastSnapshot)
+			let snapshot = error.context.uiSnapshot ?? lastSnapshot
+			lastSnapshot = snapshot
+			return .init(result: .errored(contextual(error, step: step)), attempts: 1, snapshot: snapshot)
 		}
 	}
 
@@ -291,7 +344,8 @@ package struct UIStepExecutor: Sendable {
 			step: step.id,
 			assertion: error.context.assertion,
 			filePath: error.context.filePath,
-			keyPath: error.context.keyPath
+			keyPath: error.context.keyPath,
+			uiSnapshot: error.context.uiSnapshot
 		))
 	}
 }

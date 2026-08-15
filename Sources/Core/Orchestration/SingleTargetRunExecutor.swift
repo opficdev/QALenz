@@ -136,6 +136,7 @@ package struct SingleTargetRunExecutor: SingleTargetRunExecuting {
 		var stepResults = [RunStepResult(
 			stepID: preflight.buildStep.id,
 			result: buildResult,
+			selector: preflight.buildStep.selector,
 			startedAt: startedAt,
 			endedAt: now()
 		)]
@@ -147,6 +148,7 @@ package struct SingleTargetRunExecutor: SingleTargetRunExecuting {
 			stepResults.append(.init(
 				stepID: step.id,
 				result: execution.result,
+				selector: step.selector,
 				attempts: execution.attempts,
 				uiSnapshot: execution.snapshot,
 				startedAt: stepStartedAt,

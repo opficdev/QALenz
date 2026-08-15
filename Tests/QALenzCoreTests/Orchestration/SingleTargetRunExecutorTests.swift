@@ -255,7 +255,10 @@ private final class RunManifestStoreSpy: RunManifestStoring, @unchecked Sendable
 // snapshot UI 요청에 정해진 metadata를 반환하는 시험 대역입니다.
 private struct SnapshotUIAdapterSpy: UIAutomationExecuting {
 	// 고정된 UI snapshot을 반환합니다.
-	func snapshotUI(profile: String) async -> Result<UIAutomationSnapshot, RunError> {
+	func snapshotUI(
+		profile: String,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationSnapshot, RunError> {
 		.success(.init(screenHash: "snapshot-hash", sequence: 2))
 	}
 
@@ -269,7 +272,11 @@ private struct SnapshotUIAdapterSpy: UIAutomationExecuting {
 	}
 
 	// 지원하지 않는 tap 오류를 반환합니다.
-	func tap(profile: String, elementReference: UIElementReference) async -> Result<UIAutomationActionResult, RunError> {
+	func tap(
+		profile: String,
+		elementReference: UIElementReference,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationActionResult, RunError> {
 		.failure(error)
 	}
 
@@ -277,7 +284,8 @@ private struct SnapshotUIAdapterSpy: UIAutomationExecuting {
 	func longPress(
 		profile: String,
 		elementReference: UIElementReference,
-		durationMilliseconds: Int?
+		durationMilliseconds: Int?,
+		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError> {
 		.failure(error)
 	}
@@ -286,9 +294,7 @@ private struct SnapshotUIAdapterSpy: UIAutomationExecuting {
 	func swipe(
 		profile: String,
 		elementReference: UIElementReference,
-		direction: UISwipeDirection,
-		durationMilliseconds: Int?,
-		distance: Double?
+		request: UIAutomationSwipeRequest
 	) async -> Result<UIAutomationActionResult, RunError> {
 		.failure(error)
 	}
@@ -298,7 +304,8 @@ private struct SnapshotUIAdapterSpy: UIAutomationExecuting {
 		profile: String,
 		elementReference: UIElementReference,
 		text: String,
-		replaceExisting: Bool
+		replaceExisting: Bool,
+		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError> {
 		.failure(error)
 	}

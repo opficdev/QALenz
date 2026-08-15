@@ -169,7 +169,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecu
 			arguments: ["xcodebuildmcp"] + arguments,
 			workingDirectoryURL: workingDirectoryURL,
 			environment: allowedEnvironment,
-			timeout: timeout
+			timeout: request.timeout ?? timeout
 		)
 	}
 

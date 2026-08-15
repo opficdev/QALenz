@@ -27,13 +27,13 @@ package struct UIElementReference: Sendable, Equatable {
 	}
 }
 
-// selector 대기 성공 시 현재 snapshot과 선택한 element 참조를 함께 전달합니다.
+// selector 대기 성공 시 현재 snapshot과 선택적인 element 참조를 함께 전달합니다.
 package struct UIAutomationWaitResult: Sendable, Equatable {
 	package let snapshot: UIAutomationSnapshot
-	package let elementReference: UIElementReference
+	package let elementReference: UIElementReference?
 
-	// 현재 snapshot과 단일 element 참조로 대기 결과를 구성합니다.
-	package init(snapshot: UIAutomationSnapshot, elementReference: UIElementReference) {
+	// 현재 snapshot과 선택적인 단일 element 참조로 대기 결과를 구성합니다.
+	package init(snapshot: UIAutomationSnapshot, elementReference: UIElementReference? = nil) {
 		self.snapshot = snapshot
 		self.elementReference = elementReference
 	}
@@ -57,11 +57,35 @@ package enum UISwipeDirection: Sendable, Equatable {
 	case rightward
 }
 
+// swipe 실행에 필요한 방향, 선택 값과 시간 제한을 함께 전달합니다.
+package struct UIAutomationSwipeRequest: Sendable, Equatable {
+	package let direction: UISwipeDirection
+	package let durationMilliseconds: Int?
+	package let distance: Double?
+	package let timeoutMilliseconds: Int
+
+	// swipe 실행에 필요한 값을 구성합니다.
+	package init(
+		direction: UISwipeDirection,
+		durationMilliseconds: Int?,
+		distance: Double?,
+		timeoutMilliseconds: Int
+	) {
+		self.direction = direction
+		self.durationMilliseconds = durationMilliseconds
+		self.distance = distance
+		self.timeoutMilliseconds = timeoutMilliseconds
+	}
+}
+
 // UI automation 요청을 XcodeBuildMCP adapter에 위임하는 경계를 정의합니다.
 package protocol UIAutomationExecuting: Sendable {
-	// 현재 화면의 UI snapshot을 반환합니다.
-	func snapshotUI(profile: String) async -> Result<UIAutomationSnapshot, RunError>
-	// selector가 가리키는 단일 element를 기다리고 현재 참조를 반환합니다.
+	// 설정한 시간 안에 현재 화면의 UI snapshot을 반환합니다.
+	func snapshotUI(
+		profile: String,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationSnapshot, RunError>
+	// selector가 존재할 때까지 기다리고 현재 참조를 반환합니다.
 	func waitForUI(
 		profile: String,
 		selector: ScenarioSelector,
@@ -70,27 +94,28 @@ package protocol UIAutomationExecuting: Sendable {
 	// 현재 element 참조를 한 번 tap합니다.
 	func tap(
 		profile: String,
-		elementReference: UIElementReference
+		elementReference: UIElementReference,
+		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError>
 	// 현재 element 참조를 지정한 시간만큼 누릅니다.
 	func longPress(
 		profile: String,
 		elementReference: UIElementReference,
-		durationMilliseconds: Int?
+		durationMilliseconds: Int?,
+		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError>
 	// 현재 element 범위에서 지정한 방향으로 swipe합니다.
 	func swipe(
 		profile: String,
 		elementReference: UIElementReference,
-		direction: UISwipeDirection,
-		durationMilliseconds: Int?,
-		distance: Double?
+		request: UIAutomationSwipeRequest
 	) async -> Result<UIAutomationActionResult, RunError>
 	// 현재 element 참조에 text를 입력합니다.
 	func typeText(
 		profile: String,
 		elementReference: UIElementReference,
 		text: String,
-		replaceExisting: Bool
+		replaceExisting: Bool,
+		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError>
 }

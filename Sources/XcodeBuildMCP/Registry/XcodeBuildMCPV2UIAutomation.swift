@@ -85,6 +85,7 @@ enum XcodeBuildMCPV2UIAutomation {
 				schema: .object(
 					fields: [
 						"capture": runtimeSnapshotSchema,
+						"uiError": errorSchema,
 						"waitMatch": .object(
 							fields: [
 								"matches": .array(element: .object(
@@ -95,7 +96,7 @@ enum XcodeBuildMCPV2UIAutomation {
 							requiredFields: ["matches"]
 						)
 					],
-					requiredFields: ["capture"]
+					requiredFields: []
 				)
 			)
 		)
@@ -107,7 +108,10 @@ enum XcodeBuildMCPV2UIAutomation {
 			payload: .init(
 				isRequired: true,
 				schema: .object(
-					fields: ["capture": runtimeSnapshotSchema],
+					fields: [
+						"capture": runtimeSnapshotSchema,
+						"uiError": errorSchema
+					],
 					requiredFields: []
 				)
 			)
@@ -121,5 +125,10 @@ enum XcodeBuildMCPV2UIAutomation {
 			"seq": .scalar
 		],
 		requiredFields: ["type", "screenHash", "seq"]
+	)
+
+	private static let errorSchema = PayloadSchema.object(
+		fields: ["code": .string],
+		requiredFields: ["code"]
 	)
 }

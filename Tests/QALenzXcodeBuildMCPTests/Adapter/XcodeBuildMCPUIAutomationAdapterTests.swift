@@ -21,13 +21,17 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 			payload: capturePayload
 		))
 		let adapter = XcodeBuildMCPUIAutomationAdapter(adapter: spy)
-		let snapshot = try await adapter.snapshotUI(profile: "fixture").get()
+		let snapshot = try await adapter.snapshotUI(
+			profile: "fixture",
+			timeoutMilliseconds: 5_000
+		).get()
 		let request = try #require(await spy.requests.first)
 
 		#expect(snapshot == .init(screenHash: "screen-hash", sequence: 4))
 		#expect(request == .init(
 			operation: .snapshotUI,
-			arguments: [.init(name: "profile", value: "fixture")]
+			arguments: [.init(name: "profile", value: "fixture")],
+			timeout: .milliseconds(5_000)
 		))
 	}
 
@@ -58,6 +62,74 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 			.init(name: "selector.identifier", value: "todo-list"),
 			.init(name: "selector.role", value: "list")
 		])
+		#expect(request.timeout == .seconds(6))
+	}
+
+	// 복수 selector 매치는 존재 대기 성공으로 처리하고 element 참조를 만들지 않는지 검증합니다.
+	@Test
+	func selector_대기가_복수_매치에도_성공하고_element_참조를_만들지_않는다() async throws {
+		let spy = XcodeBuildMCPAdapterSpy(result: .init(
+			operation: .waitForUI,
+			result: .passed,
+			payload: multiMatchPayload
+		))
+		let adapter = XcodeBuildMCPUIAutomationAdapter(adapter: spy)
+		let result = try await adapter.waitForUI(
+			profile: "fixture",
+			selector: .init(identifier: "todo-list"),
+			timeoutMilliseconds: 5_000
+		).get()
+
+		#expect(result.snapshot == .init(screenHash: "screen-hash", sequence: 4))
+		#expect(result.elementReference == nil)
+	}
+
+	// UI 도구 오류가 오류 코드와 마지막 snapshot을 RunError 문맥으로 변환하는지 검증합니다.
+	@Test
+	func UI_도구_오류가_오류_코드와_마지막_snapshot을_보존한다() async throws {
+		let spy = XcodeBuildMCPAdapterSpy(result: .init(
+			operation: .waitForUI,
+			result: .errored(.init(
+				kind: .adapter,
+				code: .init(rawValue: "adapter.xcodebuildmcp.command.failed"),
+				context: .init(command: "wait-for-ui")
+			)),
+			payload: errorPayload
+		))
+		let adapter = XcodeBuildMCPUIAutomationAdapter(adapter: spy)
+		let failure = await adapter.waitForUI(
+			profile: "fixture",
+			selector: .init(identifier: "todo-list"),
+			timeoutMilliseconds: 5_000
+		).failure
+		let error = try #require(failure)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.ui.WAIT_TIMEOUT")
+		#expect(error.context.uiSnapshot == .init(screenHash: "screen-hash", sequence: 4))
+	}
+
+	// capture가 없는 UI 도구 오류도 구조화 오류 코드로 변환하는지 검증합니다.
+	@Test
+	func capture가_없는_UI_도구_오류가_구조화_오류_코드를_보존한다() async throws {
+		let spy = XcodeBuildMCPAdapterSpy(result: .init(
+			operation: .snapshotUI,
+			result: .errored(.init(
+				kind: .adapter,
+				code: .init(rawValue: "adapter.xcodebuildmcp.command.failed")
+			)),
+			payload: .object([
+				"uiError": .object(["code": .string("SNAPSHOT_CAPTURE_FAILED")])
+			])
+		))
+		let adapter = XcodeBuildMCPUIAutomationAdapter(adapter: spy)
+		let failure = await adapter.snapshotUI(
+			profile: "fixture",
+			timeoutMilliseconds: 5_000
+		).failure
+		let error = try #require(failure)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.ui.SNAPSHOT_CAPTURE_FAILED")
+		#expect(error.context.uiSnapshot == nil)
 	}
 
 	// interaction 요청이 현재 element 참조와 action별 argument를 변환하는지 검증합니다.
@@ -71,29 +143,39 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 		let adapter = XcodeBuildMCPUIAutomationAdapter(adapter: spy)
 		let reference = UIElementReference(rawValue: "e4")
 
-		_ = try await adapter.tap(profile: "fixture", elementReference: reference).get()
+		_ = try await adapter.tap(
+			profile: "fixture",
+			elementReference: reference,
+			timeoutMilliseconds: 5_000
+		).get()
 		_ = try await adapter.longPress(
 			profile: "fixture",
 			elementReference: reference,
-			durationMilliseconds: 750
+			durationMilliseconds: 750,
+			timeoutMilliseconds: 5_000
 		).get()
 		_ = try await adapter.swipe(
 			profile: "fixture",
 			elementReference: reference,
-			direction: .downward,
-			durationMilliseconds: 500,
-			distance: 0.8
+			request: .init(
+				direction: .downward,
+				durationMilliseconds: 500,
+				distance: 0.8,
+				timeoutMilliseconds: 5_000
+			)
 		).get()
 		_ = try await adapter.typeText(
 			profile: "fixture",
 			elementReference: reference,
 			text: "new todo",
-			replaceExisting: true
+			replaceExisting: true,
+			timeoutMilliseconds: 5_000
 		).get()
 		let requests = await spy.requests
 
 		#expect(requests.map(\.operation) == [.tapUI, .longPressUI, .swipeUI, .typeTextUI])
 		#expect(requests.map(\.arguments) == interactionArguments)
+		#expect(requests.map(\.timeout) == Array(repeating: .milliseconds(5_000), count: 4))
 	}
 
 	// interaction 요청별 의미 기반 argument를 구성합니다.
@@ -147,6 +229,45 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 				"matches": .array([.object(["ref": .string("e4")])])
 			])
 		])
+	}
+
+	// 복수 selector 매치를 포함한 대기 성공 payload를 구성합니다.
+	private var multiMatchPayload: XcodeBuildMCPPayload {
+		.object([
+			"capture": .object([
+				"type": .string("runtime-snapshot"),
+				"screenHash": .string("screen-hash"),
+				"seq": .integer(4)
+			]),
+			"waitMatch": .object([
+				"matches": .array([
+					.object(["ref": .string("e4")]),
+					.object(["ref": .string("e5")])
+				])
+			])
+		])
+	}
+
+	// UI 오류 코드와 마지막 snapshot을 포함한 실패 payload를 구성합니다.
+	private var errorPayload: XcodeBuildMCPPayload {
+		.object([
+			"capture": .object([
+				"type": .string("runtime-snapshot"),
+				"screenHash": .string("screen-hash"),
+				"seq": .integer(4)
+			]),
+			"uiError": .object(["code": .string("WAIT_TIMEOUT")])
+		])
+	}
+}
+
+// Result의 실패 값을 선택적으로 반환합니다.
+private extension Result {
+	// 실패 값이 있으면 반환합니다.
+	var failure: Failure? {
+		guard case let .failure(error) = self else { return nil }
+
+		return error
 	}
 }
 

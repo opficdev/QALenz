@@ -85,7 +85,13 @@ struct RunManifestTests {
 				result: .failed,
 				stepResults: [
 					.init(stepID: "launch", result: .passed),
-					.init(stepID: "tap-complete", result: .failed)
+					.init(
+						stepID: "tap-complete",
+						result: .failed,
+						selector: .init(identifier: "todo-complete", role: "button"),
+						attempts: 2,
+						uiSnapshot: .init(screenHash: "screen-hash", sequence: 4)
+					)
 				],
 				evidence: [try .init(
 					kind: .screenshot,

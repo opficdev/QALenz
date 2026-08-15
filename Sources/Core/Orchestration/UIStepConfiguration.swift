@@ -23,7 +23,14 @@ struct UIStepConfiguration {
 	init(step: ExecutionPlanStep) throws {
 		let values = try Self.values(from: step)
 		timeoutMilliseconds = try Self.integer("timeoutMilliseconds", in: values, default: 5_000, minimum: 0, step: step)
-		retryCount = try Self.integer("retryCount", in: values, default: 0, minimum: 0, step: step)
+		retryCount = try Self.integer(
+			"retryCount",
+			in: values,
+			default: 0,
+			minimum: 0,
+			maximum: 100,
+			step: step
+		)
 		preDelayMilliseconds = try Self.integer("preDelayMilliseconds", in: values, default: 0, minimum: 0, step: step)
 		postDelayMilliseconds = try Self.integer("postDelayMilliseconds", in: values, default: 0, minimum: 0, step: step)
 		durationMilliseconds = try Self.optionalInteger("durationMilliseconds", in: values, minimum: 1, step: step)
@@ -51,12 +58,14 @@ struct UIStepConfiguration {
 		in values: [String: ExecutionPlanParameter],
 		default defaultValue: Int,
 		minimum: Int,
+		maximum: Int? = nil,
 		step: ExecutionPlanStep
 	) throws -> Int {
 		guard let value = values[key] else { return defaultValue }
 		guard case let .number(rawValue) = value,
 			let integer = Int(rawValue),
-			minimum <= integer else {
+			minimum <= integer,
+			maximum.map({ integer <= $0 }) ?? true else {
 			throw failure(step: step, keyPath: "parameters.\(key)")
 		}
 
