@@ -40,4 +40,54 @@ struct EvidenceReferenceTests {
 			)
 		}
 	}
+
+	// 알 수 없는 evidence kind의 decode 오류 문맥을 보존하는지 검증합니다.
+	@Test
+	func 알_수_없는_kind의_decode_오류_문맥을_보존한다() {
+		let data = Data(
+			"""
+			{
+			  "kind": "unknown",
+			  "relativePath": "evidence/launch.png",
+			  "stepID": "launch",
+			  "isRedacted": true,
+			  "isOriginalRetained": false
+			}
+			""".utf8
+		)
+
+		do {
+			_ = try JSONDecoder().decode(EvidenceReference.self, from: data)
+			#expect(Bool(false))
+		} catch let DecodingError.dataCorrupted(context) {
+			#expect(context.codingPath.last?.stringValue == "kind")
+		} catch {
+			#expect(Bool(false))
+		}
+	}
+
+	// 상대 경로 탈출 오류를 relativePath 문맥으로 변환하는지 검증합니다.
+	@Test
+	func 상대_경로_탈출_decode_오류를_relativePath_문맥으로_변환한다() {
+		let data = Data(
+			"""
+			{
+			  "kind": "log",
+			  "relativePath": "../secret.log",
+			  "stepID": "launch",
+			  "isRedacted": true,
+			  "isOriginalRetained": false
+			}
+			""".utf8
+		)
+
+		do {
+			_ = try JSONDecoder().decode(EvidenceReference.self, from: data)
+			#expect(Bool(false))
+		} catch let DecodingError.dataCorrupted(context) {
+			#expect(context.codingPath.last?.stringValue == "relativePath")
+		} catch {
+			#expect(Bool(false))
+		}
+	}
 }

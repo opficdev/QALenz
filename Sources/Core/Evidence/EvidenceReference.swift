@@ -45,16 +45,21 @@ package struct EvidenceReference: Codable, Sendable, Equatable {
 	// JSON 값을 경로 검증을 거쳐 증거 참조로 복원합니다.
 	package init(from decoder: any Decoder) throws {
 		let container = try decoder.container(keyedBy: CodingKeys.self)
+		let kind = try container.decode(EvidenceKind.self, forKey: .kind)
+		let relativePath = try container.decode(String.self, forKey: .relativePath)
+		let stepID = try container.decode(String.self, forKey: .stepID)
+		let isRedacted = try container.decode(Bool.self, forKey: .isRedacted)
+		let isOriginalRetained = try container.decode(Bool.self, forKey: .isOriginalRetained)
 
 		do {
 			try self.init(
-				kind: container.decode(EvidenceKind.self, forKey: .kind),
-				relativePath: container.decode(String.self, forKey: .relativePath),
-				stepID: container.decode(String.self, forKey: .stepID),
-				isRedacted: container.decode(Bool.self, forKey: .isRedacted),
-				isOriginalRetained: container.decode(Bool.self, forKey: .isOriginalRetained)
+				kind: kind,
+				relativePath: relativePath,
+				stepID: stepID,
+				isRedacted: isRedacted,
+				isOriginalRetained: isOriginalRetained
 			)
-		} catch {
+		} catch EvidenceReferenceError.relativePathInvalid {
 			throw DecodingError.dataCorruptedError(
 				forKey: .relativePath,
 				in: container,
