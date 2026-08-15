@@ -49,24 +49,24 @@ package struct UIAutomationActionResult: Sendable, Equatable {
 	}
 }
 
-// swipe 방향을 project-owned scenario와 adapter 사이의 공통 값으로 표현합니다.
-package enum UISwipeDirection: Sendable, Equatable {
+// scroll 방향을 project-owned scenario와 adapter 사이의 공통 값으로 표현합니다.
+package enum UIScrollDirection: Sendable, Equatable {
 	case upward
 	case downward
 	case leftward
 	case rightward
 }
 
-// swipe 실행에 필요한 방향, 선택 값과 시간 제한을 함께 전달합니다.
-package struct UIAutomationSwipeRequest: Sendable, Equatable {
-	package let direction: UISwipeDirection
+// scroll 실행에 필요한 방향, 선택 값과 시간 제한을 함께 전달합니다.
+package struct UIAutomationScrollRequest: Sendable, Equatable {
+	package let direction: UIScrollDirection
 	package let durationMilliseconds: Int?
 	package let distance: Double?
 	package let timeoutMilliseconds: Int
 
-	// swipe 실행에 필요한 값을 구성합니다.
+	// scroll 실행에 필요한 값을 구성합니다.
 	package init(
-		direction: UISwipeDirection,
+		direction: UIScrollDirection,
 		durationMilliseconds: Int?,
 		distance: Double?,
 		timeoutMilliseconds: Int
@@ -104,11 +104,11 @@ package protocol UIAutomationExecuting: Sendable {
 		durationMilliseconds: Int?,
 		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError>
-	// 현재 element 범위에서 지정한 방향으로 swipe합니다.
-	func swipe(
+	// 현재 element 범위에서 지정한 방향으로 scroll합니다.
+	func scroll(
 		profile: String,
 		elementReference: UIElementReference,
-		request: UIAutomationSwipeRequest
+		request: UIAutomationScrollRequest
 	) async -> Result<UIAutomationActionResult, RunError>
 	// 현재 element 참조에 text를 입력합니다.
 	func typeText(

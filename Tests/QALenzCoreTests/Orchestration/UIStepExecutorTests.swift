@@ -233,11 +233,11 @@ private final class UIAutomationSpy: UIAutomationExecuting, @unchecked Sendable 
 		.success(.init())
 	}
 
-	// swipe에 대한 고정 성공 결과를 반환합니다.
-	func swipe(
+	// scroll에 대한 고정 성공 결과를 반환합니다.
+	func scroll(
 		profile: String,
 		elementReference: UIElementReference,
-		request: UIAutomationSwipeRequest
+		request: UIAutomationScrollRequest
 	) async -> Result<UIAutomationActionResult, RunError> {
 		.success(.init())
 	}

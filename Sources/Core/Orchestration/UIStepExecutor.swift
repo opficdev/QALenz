@@ -214,10 +214,10 @@ package struct UIStepExecutor: Sendable {
 				timeoutMilliseconds: configuration.timeoutMilliseconds
 			)
 		case .scroll:
-			guard let direction = configuration.swipeDirection else {
+			guard let direction = configuration.scrollDirection else {
 				return .failure(failure(step: nil, code: "execution.ui.step.parameters.invalid"))
 			}
-			return await adapter.swipe(
+			return await adapter.scroll(
 				profile: profile,
 				elementReference: elementReference,
 				request: .init(

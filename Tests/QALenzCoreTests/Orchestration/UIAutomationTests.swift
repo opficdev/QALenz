@@ -29,8 +29,8 @@ struct UIAutomationTests {
 		requireContract(UIElementReference.self)
 		requireContract(UIAutomationWaitResult.self)
 		requireContract(UIAutomationActionResult.self)
-		requireContract(UISwipeDirection.self)
-		requireContract(UIAutomationSwipeRequest.self)
+		requireContract(UIScrollDirection.self)
+		requireContract(UIAutomationScrollRequest.self)
 	}
 
 	// 공통 값 계약을 컴파일 단계에서 확인합니다.

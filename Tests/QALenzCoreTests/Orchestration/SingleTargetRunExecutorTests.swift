@@ -290,11 +290,11 @@ private struct SnapshotUIAdapterSpy: UIAutomationExecuting {
 		.failure(error)
 	}
 
-	// 지원하지 않는 swipe 오류를 반환합니다.
-	func swipe(
+	// 지원하지 않는 scroll 오류를 반환합니다.
+	func scroll(
 		profile: String,
 		elementReference: UIElementReference,
-		request: UIAutomationSwipeRequest
+		request: UIAutomationScrollRequest
 	) async -> Result<UIAutomationActionResult, RunError> {
 		.failure(error)
 	}

@@ -154,7 +154,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 			durationMilliseconds: 750,
 			timeoutMilliseconds: 5_000
 		).get()
-		_ = try await adapter.swipe(
+		_ = try await adapter.scroll(
 			profile: "fixture",
 			elementReference: reference,
 			request: .init(

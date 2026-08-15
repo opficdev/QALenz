@@ -94,11 +94,11 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		return payload(from: result).flatMap(actionResult)
 	}
 
-	// 현재 element 범위에서 swipe하고 후속 snapshot 정보를 반환합니다.
-	package func swipe(
+	// 현재 element 범위에서 scroll하고 후속 snapshot 정보를 반환합니다.
+	package func scroll(
 		profile: String,
 		elementReference: UIElementReference,
-		request: UIAutomationSwipeRequest
+		request: UIAutomationScrollRequest
 	) async -> Result<UIAutomationActionResult, RunError> {
 		var arguments = [
 			XcodeBuildMCPArgument(name: "profile", value: profile),
@@ -279,8 +279,8 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 	}
 }
 
-// UI swipe 방향을 XcodeBuildMCP argument 값으로 변환합니다.
-private extension UISwipeDirection {
+// UI scroll 방향을 XcodeBuildMCP argument 값으로 변환합니다.
+private extension UIScrollDirection {
 	var argumentValue: String {
 		switch self {
 		case .upward:

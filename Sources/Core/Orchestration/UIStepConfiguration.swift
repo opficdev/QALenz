@@ -14,7 +14,7 @@ struct UIStepConfiguration {
 	let preDelayMilliseconds: Int
 	let postDelayMilliseconds: Int
 	let durationMilliseconds: Int?
-	let swipeDirection: UISwipeDirection?
+	let scrollDirection: UIScrollDirection?
 	let distance: Double?
 	let text: String?
 	let replaceExisting: Bool
@@ -37,7 +37,7 @@ struct UIStepConfiguration {
 		distance = try Self.distance(in: values, step: step)
 		text = try Self.text(in: values, step: step)
 		replaceExisting = try Self.boolean("replaceExisting", in: values, default: false, step: step)
-		swipeDirection = try Self.direction(in: values, step: step)
+		scrollDirection = try Self.direction(in: values, step: step)
 
 		try Self.validateAction(step.action, values: values, configuration: self, step: step)
 	}
@@ -99,11 +99,11 @@ struct UIStepConfiguration {
 		return boolean
 	}
 
-	// swipe direction parameter를 UI automation 공통 값으로 변환합니다.
+	// scroll direction parameter를 UI automation 공통 값으로 변환합니다.
 	private static func direction(
 		in values: [String: ExecutionPlanParameter],
 		step: ExecutionPlanStep
-	) throws -> UISwipeDirection? {
+	) throws -> UIScrollDirection? {
 		guard let value = values["direction"] else { return nil }
 		guard case let .string(direction) = value else {
 			throw failure(step: step, keyPath: "parameters.direction")
@@ -118,7 +118,7 @@ struct UIStepConfiguration {
 		}
 	}
 
-	// swipe distance parameter를 허용 범위 안의 소수로 읽습니다.
+	// scroll distance parameter를 허용 범위 안의 소수로 읽습니다.
 	private static func distance(
 		in values: [String: ExecutionPlanParameter],
 		step: ExecutionPlanStep
@@ -167,7 +167,7 @@ struct UIStepConfiguration {
 			actionKeys = ["durationMilliseconds"]
 		case .scroll:
 			actionKeys = ["durationMilliseconds", "direction", "distance"]
-			guard configuration.swipeDirection != nil else {
+			guard configuration.scrollDirection != nil else {
 				throw failure(step: step, keyPath: "parameters.direction")
 			}
 		case .typeText:
