@@ -61,6 +61,15 @@ package struct RunCommand: ParsableCommand {
 				for: try loader.load(scenarioID: scenarioID, at: configurationURL),
 				format: format
 			)
+		} catch is TargetValidationError {
+			return CLIApplication.result(
+				for: .init(errors: [.init(
+					code: .matrixInvalid,
+					filePath: configurationURL.path,
+					keyPath: "$.matrix"
+				)]),
+				format: format
+			)
 		} catch let errors as ScenarioValidationErrors {
 			return CLIApplication.result(
 				for: .init(errors: errors.errors),

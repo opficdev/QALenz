@@ -138,6 +138,26 @@ struct RunCommandTests {
 		#expect(json.standardError == nil)
 	}
 
+	// target 입력 오류를 verification failure로 출력하는지 검증합니다.
+	@Test
+	func target_입력_오류를_verification_failure로_출력한다() async throws {
+		let command = try runCommand()
+		let result = await command.execute(
+			format: .json,
+			loader: TargetValidationFailureLoaderSpy(),
+			currentDirectoryURL: URL(fileURLWithPath: "/tmp")
+		)
+		let data = try #require(result.standardOutput?.data(using: .utf8))
+		let failure = try JSONDecoder().decode(ExecutionPlanValidationFailure.self, from: data)
+
+		#expect(result.exitStatus == .verificationFailure)
+		#expect(failure.errors == [.init(
+			code: .matrixInvalid,
+			filePath: "/tmp/.qalenz/config.json",
+			keyPath: "$.matrix"
+		)])
+	}
+
 	// run 명령을 dry-run 인수로 해석합니다.
 	private func runCommand() throws -> RunCommand {
 		let command = try RootCommand.parseAsRoot(["run", "todo-completion", "--dry-run"])
@@ -293,5 +313,13 @@ private struct ScenarioValidationFailureLoaderSpy: ExecutionPlanLoading {
 	// scenario 검증 오류를 반환합니다.
 	func load(scenarioID _: String, at _: URL) throws -> ExecutionPlan {
 		throw ScenarioValidationErrors(errors: errors)
+	}
+}
+
+// target 입력 오류를 반환하는 실행 계획 loader 시험 대역입니다.
+private struct TargetValidationFailureLoaderSpy: ExecutionPlanLoading {
+	// matrix 검증 오류를 반환합니다.
+	func load(scenarioID _: String, at _: URL) throws -> ExecutionPlan {
+		throw TargetValidationError.matrixInvalid
 	}
 }
