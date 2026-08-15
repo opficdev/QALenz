@@ -10,12 +10,12 @@ import QALenzCore
 // XcodeBuildMCP 2.x UI automation CLI와 구조화된 출력 명세를 보관합니다.
 enum XcodeBuildMCPV2UIAutomation {
 	static let commandDescriptors: [XcodeBuildMCPOperation: CommandDescriptor] = [
-		.snapshotUI: .init(
+		.snapshot: .init(
 			workflow: "ui-automation",
 			tool: "snapshot-ui",
 			argumentFlags: ["profile": "--profile"]
 		),
-		.waitForUI: .init(
+		.wait: .init(
 			workflow: "ui-automation",
 			tool: "wait-for-ui",
 			argumentFlags: [
@@ -28,7 +28,7 @@ enum XcodeBuildMCPV2UIAutomation {
 				"selector.value": "--value"
 			]
 		),
-		.tapUI: .init(
+		.tap: .init(
 			workflow: "ui-automation",
 			tool: "tap",
 			argumentFlags: [
@@ -36,7 +36,7 @@ enum XcodeBuildMCPV2UIAutomation {
 				"element.reference": "--element-ref"
 			]
 		),
-		.longPressUI: .init(
+		.longPress: .init(
 			workflow: "ui-automation",
 			tool: "long-press",
 			argumentFlags: [
@@ -45,7 +45,7 @@ enum XcodeBuildMCPV2UIAutomation {
 				"duration.seconds": "--duration"
 			]
 		),
-		.swipeUI: .init(
+		.swipe: .init(
 			workflow: "ui-automation",
 			tool: "swipe",
 			argumentFlags: [
@@ -56,7 +56,7 @@ enum XcodeBuildMCPV2UIAutomation {
 				"distance": "--distance"
 			]
 		),
-		.typeTextUI: .init(
+		.typeText: .init(
 			workflow: "ui-automation",
 			tool: "type-text",
 			argumentFlags: [
@@ -69,12 +69,12 @@ enum XcodeBuildMCPV2UIAutomation {
 	]
 
 	static let outputDefinitions: [XcodeBuildMCPOperation: [String: OutputDefinition]] = [
-		.snapshotUI: captureOutputDefinitions,
-		.waitForUI: captureOutputDefinitions,
-		.tapUI: uiActionOutputDefinitions,
-		.longPressUI: uiActionOutputDefinitions,
-		.swipeUI: uiActionOutputDefinitions,
-		.typeTextUI: uiActionOutputDefinitions
+		.snapshot: captureOutputDefinitions,
+		.wait: captureOutputDefinitions,
+		.tap: uiActionOutputDefinitions,
+		.longPress: uiActionOutputDefinitions,
+		.swipe: uiActionOutputDefinitions,
+		.typeText: uiActionOutputDefinitions
 	]
 
 	private static let captureOutputDefinitions: [String: OutputDefinition] = [

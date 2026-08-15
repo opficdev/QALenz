@@ -33,7 +33,7 @@ struct XcodeBuildMCPUIAutomationOutputTests {
 				}
 			}
 			""".utf8),
-			operation: .snapshotUI
+			operation: .snapshot
 		)
 
 		#expect(result.result == .passed)

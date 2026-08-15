@@ -130,7 +130,7 @@ struct CommandBuilderTests {
 	func UI_automation_요청이_CLI_인자로_변환된다() throws {
 		let arguments = try XcodeBuildMCPV2.commandBuilder.arguments(
 			for: .init(
-				operation: .swipeUI,
+				operation: .swipe,
 				arguments: [
 					.init(name: "profile", value: "fixture"),
 					.init(name: "element.reference", value: "e4"),

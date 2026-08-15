@@ -16,7 +16,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 	@Test
 	func snapshot_요청이_profile과_snapshot_식별정보를_변환한다() async throws {
 		let spy = XcodeBuildMCPAdapterSpy(result: .init(
-			operation: .snapshotUI,
+			operation: .snapshot,
 			result: .passed,
 			payload: capturePayload
 		))
@@ -29,7 +29,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 
 		#expect(snapshot == .init(screenHash: "screen-hash", sequence: 4))
 		#expect(request == .init(
-			operation: .snapshotUI,
+			operation: .snapshot,
 			arguments: [.init(name: "profile", value: "fixture")],
 			timeout: .milliseconds(5_000)
 		))
@@ -39,7 +39,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 	@Test
 	func selector_대기_요청이_selector_argument와_element_참조를_변환한다() async throws {
 		let spy = XcodeBuildMCPAdapterSpy(result: .init(
-			operation: .waitForUI,
+			operation: .wait,
 			result: .passed,
 			payload: waitPayload
 		))
@@ -69,7 +69,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 	@Test
 	func selector_대기가_복수_매치에도_성공하고_element_참조를_만들지_않는다() async throws {
 		let spy = XcodeBuildMCPAdapterSpy(result: .init(
-			operation: .waitForUI,
+			operation: .wait,
 			result: .passed,
 			payload: multiMatchPayload
 		))
@@ -88,7 +88,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 	@Test
 	func UI_도구_오류가_오류_코드와_마지막_snapshot을_보존한다() async throws {
 		let spy = XcodeBuildMCPAdapterSpy(result: .init(
-			operation: .waitForUI,
+			operation: .wait,
 			result: .errored(.init(
 				kind: .adapter,
 				code: .init(rawValue: "adapter.xcodebuildmcp.command.failed"),
@@ -112,7 +112,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 	@Test
 	func capture가_없는_UI_도구_오류가_구조화_오류_코드를_보존한다() async throws {
 		let spy = XcodeBuildMCPAdapterSpy(result: .init(
-			operation: .snapshotUI,
+			operation: .snapshot,
 			result: .errored(.init(
 				kind: .adapter,
 				code: .init(rawValue: "adapter.xcodebuildmcp.command.failed")
@@ -136,7 +136,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 	@Test
 	func interaction_요청이_action별_argument를_변환한다() async throws {
 		let spy = XcodeBuildMCPAdapterSpy(result: .init(
-			operation: .tapUI,
+			operation: .tap,
 			result: .passed,
 			payload: capturePayload
 		))
@@ -173,7 +173,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 		).get()
 		let requests = await spy.requests
 
-		#expect(requests.map(\.operation) == [.tapUI, .longPressUI, .swipeUI, .typeTextUI])
+		#expect(requests.map(\.operation) == [.tap, .longPress, .swipe, .typeText])
 		#expect(requests.map(\.arguments) == interactionArguments)
 		#expect(requests.map(\.timeout) == Array(repeating: .milliseconds(5_000), count: 4))
 	}

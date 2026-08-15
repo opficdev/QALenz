@@ -22,7 +22,7 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationSnapshot, RunError> {
 		let result = await adapter.execute(.init(
-			operation: .snapshotUI,
+			operation: .snapshot,
 			arguments: [.init(name: "profile", value: profile)],
 			timeout: .milliseconds(timeoutMilliseconds)
 		))
@@ -37,7 +37,7 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationWaitResult, RunError> {
 		let result = await adapter.execute(.init(
-			operation: .waitForUI,
+			operation: .wait,
 			arguments: waitArguments(
 				profile: profile,
 				selector: selector,
@@ -56,7 +56,7 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError> {
 		let result = await adapter.execute(.init(
-			operation: .tapUI,
+			operation: .tap,
 			arguments: [
 				.init(name: "profile", value: profile),
 				.init(name: "element.reference", value: elementReference.rawValue)
@@ -86,7 +86,7 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		}
 
 		let result = await adapter.execute(.init(
-			operation: .longPressUI,
+			operation: .longPress,
 			arguments: arguments,
 			timeout: .milliseconds(timeoutMilliseconds)
 		))
@@ -116,7 +116,7 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		}
 
 		let result = await adapter.execute(.init(
-			operation: .swipeUI,
+			operation: .swipe,
 			arguments: arguments,
 			timeout: .milliseconds(request.timeoutMilliseconds)
 		))
@@ -133,7 +133,7 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationActionResult, RunError> {
 		let result = await adapter.execute(.init(
-			operation: .typeTextUI,
+			operation: .typeText,
 			arguments: [
 				.init(name: "profile", value: profile),
 				.init(name: "element.reference", value: elementReference.rawValue),

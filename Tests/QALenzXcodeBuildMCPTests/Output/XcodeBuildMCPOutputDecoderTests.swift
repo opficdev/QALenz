@@ -79,7 +79,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 
 		let result = XcodeBuildMCPV2.outputDecoder.decode(
 			Data(json.utf8),
-			operation: .waitForUI
+			operation: .wait
 		)
 		let error = try #require(result.error)
 
@@ -110,7 +110,7 @@ struct XcodeBuildMCPOutputDecoderTests {
 
 		let result = XcodeBuildMCPV2.outputDecoder.decode(
 			Data(json.utf8),
-			operation: .snapshotUI
+			operation: .snapshot
 		)
 
 		#expect(result.payload == .object([

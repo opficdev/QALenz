@@ -14,12 +14,12 @@ struct UIAutomationTests {
 	// UI operation 식별자가 XcodeBuildMCP command와 분리되는지 검증합니다.
 	@Test
 	func UI_automation_작업_식별자가_의미를_보존한다() {
-		#expect(XcodeBuildMCPOperation.snapshotUI.rawValue == "ui.snapshot")
-		#expect(XcodeBuildMCPOperation.waitForUI.rawValue == "ui.wait")
-		#expect(XcodeBuildMCPOperation.tapUI.rawValue == "ui.tap")
-		#expect(XcodeBuildMCPOperation.longPressUI.rawValue == "ui.long-press")
-		#expect(XcodeBuildMCPOperation.swipeUI.rawValue == "ui.swipe")
-		#expect(XcodeBuildMCPOperation.typeTextUI.rawValue == "ui.type-text")
+		#expect(XcodeBuildMCPOperation.snapshot.rawValue == "ui.snapshot")
+		#expect(XcodeBuildMCPOperation.wait.rawValue == "ui.wait")
+		#expect(XcodeBuildMCPOperation.tap.rawValue == "ui.tap")
+		#expect(XcodeBuildMCPOperation.longPress.rawValue == "ui.long-press")
+		#expect(XcodeBuildMCPOperation.swipe.rawValue == "ui.swipe")
+		#expect(XcodeBuildMCPOperation.typeText.rawValue == "ui.type-text")
 	}
 
 	// UI automation 값이 동시성과 동등성 계약을 충족하는지 검증합니다.
