@@ -9,7 +9,7 @@ import Foundation
 import QALenzCore
 
 // XcodeBuildMCP CLI 요청과 출력을 QALenz 공통 계약으로 변환합니다.
-package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
+package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecutionStreaming, Sendable {
 	private static let commandNotFoundStatus: Int32 = 127
 	private static let allowedEnvironmentKeys: Set<String> = [
 		"DEVELOPER_DIR",
@@ -146,6 +146,72 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 			continuation.onTermination = { @Sendable _ in
 				task.cancel()
 			}
+		}
+	}
+
+	// 하나의 JSONL process에서 진행 사건과 terminal 결과를 함께 전달합니다.
+	package func execution(
+		for request: XcodeBuildMCPRequest
+	) -> AsyncThrowingStream<XcodeBuildMCPExecutionUpdate, any Error> {
+		.init { continuation in
+			let task = Task {
+				do {
+					guard let descriptor = eventDescriptors[request.operation] else {
+						throw failureError(
+							operation: request.operation,
+							kind: .adapter,
+							code: "adapter.xcodebuildmcp.event.unsupported"
+						)
+					}
+
+					var decoder = XcodeBuildMCPEventDecoder(descriptor: descriptor)
+					var didTerminate = false
+					let processRequest = try processRequest(for: request, output: .jsonLines)
+					for try await processEvent in processRunner.events(for: processRequest) {
+						switch processEvent {
+						case let .standardOutput(data):
+							for event in try decoder.decode(data, operation: request.operation) {
+								continuation.yield(.event(event))
+							}
+						case let .terminated(status):
+							didTerminate = true
+							guard status == 0 else { throw terminationError(operation: request.operation, status: status) }
+						}
+					}
+					guard didTerminate else {
+						throw failureError(operation: request.operation, kind: .adapter, code: "adapter.xcodebuildmcp.process.failed")
+					}
+					let events = try decoder.finish(operation: request.operation)
+					for event in events {
+						continuation.yield(.event(event))
+						if event.kind == .completed || event.kind == .failed {
+							continuation.yield(.completed(.init(
+								operation: request.operation,
+								result: terminalResult(for: event, operation: request.operation)
+							)))
+						}
+					}
+					continuation.finish()
+				} catch {
+					continuation.finish(throwing: normalizedError(operation: request.operation, error: error))
+				}
+			}
+
+			continuation.onTermination = { @Sendable _ in task.cancel() }
+		}
+	}
+
+	// terminal JSONL 사건을 run 결과로 정규화합니다.
+	private func terminalResult(
+		for event: XcodeBuildMCPEvent,
+		operation: XcodeBuildMCPOperation
+	) -> RunResult {
+		switch event.kind {
+		case .completed: .passed
+		case .failed:
+			.errored(failureError(operation: operation, kind: .execution, code: "execution.build-and-run.failed"))
+		case .started, .progress:
+			.errored(failureError(operation: operation, kind: .adapter, code: "adapter.xcodebuildmcp.output.invalid"))
 		}
 	}
 

@@ -71,6 +71,11 @@ case "$workflow:$tool:$output" in
 		fi
 		printf '%s\n' '{"event":"build-result.build-summary","operation":"BUILD","status":"SUCCEEDED"}'
 		;;
+	simulator:build-and-run:jsonl)
+		printf '%s\n' '{"event":"build-run-result.invocation","operation":"BUILD"}'
+		printf '%s\n' '{"event":"build-run-result.launch-app","operation":"BUILD"}'
+		printf '%s\n' '{"event":"build-run-result.build-summary","operation":"BUILD","status":"SUCCEEDED"}'
+		;;
 	*)
 		exit 64
 		;;
