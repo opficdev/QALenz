@@ -124,11 +124,13 @@ struct ScenarioValidatorTests {
 
 		#expect(result.errors.map(\.code) == [
 			.keyMissing,
+			.keyMissing,
 			.testDataRequirementOperationUnsupported,
 			.testDataRequirementResourceEmpty
 		])
 		#expect(result.errors.map(\.keyPath) == [
 			"$.testDataRequirements[0].operation",
+			"$.testDataRequirements[0].resource",
 			"$.testDataRequirements[1].operation",
 			"$.testDataRequirements[2].resource"
 		])
