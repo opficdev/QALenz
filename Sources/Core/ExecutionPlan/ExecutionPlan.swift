@@ -143,7 +143,8 @@ package struct ExecutionPlanBuilder: Sendable {
 	// 검증된 scenario와 설정을 실행하지 않는 계획으로 변환합니다.
 	package func build(
 		scenario: Scenario,
-		configuration: QALenzConfiguration
+		configuration: QALenzConfiguration,
+		outputDirectoryOverrideURL: URL? = nil
 	) throws -> ExecutionPlan {
 		let selection = try TargetSelectionDecoder().decode(scenario.matrix)
 		let targets = try TargetGenerator().generate(
@@ -152,7 +153,9 @@ package struct ExecutionPlanBuilder: Sendable {
 			policy: configuration.targetPolicy
 		)
 		let steps = scenario.steps.map(makeStep)
-		let outputDirectoryURL = configuration.outputDirectoryURL.standardizedFileURL
+		let outputDirectoryURL = (
+			outputDirectoryOverrideURL ?? configuration.outputDirectoryURL
+		).standardizedFileURL
 
 		return .init(
 				scenarioID: scenario.id,
