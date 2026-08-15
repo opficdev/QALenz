@@ -67,6 +67,7 @@ struct RunCommandTests {
 		defer { try? FileManager.default.removeItem(at: projectURL) }
 		try writeConfiguration(at: projectURL)
 		try writeScenario(at: projectURL)
+		try writeUnrelatedInvalidScenario(at: projectURL)
 
 		let command = try runCommand()
 		let text = await command.execute(
@@ -202,6 +203,28 @@ struct RunCommandTests {
 			  "assertions": [],
 			  "evidence": [],
 			  "testDataRequirements": [{"operation": "create", "resource": "todo:incomplete"}]
+			}
+			""".utf8
+		).write(to: scenarioURL)
+	}
+
+	// 요청 scenario와 무관한 검증 오류를 가진 scenario fixture를 기록합니다.
+	private func writeUnrelatedInvalidScenario(at projectURL: URL) throws {
+		let scenarioURL = projectURL
+			.appendingPathComponent("scenarios", isDirectory: true)
+			.appendingPathComponent("invalid.json", isDirectory: false)
+		try Data(
+			"""
+			{
+			  "schemaVersion": 1,
+			  "id": "invalid",
+			  "name": "Invalid",
+			  "profile": "",
+			  "matrix": {},
+			  "steps": [{"id": "launch", "action": "buildAndRun"}],
+			  "assertions": [],
+			  "evidence": [],
+			  "testDataRequirements": []
 			}
 			""".utf8
 		).write(to: scenarioURL)

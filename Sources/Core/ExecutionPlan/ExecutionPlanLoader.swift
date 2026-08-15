@@ -22,8 +22,16 @@ package struct ExecutionPlanLoader: ExecutionPlanLoading {
 	package func load(scenarioID: String, at configurationURL: URL) throws -> ExecutionPlan {
 		let configuration = try QALenzConfigurationDecoder().decode(at: configurationURL)
 		let scenarioURLs = try scenarioURLs(in: configuration.scenariosDirectoryURL)
-		let scenarios = try ScenarioDecoder().decode(at: scenarioURLs)
-		guard let scenario = scenarios.first(where: { $0.id == scenarioID }) else {
+		let result = ScenarioDecoder().decodeResult(at: scenarioURLs)
+		let selectedPaths = Set(result.documents.compactMap { location in
+			location.document.id == scenarioID ? location.url.standardizedFileURL.path : nil
+		})
+		let errors = result.errors.filter { selectedPaths.contains($0.filePath) }
+
+		guard errors.isEmpty else {
+			throw ScenarioValidationErrors(errors: errors)
+		}
+		guard let scenario = result.scenarios.first(where: { $0.id == scenarioID }) else {
 			throw RunError(
 				kind: .configuration,
 				code: .init(rawValue: "configuration.scenario.not-found"),
