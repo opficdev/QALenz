@@ -273,7 +273,7 @@ struct RunCommandTests {
 					sideEffects: [.appLaunch, .simulatorUse]
 				)],
 				assertions: [],
-				evidence: ["launch"]
+				evidence: [.init(afterStepID: "launch")]
 			)]
 		)
 	}

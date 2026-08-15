@@ -315,10 +315,10 @@ extension CLIApplication {
 		}
 		let targets = plan.targets.map { target in
 			let steps = target.steps.map {
-				"  \($0.id) | \($0.action.rawValue) | \($0.sideEffects.map(\.rawValue).joined(separator: ",")) | \(selectorSummary($0.selector))"
+				"  \($0.id) | \($0.action.rawValue) | \($0.sideEffects.map(\.rawValue).joined(separator: ",")) | \(selectorSummary($0.selector)) | \(parameterSummary($0.parameters))"
 			}.joined(separator: "\n")
-			let assertions = target.assertions.joined(separator: ",")
-			let evidence = target.evidence.joined(separator: ",")
+			let assertions = target.assertions.map(referenceSummary).joined(separator: ",")
+			let evidence = target.evidence.map(referenceSummary).joined(separator: ",")
 
 			return """
 			\(target.target.identifier) | \(target.outputDirectoryPath)
@@ -351,6 +351,16 @@ extension CLIApplication {
 		guard let selector else { return "selector: -" }
 
 		return "selector: \(selector.identifier ?? "-") | \(selector.label ?? "-") | \(selector.role ?? "-") | \(selector.value ?? "-")"
+	}
+
+	// parameter의 손실 없는 계획 표현을 반환합니다.
+	private static func parameterSummary(_ parameter: ExecutionPlanParameter?) -> String {
+		parameter.map { "parameters: \(String(describing: $0))" } ?? "parameters: -"
+	}
+
+	// assertion 또는 evidence 참조의 parameter 표현을 반환합니다.
+	private static func referenceSummary(_ reference: ExecutionPlanStepReference) -> String {
+		"\(reference.afterStepID) | \(parameterSummary(reference.parameters))"
 	}
 
 	// 후보 목록을 이름과 항목 줄로 구성합니다.

@@ -44,8 +44,15 @@ struct ExecutionPlanBuilderTests {
 			[.appLaunch, .simulatorUse],
 			[.simulatorUse]
 		])
-		#expect(plan.targets.first?.assertions == ["tap-profile"])
-		#expect(plan.targets.first?.evidence == ["launch"])
+		#expect(plan.targets.first?.steps.last?.parameters == .object([
+			"text": .string("완료"),
+			"count": .number("1.20")
+		]))
+		#expect(plan.targets.first?.assertions == [.init(
+			afterStepID: "tap-profile",
+			parameters: .object(["visible": .boolean(true)])
+		)])
+		#expect(plan.targets.first?.evidence == [.init(afterStepID: "launch")])
 	}
 
 	// target 값에 경로 문자가 있어도 output 경로가 기준 디렉터리 안에 남는지 검증합니다.
@@ -90,10 +97,17 @@ struct ExecutionPlanBuilderTests {
 				.init(
 					id: "tap-profile",
 					action: .tap,
-					selector: .init(identifier: "profile-button")
+					selector: .init(identifier: "profile-button"),
+					parameters: .object([
+						"text": .string("완료"),
+						"count": .number("1.20")
+					])
 				)
 			],
-			assertions: [.init(afterStepID: "tap-profile")],
+			assertions: [.init(
+				afterStepID: "tap-profile",
+				parameters: .object(["visible": .boolean(true)])
+			)],
 			evidence: [.init(afterStepID: "launch")],
 			testDataRequirements: [
 				.init(operation: .create, resource: "todo:incomplete")
