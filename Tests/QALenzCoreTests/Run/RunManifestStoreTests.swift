@@ -72,6 +72,35 @@ struct RunManifestStoreTests {
 		#expect(try RunManifestCodec().decode(Data(contentsOf: manifestURL)) == manifest)
 	}
 
+	// run 디렉터리가 symbolic link이면 링크 대상에 manifest를 기록하지 않는지 검증합니다.
+	@Test
+	func run_디렉터리_symbolic_link를_거부한다() throws {
+		let rootURL = FileManager.default.temporaryDirectory
+			.appendingPathComponent(UUID().uuidString, isDirectory: true)
+		let outputDirectoryURL = rootURL.appendingPathComponent("Runs", isDirectory: true)
+		let redirectedDirectoryURL = rootURL.appendingPathComponent("Project", isDirectory: true)
+		let manifest = manifest()
+		let runDirectoryURL = outputDirectoryURL
+			.appendingPathComponent(manifest.id.uuidString, isDirectory: true)
+		defer { try? FileManager.default.removeItem(at: rootURL) }
+		try FileManager.default.createDirectory(at: outputDirectoryURL, withIntermediateDirectories: true)
+		try FileManager.default.createDirectory(at: redirectedDirectoryURL, withIntermediateDirectories: true)
+		try FileManager.default.createSymbolicLink(
+			at: runDirectoryURL,
+			withDestinationURL: redirectedDirectoryURL
+		)
+
+		#expect(throws: RunManifestStoreError.self) {
+			try RunManifestStore().store(manifest, in: outputDirectoryURL)
+		}
+		#expect(!FileManager.default.fileExists(
+			atPath: redirectedDirectoryURL.appendingPathComponent("manifest.json").path
+		))
+		#expect(!FileManager.default.fileExists(
+			atPath: redirectedDirectoryURL.appendingPathComponent(".manifest.lock").path
+		))
+	}
+
 	// 동시에 같은 run ID를 저장해도 하나의 완료 manifest만 남는지 검증합니다.
 	@Test
 	func 동시에_같은_run_ID를_저장하면_하나의_manifest만_남는다() async throws {
@@ -178,6 +207,11 @@ private final class FailingRunManifestFileManager: RunManifestFileManaging, @unc
 		false
 	}
 
+	// symbolic link가 없는 시험 파일 경로를 반환합니다.
+	func isSymbolicLink(at _: URL) throws -> Bool {
+		false
+	}
+
 	// 임시 manifest 기록을 보호할 process lock 요청을 허용합니다.
 	func acquireLock(at _: URL) throws -> any RunManifestLocking {
 		TestRunManifestLock()
@@ -219,6 +253,11 @@ private final class OneTimeFailingRunManifestFileManager: RunManifestFileManagin
 		fileManager.fileExists(at: url)
 	}
 
+	// Foundation 파일 관리자로 symbolic link 여부를 확인합니다.
+	func isSymbolicLink(at url: URL) throws -> Bool {
+		try fileManager.isSymbolicLink(at: url)
+	}
+
 	// Foundation 파일 관리자로 process lock을 획득합니다.
 	func acquireLock(at url: URL) throws -> any RunManifestLocking {
 		try fileManager.acquireLock(at: url)
@@ -253,6 +292,11 @@ private struct DirectoryFailingRunManifestFileManager: RunManifestFileManaging {
 
 	// 완료 manifest가 없다고 반환합니다.
 	func fileExists(at _: URL) -> Bool {
+		false
+	}
+
+	// symbolic link가 없는 시험 파일 경로를 반환합니다.
+	func isSymbolicLink(at _: URL) throws -> Bool {
 		false
 	}
 

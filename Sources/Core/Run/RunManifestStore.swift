@@ -20,6 +20,8 @@ package protocol RunManifestFileManaging: Sendable {
 	func createDirectory(at url: URL, withIntermediateDirectories: Bool) throws
 	// 파일 존재 여부를 반환합니다.
 	func fileExists(at url: URL) -> Bool
+	// 경로가 symbolic link인지 반환합니다.
+	func isSymbolicLink(at url: URL) throws -> Bool
 	// 다른 저장 작업과 충돌하지 않도록 process lock을 획득합니다.
 	func acquireLock(at url: URL) throws -> any RunManifestLocking
 	// data를 파일에 기록합니다.
@@ -55,6 +57,20 @@ package struct FoundationRunManifestFileManager: RunManifestFileManaging {
 	// 파일 존재 여부를 반환합니다.
 	package func fileExists(at url: URL) -> Bool {
 		FileManager.default.fileExists(atPath: url.path)
+	}
+
+	// 마지막 경로 구성요소를 따라가지 않고 symbolic link 여부를 확인합니다.
+	package func isSymbolicLink(at url: URL) throws -> Bool {
+		var fileStatus = stat()
+		guard lstat(url.path, &fileStatus) == 0 else {
+			guard errno == ENOENT else {
+				throw RunManifestFileManagerError.operationFailed
+			}
+
+			return false
+		}
+
+		return fileStatus.st_mode & S_IFMT == S_IFLNK
 	}
 
 	// 다른 저장 작업과 충돌하지 않도록 process lock을 획득합니다.
@@ -137,10 +153,16 @@ package struct RunManifestStore: RunManifestStoring {
 				at: outputDirectoryURL.standardizedFileURL,
 				withIntermediateDirectories: true
 			)
+			guard try !fileManager.isSymbolicLink(at: runDirectoryURL) else {
+				throw RunManifestStoreError.storageFailed
+			}
 			try fileManager.createDirectory(
 				at: runDirectoryURL,
 				withIntermediateDirectories: true
 			)
+			guard try !fileManager.isSymbolicLink(at: runDirectoryURL) else {
+				throw RunManifestStoreError.storageFailed
+			}
 		} catch {
 			throw RunManifestStoreError.storageFailed
 		}
