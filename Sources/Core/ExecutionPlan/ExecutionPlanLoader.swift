@@ -74,14 +74,17 @@ package struct ExecutionPlanLoader: ExecutionPlanLoading {
 			)
 		}
 
+		let outputDirectoryURL = try RunOutputDirectoryResolver().resolve(
+			configuredOutputDirectoryURL: configuration.outputDirectoryURL,
+			overridePath: outputDirectoryOverridePath,
+			relativeTo: currentDirectoryURL,
+			projectRootURL: configuration.projectRootURL
+		)
+
 		return try ExecutionPlanBuilder().build(
 			scenario: scenario,
 			configuration: configuration,
-			outputDirectoryOverrideURL: try RunOutputDirectoryResolver().resolve(
-				overridePath: outputDirectoryOverridePath,
-				relativeTo: currentDirectoryURL,
-				projectRootURL: configuration.projectRootURL
-			)
+			outputDirectoryOverrideURL: outputDirectoryURL
 		)
 	}
 

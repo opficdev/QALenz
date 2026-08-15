@@ -38,12 +38,32 @@ struct RunCommandOutputDirectoryTests {
 		#expect(!FileManager.default.fileExists(atPath: outputDirectoryURL.path))
 	}
 
+	// config output directory가 project 경로이면 override가 없어도 거부하는지 검증합니다.
+	@Test
+	func dryRun이_project_내_config_output_directory를_거부한다() async throws {
+		let projectURL = try makeProjectDirectory()
+		defer { try? FileManager.default.removeItem(at: projectURL) }
+		try writeConfiguration(at: projectURL, outputDirectory: "..")
+		try writeScenario(at: projectURL)
+		let command = try runCommand(arguments: ["run", "todo-completion", "--dry-run"])
+
+		let result = await command.execute(
+			format: .json,
+			loader: ExecutionPlanLoader(),
+			currentDirectoryURL: projectURL
+		)
+
+		#expect(result.exitStatus == .executionError)
+	}
+
 	// output directory override가 있는 run 명령을 해석합니다.
-	private func runCommand() throws -> RunCommand {
-		let command = try RootCommand.parseAsRoot([
+	private func runCommand(
+		arguments: [String] = [
 			"run", "todo-completion", "--dry-run",
 			"--output-directory", "../runs"
-		])
+		]
+	) throws -> RunCommand {
+		let command = try RootCommand.parseAsRoot(arguments)
 
 		return try #require(command as? RunCommand)
 	}
@@ -58,7 +78,10 @@ struct RunCommandOutputDirectoryTests {
 	}
 
 	// 현재 작업 경로 기준 dry-run config fixture를 기록합니다.
-	private func writeConfiguration(at projectURL: URL) throws {
+	private func writeConfiguration(
+		at projectURL: URL,
+		outputDirectory: String = "../outputs"
+	) throws {
 		let configurationURL = projectURL
 			.appendingPathComponent(".qalenz", isDirectory: true)
 			.appendingPathComponent("config.json", isDirectory: false)
@@ -66,14 +89,13 @@ struct RunCommandOutputDirectoryTests {
 			at: configurationURL.deletingLastPathComponent(),
 			withIntermediateDirectories: true
 		)
-		try Data(
-			"""
+		let data = """
 			{
 			  "schemaVersion": 1,
 			  "projectRoot": "..",
 			  "xcodeBuildMCPProfile": "default",
 			  "scenariosDirectory": "../scenarios",
-			  "outputDirectory": "../outputs",
+			  "outputDirectory": "\(outputDirectory)",
 			  "targetDefaults": {
 				"devices": ["iPhone 16"],
 				"operatingSystems": ["iOS 26.0"],
@@ -81,8 +103,8 @@ struct RunCommandOutputDirectoryTests {
 			  },
 			  "maximumTargetCount": 12
 			}
-			""".utf8
-		).write(to: configurationURL)
+			"""
+		try Data(data.utf8).write(to: configurationURL)
 	}
 
 	// 실행 계획을 생성할 scenario fixture를 기록합니다.

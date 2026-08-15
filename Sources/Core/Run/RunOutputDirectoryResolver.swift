@@ -23,10 +23,40 @@ package struct RunOutputDirectoryResolver: Sendable {
 		projectRootURL: URL
 	) throws -> URL? {
 		guard let overridePath else { return nil }
-		let outputDirectoryURL = makeURL(
+		return try validatedURL(
+			makeURL(
 			for: overridePath,
 			relativeTo: currentDirectoryURL
+			),
+			projectRootURL: projectRootURL
 		)
+	}
+
+	// 설정값과 override 가운데 실제 사용할 output 경로를 검증합니다.
+	package func resolve(
+		configuredOutputDirectoryURL: URL,
+		overridePath: String?,
+		relativeTo currentDirectoryURL: URL,
+		projectRootURL: URL
+	) throws -> URL {
+		let outputDirectoryURL = if let overridePath {
+			makeURL(for: overridePath, relativeTo: currentDirectoryURL)
+		} else {
+			configuredOutputDirectoryURL
+		}
+
+		return try validatedURL(
+			outputDirectoryURL,
+			projectRootURL: projectRootURL
+		)
+	}
+
+	// 후보 output 경로를 실제 경로 기준으로 검증합니다.
+	private func validatedURL(
+		_ outputDirectoryURL: URL,
+		projectRootURL: URL
+	) throws -> URL {
+		let outputDirectoryURL = resolvingExistingAncestorURL(of: outputDirectoryURL)
 
 		guard isSafeOutputDirectory(
 			outputDirectoryURL,
