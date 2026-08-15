@@ -11,6 +11,26 @@ import Foundation
 package protocol ExecutionPlanLoading: Sendable {
 	// configurationURL과 scenario 식별자로 실행 계획을 반환합니다.
 	func load(scenarioID: String, at configurationURL: URL) throws -> ExecutionPlan
+	// output directory override를 적용한 실행 계획을 반환합니다.
+	func load(
+		scenarioID: String,
+		at configurationURL: URL,
+		outputDirectoryOverridePath: String?,
+		currentDirectoryURL: URL
+	) throws -> ExecutionPlan
+}
+
+// 기본 loader에 output directory override가 없는 호출을 제공합니다.
+extension ExecutionPlanLoading {
+	// 기존 loader가 override 없이 실행 계획을 반환하게 합니다.
+	func load(
+		scenarioID: String,
+		at configurationURL: URL,
+		outputDirectoryOverridePath _: String?,
+		currentDirectoryURL _: URL
+	) throws -> ExecutionPlan {
+		try load(scenarioID: scenarioID, at: configurationURL)
+	}
 }
 
 // config가 가리키는 scenario에서 실행 계획을 구성합니다.
@@ -20,6 +40,21 @@ package struct ExecutionPlanLoader: ExecutionPlanLoading {
 
 	// 설정과 scenario를 읽어 지정한 식별자의 실행 계획을 반환합니다.
 	package func load(scenarioID: String, at configurationURL: URL) throws -> ExecutionPlan {
+		try load(
+			scenarioID: scenarioID,
+			at: configurationURL,
+			outputDirectoryOverridePath: nil,
+			currentDirectoryURL: configurationURL.deletingLastPathComponent()
+		)
+	}
+
+	// 설정을 읽고 output directory override를 적용한 실행 계획을 구성합니다.
+	package func load(
+		scenarioID: String,
+		at configurationURL: URL,
+		outputDirectoryOverridePath: String?,
+		currentDirectoryURL: URL
+	) throws -> ExecutionPlan {
 		let configuration = try QALenzConfigurationDecoder().decode(at: configurationURL)
 		let scenarioURLs = try scenarioURLs(in: configuration.scenariosDirectoryURL)
 		let result = ScenarioDecoder().decodeResult(at: scenarioURLs)
@@ -39,9 +74,17 @@ package struct ExecutionPlanLoader: ExecutionPlanLoading {
 			)
 		}
 
+		let outputDirectoryURL = try RunOutputDirectoryResolver().resolve(
+			configuredOutputDirectoryURL: configuration.outputDirectoryURL,
+			overridePath: outputDirectoryOverridePath,
+			relativeTo: currentDirectoryURL,
+			projectRootURL: configuration.projectRootURL
+		)
+
 		return try ExecutionPlanBuilder().build(
 			scenario: scenario,
-			configuration: configuration
+			configuration: configuration,
+			outputDirectoryOverrideURL: outputDirectoryURL
 		)
 	}
 

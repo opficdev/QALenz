@@ -19,6 +19,8 @@ package struct RunCommand: ParsableCommand {
 	package var scenarioID: String
 	@Flag(name: .long, help: "실행하지 않고 계획만 출력합니다.")
 	package var dryRun = false
+	@Option(name: .long, help: "run 결과를 저장할 출력 경로")
+	package var outputDirectory: String?
 	@OptionGroup
 	package var options: CLIOptions
 
@@ -58,7 +60,12 @@ package struct RunCommand: ParsableCommand {
 
 		do {
 			return CLIApplication.result(
-				for: try loader.load(scenarioID: scenarioID, at: configurationURL),
+				for: try loader.load(
+					scenarioID: scenarioID,
+					at: configurationURL,
+					outputDirectoryOverridePath: outputDirectory,
+					currentDirectoryURL: currentDirectoryURL
+				),
 				format: format
 			)
 		} catch is TargetValidationError {
