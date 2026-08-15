@@ -6,7 +6,7 @@
 //
 
 // XcodeBuildMCP가 반환한 현재 UI snapshot의 식별 정보를 표현합니다.
-package struct UIAutomationSnapshot: Sendable, Equatable {
+package struct UIAutomationSnapshot: Codable, Sendable, Equatable {
 	package let screenHash: String
 	package let sequence: Int
 

@@ -106,6 +106,16 @@ package enum ScenarioStepAction: String, CaseIterable, Codable, Sendable, Equata
 			false
 		}
 	}
+
+	// XcodeBuildMCP UI automation으로 실행할 action인지 반환합니다.
+	package var isUIAutomationAction: Bool {
+		switch self {
+		case .waitForUI, .snapshotUI, .tap, .longPress, .swipe, .typeText:
+			true
+		case .buildAndRun, .screenshot, .recordVideo:
+			false
+		}
+	}
 }
 
 // app별 UI 요소를 scenario data로 한정해 표현합니다.

@@ -180,6 +180,8 @@ package enum RunManifestValidationError: Error, Sendable, Equatable {
 package struct RunStepResult: Codable, Sendable, Equatable {
 	package let stepID: String
 	package let result: RunResult
+	package let attempts: Int?
+	package let uiSnapshot: UIAutomationSnapshot?
 	package let startedAt: Date?
 	package let endedAt: Date?
 
@@ -187,11 +189,15 @@ package struct RunStepResult: Codable, Sendable, Equatable {
 	package init(
 		stepID: String,
 		result: RunResult,
+		attempts: Int? = nil,
+		uiSnapshot: UIAutomationSnapshot? = nil,
 		startedAt: Date? = nil,
 		endedAt: Date? = nil
 	) {
 		self.stepID = stepID
 		self.result = result
+		self.attempts = attempts
+		self.uiSnapshot = uiSnapshot
 		self.startedAt = startedAt
 		self.endedAt = endedAt
 	}
