@@ -61,6 +61,7 @@ package struct QALenzConfigurationDecoder: Sendable {
 				keyPath: "$.schemaVersion"
 			)
 		}
+		try validate(document, configurationURL: configurationURL)
 
 		let outputDirectoryURL = document.outputDirectory.map {
 			resolvedURL(for: $0, configurationURL: configurationURL)
@@ -112,6 +113,13 @@ package struct QALenzConfigurationDecoder: Sendable {
 		for error: any Error,
 		configurationURL: URL
 	) -> RunError {
+		if let error = error as? ConfigurationValidationError {
+			return configurationError(
+				code: "configuration.value.invalid",
+				configurationURL: configurationURL,
+				keyPath: error.keyPath
+			)
+		}
 		guard let error = error as? DecodingError else {
 			return configurationError(
 				code: "configuration.json.invalid",
@@ -140,6 +148,42 @@ package struct QALenzConfigurationDecoder: Sendable {
 				code: "configuration.json.invalid",
 				configurationURL: configurationURL,
 				keyPath: "$"
+			)
+		}
+	}
+
+	// 설정 schema의 의미 제약을 JSON key path와 함께 검증합니다.
+	private func validate(
+		_ document: QALenzConfigurationDocument,
+		configurationURL: URL
+	) throws {
+		for (name, values) in [
+			("devices", document.targetDefaults.devices),
+			("operatingSystems", document.targetDefaults.operatingSystems),
+			("appearances", document.targetDefaults.appearances)
+		] {
+			guard !values.isEmpty else {
+				throw configurationError(
+					code: "configuration.value.invalid",
+					configurationURL: configurationURL,
+					keyPath: "$.targetDefaults.\(name)"
+				)
+			}
+
+			guard values.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+				throw configurationError(
+					code: "configuration.value.invalid",
+					configurationURL: configurationURL,
+					keyPath: "$.targetDefaults.\(name)"
+				)
+			}
+		}
+
+		guard 0 < document.maximumTargetCount else {
+			throw configurationError(
+				code: "configuration.value.invalid",
+				configurationURL: configurationURL,
+				keyPath: "$.maximumTargetCount"
 			)
 		}
 	}
@@ -217,11 +261,44 @@ package struct QALenzConfigurationDocument: Decodable {
 			forKey: .scenariosDirectory
 		)
 		targetDefaults = try container.decode(TargetDefaults.self, forKey: .targetDefaults)
+		let targetDefaultsContainer = try container.nestedContainer(
+			keyedBy: TargetDefaultsCodingKey.self,
+			forKey: .targetDefaults
+		)
+		if let unknownKey = targetDefaultsContainer.allKeys.first(
+			where: { !TargetDefaultsCodingKey.allowedNames.contains($0.stringValue) }
+		) {
+			throw ConfigurationValidationError(
+				keyPath: "$.targetDefaults.\(unknownKey.stringValue)"
+			)
+		}
 		maximumTargetCount = try container.decode(Int.self, forKey: .maximumTargetCount)
 		outputDirectory = if container.contains(.outputDirectory) {
 			try container.decode(String.self, forKey: .outputDirectory)
 		} else {
 			nil
 		}
+	}
+}
+
+// config 의미 검증에서 반환할 JSON key path를 전달합니다.
+private struct ConfigurationValidationError: Error {
+	let keyPath: String
+}
+
+// targetDefaults의 허용 key를 확인하는 동적 JSON key를 정의합니다.
+private struct TargetDefaultsCodingKey: CodingKey {
+	static let allowedNames = ["devices", "operatingSystems", "appearances"]
+
+	let stringValue: String
+	let intValue: Int?
+
+	init?(stringValue: String) {
+		self.stringValue = stringValue
+		intValue = nil
+	}
+
+	init?(intValue: Int) {
+		return nil
 	}
 }
