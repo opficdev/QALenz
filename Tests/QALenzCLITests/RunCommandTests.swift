@@ -127,14 +127,14 @@ struct RunCommandTests {
 		)])
 	}
 
-	// dry-run 없이 run 명령을 해석하면 사용 오류로 차단하는지 검증합니다.
+	// dry-run 없이 run 명령을 해석하면 실행 경로의 configuration 오류를 반환하는지 검증합니다.
 	@Test
-	func dryRun_없이는_사용_오류로_차단한다() async {
+	func dryRun_없이는_실행_오류를_반환한다() async {
 		let result = await CLIApplication.execute(arguments: ["run", "todo-completion"])
 
-		#expect(result.exitStatus == .usageError)
+		#expect(result.exitStatus == .executionError)
 		#expect(result.standardOutput == nil)
-		#expect(result.standardError?.contains("--dry-run") == true)
+		#expect(result.standardError?.contains("configuration") == true)
 	}
 
 	// scenario 검증 오류의 파일과 JSON key path를 text와 JSON 출력에 보존하는지 검증합니다.
@@ -382,3 +382,5 @@ private struct TargetValidationFailureLoaderSpy: ExecutionPlanLoading {
 		throw TargetValidationError.matrixInvalid
 	}
 }
+
+// 고정 실행 결과를 반환하는 단일 target 실행기 시험 대역입니다.

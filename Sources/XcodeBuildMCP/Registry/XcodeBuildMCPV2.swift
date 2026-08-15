@@ -49,6 +49,14 @@ enum XcodeBuildMCPV2 {
 				"simulator.name": "--simulator-name",
 				"configuration": "--configuration"
 			]
+		),
+		XcodeBuildMCPOperation.buildAndRunSimulator: .init(
+			workflow: "simulator",
+			tool: "build-and-run",
+			argumentFlags: [
+				"profile": "--profile",
+				"simulator.name": "--simulator-name"
+			]
 		)
 	])
 
@@ -132,6 +140,24 @@ enum XcodeBuildMCPV2 {
 				),
 				result: .summaryStatus
 			)
+		],
+		XcodeBuildMCPOperation.buildAndRunSimulator: [
+			"xcodebuildmcp.output.build-run-result": .init(
+				versions: ["2"],
+				payload: .init(
+					isRequired: true,
+					schema: .object(
+						fields: [
+							"summary": .object(
+								fields: ["status": .string],
+								requiredFields: ["status"]
+							)
+						],
+						requiredFields: ["summary"]
+					)
+				),
+				result: .summaryStatus
+			)
 		]
 	])
 
@@ -139,11 +165,12 @@ enum XcodeBuildMCPV2 {
 		XcodeBuildMCPOperation.buildSimulator: .init(
 			namespace: "build-result",
 			operation: "BUILD"
+		),
+		XcodeBuildMCPOperation.buildAndRunSimulator: .init(
+			namespace: "build-run-result",
+			operation: "BUILD",
+			operationlessComponents: ["phase"],
+			needsTerminalEvent: false
 		)
 	]
-}
-
-// XcodeBuildMCP 2.x 명세가 지원하는 의미 기반 operation을 보관합니다.
-private extension XcodeBuildMCPOperation {
-	static let buildSimulator = Self(rawValue: "build.simulator")
 }

@@ -69,11 +69,23 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		}
 
 		guard let terminalEvent else {
-			throw invalidOutputError(operation: operation)
+			guard !descriptor.needsTerminalEvent else {
+				throw invalidOutputError(operation: operation)
+			}
+			return events
 		}
 		events.append(terminalEvent)
 
 		return events
+	}
+
+	// event가 operation 필드를 생략할 수 있는지를 반환합니다.
+	private func permitsOperationlessEvent(_ name: String) -> Bool {
+		guard let component = name.split(separator: ".").last else {
+			return false
+		}
+
+		return descriptor.operationlessComponents.contains(String(component))
 	}
 
 	// JSONL 한 줄을 검증하고 정규화된 진행 사건으로 변환합니다.
@@ -95,7 +107,9 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 
 		guard
 			event.event.hasPrefix("\(descriptor.namespace)."),
-			event.operation == descriptor.operation
+			event.operation == descriptor.operation || (
+				event.operation == nil && permitsOperationlessEvent(event.event)
+			)
 		else {
 			throw invalidOutputError(operation: operation)
 		}
@@ -167,7 +181,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 	// JSONL 한 줄에서 정규화에 필요한 필드만 해석합니다.
 	private struct Event: Decodable {
 		let event: String
-		let operation: String
+		let operation: String?
 		let status: String?
 	}
 }

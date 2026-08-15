@@ -9,8 +9,8 @@ import Foundation
 import QALenzCore
 
 // XcodeBuildMCP CLI 요청과 출력을 QALenz 공통 계약으로 변환합니다.
-package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
-	private static let commandNotFoundStatus: Int32 = 127
+package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecutionStreaming, Sendable {
+	static let commandNotFoundStatus: Int32 = 127
 	private static let allowedEnvironmentKeys: Set<String> = [
 		"DEVELOPER_DIR",
 		"PATH",
@@ -19,8 +19,8 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 
 	private let commandBuilder: CommandBuilder
 	private let outputDecoder: XcodeBuildMCPOutputDecoder
-	private let eventDescriptors: [XcodeBuildMCPOperation: EventDescriptor]
-	private let processRunner: any ProcessRunning
+	let eventDescriptors: [XcodeBuildMCPOperation: EventDescriptor]
+	let processRunner: any ProcessRunning
 	private let workingDirectoryURL: URL
 	private let environment: [String: String]
 	private let timeout: Duration
@@ -158,7 +158,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 	}
 
 	// 요청과 출력 형식으로 허용된 process 실행 요청을 생성합니다.
-	private func processRequest(
+	func processRequest(
 		for request: XcodeBuildMCPRequest,
 		output: CommandOutputFormat
 	) throws -> ProcessRequest {
@@ -179,7 +179,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 	}
 
 	// 실행 경계 오류를 원본 내용을 포함하지 않는 RunError로 변환합니다.
-	private func normalizedError(
+	func normalizedError(
 		operation: XcodeBuildMCPOperation,
 		error: any Error
 	) -> RunError {
@@ -236,7 +236,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 	}
 
 	// env 종료 상태를 CLI 미설치와 command 실패 오류로 구분합니다.
-	private func terminationError(
+	func terminationError(
 		operation: XcodeBuildMCPOperation,
 		status: Int32
 	) -> RunError {
@@ -255,7 +255,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, Sendable {
 	}
 
 	// 원본 process 출력 없이 구조화된 오류를 생성합니다.
-	private func failureError(
+	func failureError(
 		operation: XcodeBuildMCPOperation,
 		kind: RunError.Kind,
 		code: String

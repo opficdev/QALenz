@@ -92,22 +92,34 @@ package struct RunTargetResult: Codable, Sendable, Equatable {
 	package let result: RunResult
 	package let stepResults: [RunStepResult]
 	package let evidence: [EvidenceReference]
+	package let startedAt: Date?
+	package let endedAt: Date?
 
 	// target 결과, step 결과, 증거 참조로 구성합니다.
 	package init(
 		target: Target,
 		result: RunResult,
 		stepResults: [RunStepResult],
-		evidence: [EvidenceReference]
+		evidence: [EvidenceReference],
+		startedAt: Date? = nil,
+		endedAt: Date? = nil
 	) throws {
 		guard result != .passed || (!stepResults.isEmpty && stepResults.allSatisfy { $0.result == .passed }) else {
 			throw RunManifestValidationError.targetPassedWithNonPassingStep
+		}
+		guard Self.isValidTimeRange(startedAt: startedAt, endedAt: endedAt) else {
+			throw RunManifestValidationError.targetTimeRangeInvalid
+		}
+		guard stepResults.allSatisfy({ $0.isWithin(startedAt: startedAt, endedAt: endedAt) }) else {
+			throw RunManifestValidationError.stepTimeRangeInvalid
 		}
 
 		self.target = target
 		self.result = result
 		self.stepResults = stepResults
 		self.evidence = evidence
+		self.startedAt = startedAt
+		self.endedAt = endedAt
 	}
 
 	// JSON 값을 결과 정합성을 검증한 target 결과로 복원합니다.
@@ -118,7 +130,9 @@ package struct RunTargetResult: Codable, Sendable, Equatable {
 			target: container.decode(Target.self, forKey: .target),
 			result: container.decode(RunResult.self, forKey: .result),
 			stepResults: container.decode([RunStepResult].self, forKey: .stepResults),
-			evidence: container.decode([EvidenceReference].self, forKey: .evidence)
+			evidence: container.decode([EvidenceReference].self, forKey: .evidence),
+			startedAt: container.decodeIfPresent(Date.self, forKey: .startedAt),
+			endedAt: container.decodeIfPresent(Date.self, forKey: .endedAt)
 		)
 	}
 
@@ -130,6 +144,17 @@ package struct RunTargetResult: Codable, Sendable, Equatable {
 		try container.encode(result, forKey: .result)
 		try container.encode(stepResults, forKey: .stepResults)
 		try container.encode(evidence, forKey: .evidence)
+		try container.encodeIfPresent(startedAt, forKey: .startedAt)
+		try container.encodeIfPresent(endedAt, forKey: .endedAt)
+	}
+
+	// 시작과 종료 시각이 함께 있고 순서가 올바른지 반환합니다.
+	private static func isValidTimeRange(startedAt: Date?, endedAt: Date?) -> Bool {
+		switch (startedAt, endedAt) {
+		case (nil, nil): true
+		case let (.some(startedAt), .some(endedAt)): startedAt <= endedAt
+		default: false
+		}
 	}
 
 	// JSON key를 정의합니다.
@@ -138,6 +163,8 @@ package struct RunTargetResult: Codable, Sendable, Equatable {
 		case result
 		case stepResults
 		case evidence
+		case startedAt
+		case endedAt
 	}
 }
 
@@ -145,17 +172,38 @@ package struct RunTargetResult: Codable, Sendable, Equatable {
 package enum RunManifestValidationError: Error, Sendable, Equatable {
 	case manifestPassedWithNonPassingTarget
 	case targetPassedWithNonPassingStep
+	case targetTimeRangeInvalid
+	case stepTimeRangeInvalid
 }
 
 // 하나의 scenario step의 정규화된 결과를 표현합니다.
 package struct RunStepResult: Codable, Sendable, Equatable {
 	package let stepID: String
 	package let result: RunResult
+	package let startedAt: Date?
+	package let endedAt: Date?
 
 	// step 식별자와 결과로 구성합니다.
-	package init(stepID: String, result: RunResult) {
+	package init(
+		stepID: String,
+		result: RunResult,
+		startedAt: Date? = nil,
+		endedAt: Date? = nil
+	) {
 		self.stepID = stepID
 		self.result = result
+		self.startedAt = startedAt
+		self.endedAt = endedAt
+	}
+
+	// step 시각이 target 시각 범위에 포함되는지 반환합니다.
+	fileprivate func isWithin(startedAt targetStartedAt: Date?, endedAt targetEndedAt: Date?) -> Bool {
+		switch (startedAt, endedAt, targetStartedAt, targetEndedAt) {
+		case (nil, nil, nil, nil): true
+		case let (.some(startedAt), .some(endedAt), .some(targetStartedAt), .some(targetEndedAt)):
+			targetStartedAt <= startedAt && startedAt <= endedAt && endedAt <= targetEndedAt
+		default: false
+		}
 	}
 }
 

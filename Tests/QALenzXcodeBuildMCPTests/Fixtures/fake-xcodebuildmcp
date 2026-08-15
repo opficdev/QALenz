@@ -17,6 +17,7 @@ shift 2
 output=""
 scheme=""
 project_path=""
+profile=""
 
 while [ "$#" -gt 0 ]; do
 	case "$1" in
@@ -30,6 +31,10 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--project-path)
 			project_path="$2"
+			shift 2
+			;;
+		--profile)
+			profile="$2"
 			shift 2
 			;;
 		*)
@@ -70,6 +75,20 @@ case "$workflow:$tool:$output" in
 			fi
 		fi
 		printf '%s\n' '{"event":"build-result.build-summary","operation":"BUILD","status":"SUCCEEDED"}'
+		;;
+	simulator:build-and-run:jsonl)
+		printf '%s\n' '{"event":"build-run-result.invocation","operation":"BUILD"}'
+		if [ "$profile" = "build-failure" ]; then
+			exit 1
+		fi
+		if [ "$profile" = "launch-failure-without-newline" ]; then
+			printf '%s' '{"event":"build-run-result.phase","phase":"launch-app","status":"started"}'
+			exit 1
+		fi
+		printf '%s\n' '{"event":"build-run-result.phase","phase":"launch-app","status":"started"}'
+		if [ "$profile" = "launch-failure" ]; then
+			exit 1
+		fi
 		;;
 	*)
 		exit 64
