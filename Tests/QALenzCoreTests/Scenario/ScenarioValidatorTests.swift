@@ -134,6 +134,44 @@ struct ScenarioValidatorTests {
 		])
 	}
 
+	// 하나의 test data 요구사항에서 발견한 모든 필드 오류를 함께 반환하는지 검증합니다.
+	@Test
+	func testDataRequirement_한_항목의_모든_필드_오류를_반환한다() throws {
+		let document = try ScenarioJSONDecoder().decode(
+			Data(
+				"""
+				{
+				  "schemaVersion": 1,
+				  "id": "test-data-errors",
+				  "name": "Test data errors",
+				  "profile": "default",
+				  "matrix": {},
+				  "steps": [{"id": "launch", "action": "buildAndRun"}],
+				  "assertions": [],
+				  "evidence": [],
+				  "testDataRequirements": [{}, {"operation": "reset", "resource": "   "}]
+				}
+				""".utf8
+			)
+		)
+		let result = ScenarioValidator().validate([
+			.init(document: document, url: URL(fileURLWithPath: "/tmp/test-data-errors.json"))
+		])
+
+		#expect(result.errors.map(\.code) == [
+			.keyMissing,
+			.keyMissing,
+			.testDataRequirementOperationUnsupported,
+			.testDataRequirementResourceEmpty
+		])
+		#expect(result.errors.map(\.keyPath) == [
+			"$.testDataRequirements[0].operation",
+			"$.testDataRequirements[0].resource",
+			"$.testDataRequirements[1].operation",
+			"$.testDataRequirements[1].resource"
+		])
+	}
+
 	// fixture 이름에 해당하는 Scenario JSON URL을 반환합니다.
 	private func fixtureURL(named name: String) throws -> URL {
 		try #require(

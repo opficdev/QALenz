@@ -38,29 +38,28 @@ struct TestDataRequirementValidator {
 	) {
 		let keyPath = "$.testDataRequirements[\(index)]"
 
-		guard let operation = requirement.operation else {
+		if let operation = requirement.operation {
+			if TestDataOperation(rawValue: operation) == nil {
+				errors.append(.init(
+					code: .testDataRequirementOperationUnsupported,
+					filePath: filePath,
+					keyPath: "\(keyPath).operation"
+				))
+			}
+		} else {
 			appendMissingKey(filePath: filePath, keyPath: "\(keyPath).operation", errors: &errors)
-			return
 		}
-		guard TestDataOperation(rawValue: operation) != nil else {
-			errors.append(.init(
-				code: .testDataRequirementOperationUnsupported,
-				filePath: filePath,
-				keyPath: "\(keyPath).operation"
-			))
-			return
-		}
-		guard let resource = requirement.resource else {
+
+		if let resource = requirement.resource {
+			if resource.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+				errors.append(.init(
+					code: .testDataRequirementResourceEmpty,
+					filePath: filePath,
+					keyPath: "\(keyPath).resource"
+				))
+			}
+		} else {
 			appendMissingKey(filePath: filePath, keyPath: "\(keyPath).resource", errors: &errors)
-			return
-		}
-		guard !resource.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-			errors.append(.init(
-				code: .testDataRequirementResourceEmpty,
-				filePath: filePath,
-				keyPath: "\(keyPath).resource"
-			))
-			return
 		}
 	}
 
