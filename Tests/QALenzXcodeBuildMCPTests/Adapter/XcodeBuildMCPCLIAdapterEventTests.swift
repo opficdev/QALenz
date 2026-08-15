@@ -73,9 +73,47 @@ struct XcodeBuildMCPCLIAdapterEventTests {
 			}
 		}
 
-		#expect(events.map(\.kind) == [.started, .progress, .completed])
+		#expect(events.map(\.kind) == [.started, .progress])
 		#expect(terminalResult?.operation == buildAndRunSimulatorOperation)
 		#expect(terminalResult?.result == .passed)
+	}
+
+	// JSONL process 종료 상태와 phase로 build 실패와 launch 실패를 구분하는지 검증합니다.
+	@Test(arguments: [
+		("build-failure", "execution.build.failed"),
+		("launch-failure", "execution.launch.failed")
+	])
+	func buildAndRun_실패_종류를_구분한다(
+		profile: String,
+		expectedCode: String
+	) async throws {
+		let directory = try makeTemporaryDirectory()
+		defer { try? FileManager.default.removeItem(at: directory) }
+		try installFakeXcodeBuildMCP(in: directory)
+		let adapter = XcodeBuildMCPCLIAdapter(
+			workingDirectoryURL: directory,
+			environment: ["PATH": directory.path],
+			timeout: .seconds(5)
+		)
+		var terminalResult: XcodeBuildMCPResult?
+
+		for try await update in adapter.execution(for: .init(
+			operation: buildAndRunSimulatorOperation,
+			arguments: [
+				.init(name: "profile", value: profile),
+				.init(name: "simulator.name", value: "Fixture Phone")
+			]
+		)) {
+			if case let .completed(result) = update {
+				terminalResult = result
+			}
+		}
+
+		guard case let .errored(error) = terminalResult?.result else {
+			Issue.record("실행 오류가 반환되지 않음")
+			return
+		}
+		#expect(error.code.rawValue == expectedCode)
 	}
 
 	// 가짜 xcodebuildmcp 실행 파일을 설치할 임시 디렉터리를 생성합니다.

@@ -10,7 +10,7 @@ import QALenzCore
 
 // XcodeBuildMCP CLI 요청과 출력을 QALenz 공통 계약으로 변환합니다.
 package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecutionStreaming, Sendable {
-	private static let commandNotFoundStatus: Int32 = 127
+	static let commandNotFoundStatus: Int32 = 127
 	private static let allowedEnvironmentKeys: Set<String> = [
 		"DEVELOPER_DIR",
 		"PATH",
@@ -19,8 +19,8 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecu
 
 	private let commandBuilder: CommandBuilder
 	private let outputDecoder: XcodeBuildMCPOutputDecoder
-	private let eventDescriptors: [XcodeBuildMCPOperation: EventDescriptor]
-	private let processRunner: any ProcessRunning
+	let eventDescriptors: [XcodeBuildMCPOperation: EventDescriptor]
+	let processRunner: any ProcessRunning
 	private let workingDirectoryURL: URL
 	private let environment: [String: String]
 	private let timeout: Duration
@@ -149,72 +149,6 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecu
 		}
 	}
 
-	// 하나의 JSONL process에서 진행 사건과 terminal 결과를 함께 전달합니다.
-	package func execution(
-		for request: XcodeBuildMCPRequest
-	) -> AsyncThrowingStream<XcodeBuildMCPExecutionUpdate, any Error> {
-		.init { continuation in
-			let task = Task {
-				do {
-					guard let descriptor = eventDescriptors[request.operation] else {
-						throw failureError(
-							operation: request.operation,
-							kind: .adapter,
-							code: "adapter.xcodebuildmcp.event.unsupported"
-						)
-					}
-
-					var decoder = XcodeBuildMCPEventDecoder(descriptor: descriptor)
-					var didTerminate = false
-					let processRequest = try processRequest(for: request, output: .jsonLines)
-					for try await processEvent in processRunner.events(for: processRequest) {
-						switch processEvent {
-						case let .standardOutput(data):
-							for event in try decoder.decode(data, operation: request.operation) {
-								continuation.yield(.event(event))
-							}
-						case let .terminated(status):
-							didTerminate = true
-							guard status == 0 else { throw terminationError(operation: request.operation, status: status) }
-						}
-					}
-					guard didTerminate else {
-						throw failureError(operation: request.operation, kind: .adapter, code: "adapter.xcodebuildmcp.process.failed")
-					}
-					let events = try decoder.finish(operation: request.operation)
-					for event in events {
-						continuation.yield(.event(event))
-						if event.kind == .completed || event.kind == .failed {
-							continuation.yield(.completed(.init(
-								operation: request.operation,
-								result: terminalResult(for: event, operation: request.operation)
-							)))
-						}
-					}
-					continuation.finish()
-				} catch {
-					continuation.finish(throwing: normalizedError(operation: request.operation, error: error))
-				}
-			}
-
-			continuation.onTermination = { @Sendable _ in task.cancel() }
-		}
-	}
-
-	// terminal JSONL 사건을 run 결과로 정규화합니다.
-	private func terminalResult(
-		for event: XcodeBuildMCPEvent,
-		operation: XcodeBuildMCPOperation
-	) -> RunResult {
-		switch event.kind {
-		case .completed: .passed
-		case .failed:
-			.errored(failureError(operation: operation, kind: .execution, code: "execution.build-and-run.failed"))
-		case .started, .progress:
-			.errored(failureError(operation: operation, kind: .adapter, code: "adapter.xcodebuildmcp.output.invalid"))
-		}
-	}
-
 	// 요청과 출력 형식으로 XcodeBuildMCP CLI process를 실행합니다.
 	private func run(
 		_ request: XcodeBuildMCPRequest,
@@ -224,7 +158,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecu
 	}
 
 	// 요청과 출력 형식으로 허용된 process 실행 요청을 생성합니다.
-	private func processRequest(
+	func processRequest(
 		for request: XcodeBuildMCPRequest,
 		output: CommandOutputFormat
 	) throws -> ProcessRequest {
@@ -245,7 +179,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecu
 	}
 
 	// 실행 경계 오류를 원본 내용을 포함하지 않는 RunError로 변환합니다.
-	private func normalizedError(
+	func normalizedError(
 		operation: XcodeBuildMCPOperation,
 		error: any Error
 	) -> RunError {
@@ -302,7 +236,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecu
 	}
 
 	// env 종료 상태를 CLI 미설치와 command 실패 오류로 구분합니다.
-	private func terminationError(
+	func terminationError(
 		operation: XcodeBuildMCPOperation,
 		status: Int32
 	) -> RunError {
@@ -321,7 +255,7 @@ package struct XcodeBuildMCPCLIAdapter: XcodeBuildMCPAdapter, XcodeBuildMCPExecu
 	}
 
 	// 원본 process 출력 없이 구조화된 오류를 생성합니다.
-	private func failureError(
+	func failureError(
 		operation: XcodeBuildMCPOperation,
 		kind: RunError.Kind,
 		code: String

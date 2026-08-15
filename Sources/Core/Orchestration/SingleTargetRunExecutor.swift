@@ -140,6 +140,9 @@ package struct SingleTargetRunExecutor: SingleTargetRunExecuting {
 					terminalResult = result
 				}
 			}
+			if Task.isCancelled {
+				return .errored(failure(code: "execution.cancelled"))
+			}
 
 			return terminalResult?.result ?? .errored(failure(code: "adapter.xcodebuildmcp.output.invalid"))
 		} catch is CancellationError {

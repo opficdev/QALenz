@@ -168,7 +168,9 @@ enum XcodeBuildMCPV2 {
 		),
 		XcodeBuildMCPOperation.buildAndRunSimulator: .init(
 			namespace: "build-run-result",
-			operation: "BUILD"
+			operation: "BUILD",
+			operationlessEventComponents: ["phase"],
+			requiresTerminalEvent: false
 		)
 	]
 }

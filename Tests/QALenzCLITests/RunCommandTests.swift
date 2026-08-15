@@ -382,3 +382,5 @@ private struct TargetValidationFailureLoaderSpy: ExecutionPlanLoading {
 		throw TargetValidationError.matrixInvalid
 	}
 }
+
+// 고정 실행 결과를 반환하는 단일 target 실행기 시험 대역입니다.
