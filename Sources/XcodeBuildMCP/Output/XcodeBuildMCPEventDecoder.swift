@@ -69,7 +69,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 		}
 
 		guard let terminalEvent else {
-			guard !descriptor.requiresTerminalEvent else {
+			guard !descriptor.needsTerminalEvent else {
 				throw invalidOutputError(operation: operation)
 			}
 			return events
@@ -85,7 +85,7 @@ package struct XcodeBuildMCPEventDecoder: Sendable {
 			return false
 		}
 
-		return descriptor.operationlessEventComponents.contains(String(component))
+		return descriptor.operationlessComponents.contains(String(component))
 	}
 
 	// JSONL 한 줄을 검증하고 정규화된 진행 사건으로 변환합니다.

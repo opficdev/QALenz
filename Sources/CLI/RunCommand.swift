@@ -35,9 +35,9 @@ package struct RunCommand: ParsableCommand {
 
 	// 요청한 출력 형식과 현재 환경에서 dry-run 계획을 출력합니다.
 	package func execute(format: CLIOutputFormat) async -> CLIProcessResult {
-		let currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+		let currentURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 		let adapter = XcodeBuildMCPCLIAdapter(
-			workingDirectoryURL: currentDirectoryURL,
+			workingDirectoryURL: currentURL,
 			environment: ProcessInfo.processInfo.environment,
 			timeout: .seconds(300)
 		)
@@ -47,7 +47,7 @@ package struct RunCommand: ParsableCommand {
 			format: format,
 			loader: ExecutionPlanLoader(),
 			executor: executor,
-			currentDirectoryURL: currentDirectoryURL
+			currentDirectoryURL: currentURL
 		)
 	}
 

@@ -14,7 +14,7 @@ import Testing
 @Suite
 struct XcodeBuildMCPCLIAdapterEventTests {
 	private let buildSimulatorOperation = XcodeBuildMCPOperation(rawValue: "build.simulator")
-	private let buildAndRunSimulatorOperation = XcodeBuildMCPOperation.buildAndRunSimulator
+	private let operation = XcodeBuildMCPOperation.buildAndRunSimulator
 
 	// JSONL 사건이 process 종료 전에 공통 진행 사건으로 전달되는지 검증합니다.
 	@Test
@@ -61,7 +61,7 @@ struct XcodeBuildMCPCLIAdapterEventTests {
 		var terminalResult: XcodeBuildMCPResult?
 
 		for try await update in adapter.execution(for: .init(
-			operation: buildAndRunSimulatorOperation,
+			operation: operation,
 			arguments: [
 				.init(name: "profile", value: "default"),
 				.init(name: "simulator.name", value: "Fixture Phone")
@@ -74,7 +74,7 @@ struct XcodeBuildMCPCLIAdapterEventTests {
 		}
 
 		#expect(events.map(\.kind) == [.started, .progress])
-		#expect(terminalResult?.operation == buildAndRunSimulatorOperation)
+		#expect(terminalResult?.operation == operation)
 		#expect(terminalResult?.result == .passed)
 	}
 
@@ -98,7 +98,7 @@ struct XcodeBuildMCPCLIAdapterEventTests {
 		var terminalResult: XcodeBuildMCPResult?
 
 		for try await update in adapter.execution(for: .init(
-			operation: buildAndRunSimulatorOperation,
+			operation: operation,
 			arguments: [
 				.init(name: "profile", value: profile),
 				.init(name: "simulator.name", value: "Fixture Phone")

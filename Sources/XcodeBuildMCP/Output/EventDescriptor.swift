@@ -9,19 +9,19 @@
 package struct EventDescriptor: Sendable, Equatable {
 	package let namespace: String
 	package let operation: String
-	package let operationlessEventComponents: Set<String>
-	package let requiresTerminalEvent: Bool
+	package let operationlessComponents: Set<String>
+	package let needsTerminalEvent: Bool
 
 	// event namespace와 operation으로 descriptor를 구성합니다.
 	package init(
 		namespace: String,
 		operation: String,
-		operationlessEventComponents: Set<String> = [],
-		requiresTerminalEvent: Bool = true
+		operationlessComponents: Set<String> = [],
+		needsTerminalEvent: Bool = true
 	) {
 		self.namespace = namespace
 		self.operation = operation
-		self.operationlessEventComponents = operationlessEventComponents
-		self.requiresTerminalEvent = requiresTerminalEvent
+		self.operationlessComponents = operationlessComponents
+		self.needsTerminalEvent = needsTerminalEvent
 	}
 }

@@ -201,11 +201,11 @@ private final class RunManifestStoreSpy: RunManifestStoring, @unchecked Sendable
 		return manifestsStorage
 	}
 
-	func store(_ manifest: RunManifest, in outputDirectoryURL: URL) throws -> URL {
+	func store(_ manifest: RunManifest, in outputURL: URL) throws -> URL {
 		lock.lock()
 		manifestsStorage.append(manifest)
 		lock.unlock()
-		return outputDirectoryURL.appendingPathComponent("manifest.json")
+		return outputURL.appendingPathComponent("manifest.json")
 	}
 }
 
