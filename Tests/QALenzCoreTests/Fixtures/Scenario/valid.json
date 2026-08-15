@@ -19,6 +19,10 @@
 			}
 		},
 		{
+			"id": "snapshot-home",
+			"action": "snapshotUI"
+		},
+		{
 			"id": "tap-profile",
 			"action": "tap",
 			"selector": {
@@ -40,6 +44,9 @@
 		{
 			"id": "swipe-list",
 			"action": "swipe",
+			"selector": {
+				"identifier": "todo-list"
+			},
 			"parameters": {
 				"direction": "up"
 			}

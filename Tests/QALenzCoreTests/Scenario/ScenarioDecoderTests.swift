@@ -28,6 +28,7 @@ struct ScenarioDecoderTests {
 			scenario.steps.map(\.action) == [
 				.buildAndRun,
 				.waitForUI,
+				.snapshotUI,
 				.tap,
 				.longPress,
 				.swipe,
