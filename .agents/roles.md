@@ -23,7 +23,8 @@ This document defines responsibilities, permissions, and handoff formats for non
 | --- | --- | --- | --- |
 | `Primary` | 계획, 구현, 통합, 최종 결정, 실패 원인 분석 | `gpt-5.6-terra` | `xhigh` |
 | `Design` | 이슈 분석, 구현 설계, 계약과 경계 설계 | `gpt-5.6-sol` | `xhigh` |
-| `Lightweight` | 읽기 전용 사전 점검, 코드 검토, 검증, GitHub·CI 조사, 문서 작성 | `gpt-5.3-codex-spark` | `xhigh` |
+| `Review` | 코드 검토 | `gpt-5.6-sol` | `xhigh` |
+| `Lightweight` | 읽기 전용 사전 점검, 검증, GitHub·CI 조사, 문서 작성 | `gpt-5.3-codex-spark` | `xhigh` |
 
 | Role | 실행 주체 또는 custom agent | Tier | 승격 조건 |
 | --- | --- | --- | --- |
@@ -31,17 +32,17 @@ This document defines responsibilities, permissions, and handoff formats for non
 | Implementer | active main agent | `Primary` | 항상 |
 | Designer | `designer` | `Design` | 이슈 분석 또는 구현 설계 필요 |
 | Architecture Watcher | `architecture_watcher` | `Lightweight` | `Block`, `Needs Owner Decision`, 경계 판단 불명확 |
-| Code Reviewer | `code_reviewer` | `Lightweight` | 실행 동작, 동시성, 계약, 시험 전략 관련 finding |
+| Code Reviewer | `code_reviewer` | `Review` | 실행 동작, 동시성, 계약, 시험 전략 관련 finding |
 | Verification Runner | `verification_runner` | `Lightweight` | 검사 실패 또는 원인 불명확 |
 | GitHub/CI Analyst | `github_ci_analyst` | `Lightweight` | CI 원인 분석에 코드·workflow 변경 필요 또는 이슈·리뷰 범위 충돌 |
 | Documentation Writer | `documentation_writer` | `Lightweight` | 설계 경계, 검증 위험, 이슈 범위를 설명해야 함 |
 
-Project-scoped custom agent TOML은 `.codex/agents/`에 둡니다. `Designer`와 `Lightweight` 역할을 주 에이전트가 직접 수행하거나 임의의 `task_name`으로 생성한 에이전트 결과를 사용해서는 안 됩니다.
+Project-scoped custom agent TOML은 `.codex/agents/`에 둡니다. `Designer`, `Review`, `Lightweight` 역할을 주 에이전트가 직접 수행하거나 임의의 `task_name`으로 생성한 에이전트 결과를 사용해서는 안 됩니다.
 
 ## Connected side-task dispatch
 
 - `spawn_agent.task_name`에는 아래 표의 정확한 식별자만 사용합니다.
-- 모든 `Designer`와 `Lightweight` 역할은 현재 작업에 연결된 side task로 생성하고, 결과를 `Primary`가 통합합니다.
+- 모든 `Designer`, `Review`, `Lightweight` 역할은 현재 작업에 연결된 side task로 생성하고, 결과를 `Primary`가 통합합니다.
 - custom agent TOML 또는 해당 역할의 고정 모델을 선택할 수 없으면 다른 모델로 대체하지 않고 중단 사유를 보고합니다.
 - 읽기 전용 역할은 서로의 미완료 결과에 의존하지 않을 때만 병렬로 실행합니다.
 

@@ -6,7 +6,7 @@
 //
 
 // 누락한 실행 dimension에 적용할 project 기본값을 표현합니다.
-package struct TargetDefaults: Sendable, Equatable {
+package struct TargetDefaults: Codable, Sendable, Equatable {
 	package let devices: [String]
 	package let operatingSystems: [String]
 	package let appearances: [String]

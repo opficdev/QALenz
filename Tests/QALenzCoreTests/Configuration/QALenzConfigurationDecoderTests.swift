@@ -33,6 +33,12 @@ struct QALenzConfigurationDecoderTests {
 		#expect(configuration.outputDirectoryURL == baseURL
 			.appendingPathComponent("outputs", isDirectory: true)
 			.standardizedFileURL)
+		#expect(configuration.targetDefaults == .init(
+			devices: ["iPhone 16"],
+			operatingSystems: ["iOS 26.0"],
+			appearances: ["light"]
+		))
+		#expect(configuration.targetPolicy.maximumTargetCount == 12)
 	}
 
 	// outputDirectory가 없으면 repository 밖의 기본 경로를 반환하는지 검증합니다.
@@ -134,6 +140,31 @@ struct QALenzConfigurationDecoderTests {
 		#expect(error.context.keyPath == "$.scenariosDirectory")
 	}
 
+	// target 설정의 schema 의미 제약을 decoder 경계에서 거부하는지 검증합니다.
+	@Test
+	func target_설정의_의미_제약을_거부한다() throws {
+		let cases = [
+			("\"devices\": []", "$.targetDefaults.devices"),
+			("\"devices\": [\"   \"]", "$.targetDefaults.devices"),
+			("\"maximumTargetCount\": 0", "$.maximumTargetCount"),
+			(
+				"\"targetDefaults\": {\"devices\": [\"iPhone 16\"], \"operatingSystems\": [\"iOS 26.0\"], " +
+					"\"appearances\": [\"light\"], \"unknown\": []}",
+				"$.targetDefaults.unknown"
+			)
+		]
+
+		for (replacement, keyPath) in cases {
+			let data = Data(configurationJSON(replacing: replacement).utf8)
+			let error = try requireConfigurationError {
+				try makeDecoder().decode(data, at: URL(fileURLWithPath: "/tmp/config.json"))
+			}
+
+			#expect(error.code.rawValue == "configuration.value.invalid")
+			#expect(error.context.keyPath == keyPath)
+		}
+	}
+
 	// 고정된 Application Support 경로를 주입한 decoder를 구성합니다.
 	private func makeDecoder() -> QALenzConfigurationDecoder {
 		.init(applicationSupportDirectoryURL: applicationSupportDirectoryURL)
@@ -157,5 +188,29 @@ struct QALenzConfigurationDecoderTests {
 		try #require(throws: RunError.self) {
 			try operation()
 		}
+	}
+
+	// target 설정 일부를 치환한 유효 config JSON을 반환합니다.
+	private func configurationJSON(replacing replacement: String) -> String {
+		let defaults = "\"targetDefaults\": {\"devices\": [\"iPhone 16\"], " +
+			"\"operatingSystems\": [\"iOS 26.0\"], \"appearances\": [\"light\"]}"
+		let maximum = "\"maximumTargetCount\": 12"
+		let values = if replacement.hasPrefix("\"maximumTargetCount\"") {
+			"\(defaults), \(replacement)"
+		} else if replacement.hasPrefix("\"targetDefaults\"") {
+			"\(replacement), \(maximum)"
+		} else {
+			"\"targetDefaults\": {\(replacement), \"operatingSystems\": [\"iOS 26.0\"], \"appearances\": [\"light\"]}, \(maximum)"
+		}
+
+		return """
+		{
+		  "schemaVersion": 1,
+		  "projectRoot": ".",
+		  "xcodeBuildMCPProfile": "default",
+		  "scenariosDirectory": "scenarios",
+		  \(values)
+		}
+		"""
 	}
 }

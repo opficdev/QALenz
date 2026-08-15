@@ -19,6 +19,11 @@ struct QALenzConfigurationSchemaTests {
 		let requiredKeyNames = try #require(schema["required"] as? [String])
 		let properties = try #require(schema["properties"] as? [String: [String: Any]])
 		let schemaVersionProperty = try #require(properties["schemaVersion"])
+		let targetDefaultsProperty = try #require(properties["targetDefaults"])
+		let targetDefaultProperties = try #require(
+			targetDefaultsProperty["properties"] as? [String: [String: Any]]
+		)
+		let maximumTargetCountProperty = try #require(properties["maximumTargetCount"])
 
 		#expect(schema["type"] as? String == "object")
 		#expect(requiredKeyNames == QALenzConfigurationDocument.requiredKeyNames)
@@ -29,11 +34,25 @@ struct QALenzConfigurationSchemaTests {
 				== QALenzConfiguration.supportedSchemaVersion
 		)
 
-		for key in QALenzConfigurationDocument.keyNames where key != "schemaVersion" {
+		for key in ["projectRoot", "xcodeBuildMCPProfile", "scenariosDirectory", "outputDirectory"] {
 			let property = try #require(properties[key])
 
 			#expect(property["type"] as? String == "string")
 		}
+
+		#expect(targetDefaultsProperty["type"] as? String == "object")
+		#expect(targetDefaultsProperty["additionalProperties"] as? Bool == false)
+		#expect(Set(targetDefaultProperties.keys) == ["devices", "operatingSystems", "appearances"])
+		for property in targetDefaultProperties.values {
+			let items = try #require(property["items"] as? [String: Any])
+
+			#expect(property["type"] as? String == "array")
+			#expect(property["minItems"] as? Int == 1)
+			#expect(items["type"] as? String == "string")
+			#expect(items["minLength"] as? Int == 1)
+		}
+		#expect(maximumTargetCountProperty["type"] as? String == "integer")
+		#expect(maximumTargetCountProperty["minimum"] as? Int == 1)
 	}
 
 	// bundle의 JSON Schema를 dictionary로 해석합니다.

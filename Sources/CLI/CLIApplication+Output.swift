@@ -27,6 +27,40 @@ extension CLIApplication {
 		}
 	}
 
+	// ExecutionPlan을 요청한 출력 형식의 프로세스 결과로 변환합니다.
+	package static func result(
+		for plan: ExecutionPlan,
+		format: CLIOutputFormat
+	) -> CLIProcessResult {
+		switch format {
+		case .text:
+			return .init(
+				standardOutput: textOutput(for: plan),
+				standardError: nil,
+				exitStatus: .success
+			)
+		case .json:
+			return jsonResult(for: plan)
+		}
+	}
+
+	// ExecutionPlanValidationFailure를 요청한 출력 형식의 프로세스 결과로 변환합니다.
+	package static func result(
+		for failure: ExecutionPlanValidationFailure,
+		format: CLIOutputFormat
+	) -> CLIProcessResult {
+		switch format {
+		case .text:
+			return .init(
+				standardOutput: textOutput(for: failure),
+				standardError: nil,
+				exitStatus: .verificationFailure
+			)
+		case .json:
+			return jsonResult(for: failure)
+		}
+	}
+
 	// RunError를 요청한 출력 형식의 프로세스 오류 결과로 변환합니다.
 	package static func result(
 		for error: RunError,
@@ -146,6 +180,50 @@ extension CLIApplication {
 		}
 	}
 
+	// ExecutionPlan을 정렬된 JSON 프로세스 결과로 변환합니다.
+	private static func jsonResult(for plan: ExecutionPlan) -> CLIProcessResult {
+		do {
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+			let data = try encoder.encode(plan)
+
+			return .init(
+				// swiftlint:disable:next optional_data_string_conversion
+				standardOutput: String(decoding: data, as: UTF8.self),
+				standardError: nil,
+				exitStatus: .success
+			)
+		} catch {
+			return .init(
+				standardOutput: nil,
+				standardError: "Execution plan encoding failed.",
+				exitStatus: .executionError
+			)
+		}
+	}
+
+	// ExecutionPlanValidationFailure를 정렬된 JSON 프로세스 결과로 변환합니다.
+	private static func jsonResult(for failure: ExecutionPlanValidationFailure) -> CLIProcessResult {
+		do {
+			let encoder = JSONEncoder()
+			encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+			let data = try encoder.encode(failure)
+
+			return .init(
+				// swiftlint:disable:next optional_data_string_conversion
+				standardOutput: String(decoding: data, as: UTF8.self),
+				standardError: nil,
+				exitStatus: .verificationFailure
+			)
+		} catch {
+			return .init(
+				standardOutput: nil,
+				standardError: "Execution plan validation failure encoding failed.",
+				exitStatus: .executionError
+			)
+		}
+	}
+
 	// RunResult를 JSON 프로세스 오류 결과로 변환합니다.
 	private static func jsonErrorResult(for runResult: RunResult) -> CLIProcessResult {
 		do {
@@ -228,6 +306,61 @@ extension CLIApplication {
 
 			return ([summary] + errors).joined(separator: "\n")
 		}.joined(separator: "\n")
+	}
+
+	// ExecutionPlan을 사람이 읽는 줄 단위 출력으로 변환합니다.
+	private static func textOutput(for plan: ExecutionPlan) -> String {
+		let requirements = plan.testDataRequirements.map {
+			"\($0.operation.rawValue) | \($0.resource)"
+		}
+		let targets = plan.targets.map { target in
+			let steps = target.steps.map {
+				"  \($0.id) | \($0.action.rawValue) | \($0.sideEffects.map(\.rawValue).joined(separator: ",")) | \(selectorSummary($0.selector)) | \(parameterSummary($0.parameters))"
+			}.joined(separator: "\n")
+			let assertions = target.assertions.map(referenceSummary).joined(separator: ",")
+			let evidence = target.evidence.map(referenceSummary).joined(separator: ",")
+
+			return """
+			\(target.target.identifier) | \(target.outputDirectoryPath)
+			\(steps)
+			  assertions | \(assertions)
+			  evidence | \(evidence)
+			"""
+		}
+
+		return [
+			"scenario: \(plan.scenarioID)",
+			"profile: \(plan.profile)",
+			"projectRoot: \(plan.projectRootPath)",
+			"xcodeBuildMCPProfile: \(plan.xcodeBuildMCPProfile)",
+			"outputDirectory: \(plan.outputDirectoryPath)",
+			textSection(named: "testDataRequirements", values: requirements),
+			textSection(named: "targets", values: targets)
+		].joined(separator: "\n")
+	}
+
+	// ExecutionPlanValidationFailure의 오류를 사람이 읽는 줄 단위 출력으로 변환합니다.
+	private static func textOutput(for failure: ExecutionPlanValidationFailure) -> String {
+		failure.errors.map {
+			"\($0.code.rawValue) | \($0.filePath) | \($0.keyPath)"
+		}.joined(separator: "\n")
+	}
+
+	// selector의 제공 값을 사람이 읽는 실행 계획 문자열로 변환합니다.
+	private static func selectorSummary(_ selector: ScenarioSelector?) -> String {
+		guard let selector else { return "selector: -" }
+
+		return "selector: \(selector.identifier ?? "-") | \(selector.label ?? "-") | \(selector.role ?? "-") | \(selector.value ?? "-")"
+	}
+
+	// parameter의 손실 없는 계획 표현을 반환합니다.
+	private static func parameterSummary(_ parameter: ExecutionPlanParameter?) -> String {
+		parameter.map { "parameters: \(String(describing: $0))" } ?? "parameters: -"
+	}
+
+	// assertion 또는 evidence 참조의 parameter 표현을 반환합니다.
+	private static func referenceSummary(_ reference: ExecutionPlanStepReference) -> String {
+		"\(reference.afterStepID) | \(parameterSummary(reference.parameters))"
 	}
 
 	// 후보 목록을 이름과 항목 줄로 구성합니다.

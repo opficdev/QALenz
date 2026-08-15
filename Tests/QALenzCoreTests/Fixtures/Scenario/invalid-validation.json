@@ -32,5 +32,6 @@
 		{
 			"afterStepID": "missing-step"
 		}
-	]
+	],
+	"testDataRequirements": []
 }

@@ -2,6 +2,8 @@
   "schemaVersion": 1,
   "projectRoot": "..",
   "xcodeBuildMCPProfile": "default",
-  "scenariosDirectory": "scenarios",
-  "outputDirectory": "outputs"
+	"scenariosDirectory": "scenarios",
+	"outputDirectory": "outputs",
+	"targetDefaults": {"devices": ["iPhone 16"], "operatingSystems": ["iOS 26.0"], "appearances": ["light"]},
+	"maximumTargetCount": 12
 }

@@ -106,6 +106,11 @@ package struct ScenarioValidator: Sendable {
 			kind: .evidence,
 			errors: &errors
 		)
+		TestDataRequirementValidator().validate(
+			document.testDataRequirements,
+			filePath: filePath,
+			errors: &errors
+		)
 	}
 
 	// 지원하는 schemaVersion인지 검증합니다.
@@ -202,7 +207,8 @@ package struct ScenarioValidator: Sendable {
 			let matrix = document.matrix,
 			let steps = document.steps,
 			let assertions = document.assertions,
-			let evidence = document.evidence
+			let evidence = document.evidence,
+			let testDataRequirements = document.testDataRequirements
 		else { return nil }
 
 		let scenarioSteps = steps.compactMap { step -> ScenarioStep? in
@@ -226,10 +232,14 @@ package struct ScenarioValidator: Sendable {
 
 			return .init(afterStepID: afterStepID, parameters: reference.parameters)
 		}
+		let scenarioTestDataRequirements = makeTestDataRequirements(
+			from: testDataRequirements
+		)
 
 		guard steps.count == scenarioSteps.count else { return nil }
 		guard assertions.count == scenarioAssertions.count else { return nil }
 		guard evidence.count == scenarioEvidence.count else { return nil }
+		guard testDataRequirements.count == scenarioTestDataRequirements.count else { return nil }
 
 		return .init(
 			schemaVersion: schemaVersion,
@@ -239,8 +249,24 @@ package struct ScenarioValidator: Sendable {
 			matrix: matrix,
 			steps: scenarioSteps,
 			assertions: scenarioAssertions,
-			evidence: scenarioEvidence
+			evidence: scenarioEvidence,
+			testDataRequirements: scenarioTestDataRequirements
 		)
+	}
+
+	// 검증한 requirement 문서를 실행 계층 값으로 변환합니다.
+	private func makeTestDataRequirements(
+		from requirements: [TestDataRequirementDocument]
+	) -> [TestDataRequirement] {
+		requirements.compactMap { requirement -> TestDataRequirement? in
+			guard let operationName = requirement.operation,
+				let operation = TestDataOperation(rawValue: operationName),
+				let resource = requirement.resource else {
+				return nil
+			}
+
+			return .init(operation: operation, resource: resource)
+		}
 	}
 
 	// step이 id, action, selector, parameter를 전혀 포함하지 않는지 반환합니다.

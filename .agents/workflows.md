@@ -13,7 +13,7 @@ Use `.agents/roles.md` for role permissions and output formats.
 3. When issue analysis or implementation design is required, prepare a `Design Brief` and create the `Designer` side task.
 4. Have the Planner finalize the Task Packet from the `Designer` result with required roles, model assignment, exact `task_name`, and execution permissions.
 5. Keep `Primary` roles with the active main agent.
-6. Create each required `Lightweight` role as a connected side task through its exact configured `task_name`.
+6. Create each required `Review` and `Lightweight` role as a connected side task through its exact configured `task_name`.
 7. Apply changes only through the assigned writing role after required preflight results pass.
 8. Reuse the existing agent with `followup_task` for later work in the same role.
 9. Integrate every delegated result, inspect the final diff and all not-run checks, and report only evidence-backed results.
@@ -67,7 +67,7 @@ Role order:
 1. Designer (`designer`, `Design`)
 2. Planner (`Primary`)
 3. Implementer (`Primary`)
-4. Code Reviewer (`code_reviewer`, `Lightweight`)
+4. Code Reviewer (`code_reviewer`, `Review`)
 5. Verification Runner (`verification_runner`, `Lightweight`)
 
 Completion conditions:
@@ -86,7 +86,7 @@ Role order:
 3. Architecture Watcher preflight (`architecture_watcher`, `Lightweight`)
 4. Implementer (`Primary`)
 5. Architecture Watcher final review (`architecture_watcher`, `Lightweight`)
-6. Code Reviewer (`code_reviewer`, `Lightweight`)
+6. Code Reviewer (`code_reviewer`, `Review`)
 7. Verification Runner (`verification_runner`, `Lightweight`)
 
 Stop before implementation when the Architecture Watcher returns `Block` or `Needs Owner Decision`.
@@ -105,7 +105,7 @@ Role order:
 1. Designer (`designer`, `Design`) when issue analysis or implementation design is required
 2. Planner (`Primary`), or the first step when `Designer` is not required
 3. Documentation Writer (`documentation_writer`, `Lightweight`)
-4. Code Reviewer (`code_reviewer`, `Lightweight`)
+4. Code Reviewer (`code_reviewer`, `Review`)
 5. Verification Runner (`verification_runner`, `Lightweight`)
 
 Required checks:
@@ -126,7 +126,7 @@ Role order:
 3. Architecture Watcher preflight (`architecture_watcher`, `Lightweight`)
 4. Implementer (`Primary`)
 5. Architecture Watcher final review (`architecture_watcher`, `Lightweight`)
-6. Code Reviewer (`code_reviewer`, `Lightweight`)
+6. Code Reviewer (`code_reviewer`, `Review`)
 7. Verification Runner (`verification_runner`, `Lightweight`)
 
 Stop before implementation when the Architecture Watcher returns `Block` or `Needs Owner Decision`.
@@ -166,7 +166,7 @@ Role order:
 2. Designer (`designer`, `Design`) analyzes the accepted change design.
 3. Planner (`Primary`) defines the accepted change scope.
 4. Implementer (`Primary`) applies only selected changes.
-5. Code Reviewer (`code_reviewer`, `Lightweight`) reviews the final diff.
+5. Code Reviewer (`code_reviewer`, `Review`) reviews the final diff.
 6. Verification Runner (`verification_runner`, `Lightweight`) performs related checks.
 
 Validate review feedback against current code and contracts before accepting it. Exclude unrelated cleanup.
@@ -180,14 +180,14 @@ Role order:
 1. Designer (`designer`, `Design`)
 2. Planner (`Primary`)
 3. Implementer (`Primary`)
-4. Code Reviewer (`code_reviewer`, `Lightweight`)
+4. Code Reviewer (`code_reviewer`, `Review`)
 5. Verification Runner (`verification_runner`, `Lightweight`)
 
 Required checks:
 
 ```sh
 git diff --check -- AGENTS.md .agents .codex/agents
-rg -n "gpt-5\\.6-terra|gpt-5\\.6-sol|gpt-5\\.3-codex-spark|Designer|designer|Lightweight|task_name" AGENTS.md .agents .codex/agents
+rg -n "gpt-5\\.6-terra|gpt-5\\.6-sol|gpt-5\\.3-codex-spark|Designer|designer|Review|Lightweight|task_name" AGENTS.md .agents .codex/agents
 ```
 
 Do not modify QALenz source, tests, manifests, CI, or public documentation as part of this workflow unless the user separately requests it.

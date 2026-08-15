@@ -15,7 +15,8 @@ package struct ScenarioDocument: Sendable {
 		"matrix",
 		"steps",
 		"assertions",
-		"evidence"
+		"evidence",
+		"testDataRequirements"
 	]
 
 	package static let keyNames = requiredKeyNames
@@ -28,6 +29,7 @@ package struct ScenarioDocument: Sendable {
 	package let steps: [ScenarioStepDocument]?
 	package let assertions: [ScenarioStepReferenceDocument]?
 	package let evidence: [ScenarioStepReferenceDocument]?
+	package let testDataRequirements: [TestDataRequirementDocument]?
 
 	// Scenario JSON codec이 해석한 원본 값으로 문서를 구성합니다.
 	package init(
@@ -38,7 +40,8 @@ package struct ScenarioDocument: Sendable {
 		matrix: ScenarioValue?,
 		steps: [ScenarioStepDocument]?,
 		assertions: [ScenarioStepReferenceDocument]?,
-		evidence: [ScenarioStepReferenceDocument]?
+		evidence: [ScenarioStepReferenceDocument]?,
+		testDataRequirements: [TestDataRequirementDocument]?
 	) {
 		self.schemaVersion = schemaVersion
 		self.id = id
@@ -48,8 +51,21 @@ package struct ScenarioDocument: Sendable {
 		self.steps = steps
 		self.assertions = assertions
 		self.evidence = evidence
+		self.testDataRequirements = testDataRequirements
 	}
 
+}
+
+// 검증 전 test data 요구사항의 원본 값을 표현합니다.
+package struct TestDataRequirementDocument: Sendable {
+	package let operation: String?
+	package let resource: String?
+
+	// Scenario JSON codec이 해석한 요구사항 원본 값으로 구성합니다.
+	package init(operation: String?, resource: String?) {
+		self.operation = operation
+		self.resource = resource
+	}
 }
 
 // 검증 전 step의 raw action tag와 선택 payload를 표현합니다.

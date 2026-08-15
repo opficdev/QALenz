@@ -56,7 +56,12 @@ private struct ScenarioJSONDocumentDecoder {
 			matrix: optionalMatrix(in: object, forKey: "matrix", at: "$.matrix"),
 			steps: optionalSteps(in: object, forKey: "steps", at: "$.steps"),
 			assertions: optionalReferences(in: object, forKey: "assertions", at: "$.assertions"),
-			evidence: optionalReferences(in: object, forKey: "evidence", at: "$.evidence")
+			evidence: optionalReferences(in: object, forKey: "evidence", at: "$.evidence"),
+			testDataRequirements: try TestDataRequirementJSONDocumentDecoder().decode(
+				in: object,
+				forKey: "testDataRequirements",
+				at: "$.testDataRequirements"
+			)
 		)
 	}
 
@@ -299,7 +304,10 @@ extension ScenarioJSONValue {
 			"matrix": .init(scenarioValue: scenario.matrix),
 			"steps": .array(scenario.steps.map { .init(step: $0) }),
 			"assertions": .array(scenario.assertions.map { .init(reference: $0) }),
-			"evidence": .array(scenario.evidence.map { .init(reference: $0) })
+			"evidence": .array(scenario.evidence.map { .init(reference: $0) }),
+			"testDataRequirements": .array(
+				scenario.testDataRequirements.map { .init(testDataRequirement: $0) }
+			)
 		])
 	}
 
