@@ -69,7 +69,7 @@ struct RunCommandTests {
 		defer { try? FileManager.default.removeItem(at: projectURL) }
 		try writeConfiguration(at: projectURL)
 		try writeScenario(at: projectURL)
-		try writeUnrelatedInvalidScenario(at: projectURL)
+		try RunCommandFixture.writeUnrelatedInvalidScenario(at: projectURL)
 
 		let command = try runCommand()
 		let text = await command.execute(
@@ -97,6 +97,34 @@ struct RunCommandTests {
 			resource: "todo:incomplete"
 		)])
 		#expect(!FileManager.default.fileExists(atPath: outputDirectoryURL.path))
+	}
+
+	// 요청 scenario의 검증 오류는 다른 scenario와 분리해 반환하는지 검증합니다.
+	@Test
+	func fixture_기반_dryRun이_요청_scenario의_검증_오류를_반환한다() async throws {
+		let projectURL = try makeProjectDirectory()
+		defer { try? FileManager.default.removeItem(at: projectURL) }
+		try writeConfiguration(at: projectURL)
+		try RunCommandFixture.writeInvalidRequestedScenario(at: projectURL)
+		try RunCommandFixture.writeUnrelatedInvalidScenario(at: projectURL)
+
+		let result = try await runCommand().execute(
+			format: .json,
+			loader: ExecutionPlanLoader(),
+			currentDirectoryURL: projectURL
+		)
+		let data = try #require(result.standardOutput?.data(using: .utf8))
+		let failure = try JSONDecoder().decode(ExecutionPlanValidationFailure.self, from: data)
+		let scenarioURL = projectURL
+			.appendingPathComponent("scenarios", isDirectory: true)
+			.appendingPathComponent("todo-completion.json", isDirectory: false)
+
+		#expect(result.exitStatus == .verificationFailure)
+		#expect(failure.errors == [.init(
+			code: .profileEmpty,
+			filePath: scenarioURL.standardizedFileURL.path,
+			keyPath: "$.profile"
+		)])
 	}
 
 	// dry-run 없이 run 명령을 해석하면 사용 오류로 차단하는지 검증합니다.
@@ -230,28 +258,6 @@ struct RunCommandTests {
 		).write(to: scenarioURL)
 	}
 
-	// 요청 scenario와 무관한 검증 오류를 가진 scenario fixture를 기록합니다.
-	private func writeUnrelatedInvalidScenario(at projectURL: URL) throws {
-		let scenarioURL = projectURL
-			.appendingPathComponent("scenarios", isDirectory: true)
-			.appendingPathComponent("invalid.json", isDirectory: false)
-		try Data(
-			"""
-			{
-			  "schemaVersion": 1,
-			  "id": "invalid",
-			  "name": "Invalid",
-			  "profile": "",
-			  "matrix": {},
-			  "steps": [{"id": "launch", "action": "buildAndRun"}],
-			  "assertions": [],
-			  "evidence": [],
-			  "testDataRequirements": []
-			}
-			""".utf8
-		).write(to: scenarioURL)
-	}
-
 	// 시험에서 사용할 고정 실행 계획을 반환합니다.
 	private func plan() -> ExecutionPlan {
 		.init(
@@ -276,6 +282,57 @@ struct RunCommandTests {
 				evidence: [.init(afterStepID: "launch")]
 			)]
 		)
+	}
+}
+
+// RunCommandTests가 사용하는 scenario fixture를 기록합니다.
+private enum RunCommandFixture {
+	// 요청 scenario와 무관한 검증 오류를 가진 scenario fixture를 기록합니다.
+	static func writeUnrelatedInvalidScenario(at projectURL: URL) throws {
+		let scenarioURL = projectURL
+			.appendingPathComponent("scenarios", isDirectory: true)
+			.appendingPathComponent("invalid.json", isDirectory: false)
+		try Data(
+			"""
+			{
+			  "schemaVersion": 1,
+			  "id": "invalid",
+			  "name": "Invalid",
+			  "profile": "",
+			  "matrix": {},
+			  "steps": [{"id": "launch", "action": "buildAndRun"}],
+			  "assertions": [],
+			  "evidence": [],
+			  "testDataRequirements": []
+			}
+			""".utf8
+		).write(to: scenarioURL)
+	}
+
+	// 요청 식별자와 일치하지만 profile이 비어 있는 scenario fixture를 기록합니다.
+	static func writeInvalidRequestedScenario(at projectURL: URL) throws {
+		let scenarioURL = projectURL
+			.appendingPathComponent("scenarios", isDirectory: true)
+			.appendingPathComponent("todo-completion.json", isDirectory: false)
+		try FileManager.default.createDirectory(
+			at: scenarioURL.deletingLastPathComponent(),
+			withIntermediateDirectories: true
+		)
+		try Data(
+			"""
+			{
+			  "schemaVersion": 1,
+			  "id": "todo-completion",
+			  "name": "Todo 완료 처리",
+			  "profile": "",
+			  "matrix": {},
+			  "steps": [{"id": "launch", "action": "buildAndRun"}],
+			  "assertions": [],
+			  "evidence": [],
+			  "testDataRequirements": []
+			}
+			""".utf8
+		).write(to: scenarioURL)
 	}
 }
 
