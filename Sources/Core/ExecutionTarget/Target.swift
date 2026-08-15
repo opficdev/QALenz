@@ -6,6 +6,8 @@
 //
 
 // 하나의 device, operatingSystem, appearance 조합을 표현합니다.
+import Foundation
+
 package struct Target: Codable, Sendable, Equatable {
 	package let device: String
 	package let operatingSystem: String
@@ -26,6 +28,11 @@ package struct Target: Codable, Sendable, Equatable {
 			Self.identifierComponent(name: "operatingSystem", value: operatingSystem),
 			Self.identifierComponent(name: "appearance", value: appearance)
 		].joined(separator: "|")
+	}
+
+	// target identifier를 파일 경로에 사용할 안전한 구성 요소로 반환합니다.
+	package var outputDirectoryComponent: String {
+		"target-" + identifier.utf8.map { String(format: "%02x", $0) }.joined()
 	}
 
 	// 구분자가 값에 포함돼도 충돌하지 않는 identifier 구성 요소를 반환합니다.

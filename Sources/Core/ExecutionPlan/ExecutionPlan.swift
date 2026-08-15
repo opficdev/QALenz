@@ -120,7 +120,7 @@ package struct ExecutionPlanBuilder: Sendable {
 				.init(
 					target: target,
 					outputDirectoryPath: outputDirectoryURL
-						.appendingPathComponent(target.identifier, isDirectory: true)
+						.appendingPathComponent(target.outputDirectoryComponent, isDirectory: true)
 						.path,
 					steps: steps,
 					assertions: scenario.assertions.map(\.afterStepID),

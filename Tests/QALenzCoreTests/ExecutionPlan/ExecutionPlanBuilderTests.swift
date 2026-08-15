@@ -46,6 +46,32 @@ struct ExecutionPlanBuilderTests {
 		#expect(plan.targets.first?.evidence == ["launch"])
 	}
 
+	// target 값에 경로 문자가 있어도 output 경로가 기준 디렉터리 안에 남는지 검증합니다.
+	@Test
+	func target_값의_경로_문자를_안전한_output_구성요소로_변환한다() throws {
+		let outputDirectoryURL = URL(fileURLWithPath: "/tmp/QALenz/Runs", isDirectory: true)
+		let scenario = Scenario(
+			schemaVersion: 1,
+			id: "safe-output",
+			name: "Safe output",
+			profile: "default",
+			matrix: .object(["devices": .array([.string("x/../../tmp")])]),
+			steps: [.init(id: "launch", action: .buildAndRun)],
+			assertions: [],
+			evidence: [],
+			testDataRequirements: []
+		)
+		let plan = try ExecutionPlanBuilder().build(
+			scenario: scenario,
+			configuration: configuration(outputDirectoryURL: outputDirectoryURL)
+		)
+		let target = try #require(plan.targets.first)
+
+		#expect(target.target.outputDirectoryComponent.hasPrefix("target-"))
+		#expect(!target.target.outputDirectoryComponent.contains("/"))
+		#expect(target.outputDirectoryPath.hasPrefix(outputDirectoryURL.path + "/"))
+	}
+
 	// 실행 계획에 사용할 scenario를 반환합니다.
 	private func scenario() -> Scenario {
 		Scenario(
