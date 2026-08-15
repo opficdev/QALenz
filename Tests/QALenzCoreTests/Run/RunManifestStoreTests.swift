@@ -17,7 +17,7 @@ struct RunManifestStoreTests {
 	func task_전용_임시_디렉터리에_완료_manifest만_기록한다() throws {
 		let outputDirectoryURL = try makeOutputDirectoryURL()
 		defer { try? FileManager.default.removeItem(at: outputDirectoryURL) }
-		let manifest = manifest()
+		let manifest = try manifest()
 
 		let manifestURL = try RunManifestStore().store(manifest, in: outputDirectoryURL)
 		let data = try Data(contentsOf: manifestURL)
@@ -29,12 +29,12 @@ struct RunManifestStoreTests {
 
 	// 임시 파일 기록이 실패하면 완료 manifest를 rename하지 않는지 검증합니다.
 	@Test
-	func 임시_파일_기록이_실패하면_완료_manifest를_노출하지_않는다() {
+	func 임시_파일_기록이_실패하면_완료_manifest를_노출하지_않는다() throws {
 		let fileManager = FailingRunManifestFileManager()
 		let store = RunManifestStore(fileManager: fileManager)
 
 		#expect(throws: RunManifestStoreError.self) {
-			try store.store(manifest(), in: URL(fileURLWithPath: "/tmp/QALenz/Runs", isDirectory: true))
+			try store.store(try manifest(), in: URL(fileURLWithPath: "/tmp/QALenz/Runs", isDirectory: true))
 		}
 		#expect(fileManager.movedURLs.isEmpty)
 		#expect(fileManager.removedURLs.count == 1)
@@ -46,7 +46,7 @@ struct RunManifestStoreTests {
 		let outputDirectoryURL = try makeOutputDirectoryURL()
 		defer { try? FileManager.default.removeItem(at: outputDirectoryURL) }
 		let store = RunManifestStore()
-		let manifest = manifest()
+		let manifest = try manifest()
 
 		_ = try store.store(manifest, in: outputDirectoryURL)
 
@@ -60,7 +60,7 @@ struct RunManifestStoreTests {
 	func 증거가_있는_기존_run_디렉터리에_완료_manifest를_저장한다() throws {
 		let outputDirectoryURL = try makeOutputDirectoryURL()
 		defer { try? FileManager.default.removeItem(at: outputDirectoryURL) }
-		let manifest = manifest()
+		let manifest = try manifest()
 		let evidenceDirectoryURL = outputDirectoryURL
 			.appendingPathComponent(manifest.id.uuidString, isDirectory: true)
 			.appendingPathComponent("evidence", isDirectory: true)
@@ -79,7 +79,7 @@ struct RunManifestStoreTests {
 			.appendingPathComponent(UUID().uuidString, isDirectory: true)
 		let outputDirectoryURL = rootURL.appendingPathComponent("Runs", isDirectory: true)
 		let redirectedDirectoryURL = rootURL.appendingPathComponent("Project", isDirectory: true)
-		let manifest = manifest()
+		let manifest = try manifest()
 		let runDirectoryURL = outputDirectoryURL
 			.appendingPathComponent(manifest.id.uuidString, isDirectory: true)
 		defer { try? FileManager.default.removeItem(at: rootURL) }
@@ -107,7 +107,7 @@ struct RunManifestStoreTests {
 		let outputDirectoryURL = try makeOutputDirectoryURL()
 		defer { try? FileManager.default.removeItem(at: outputDirectoryURL) }
 		let store = RunManifestStore()
-		let manifest = manifest()
+		let manifest = try manifest()
 		let successes = await withTaskGroup(of: Bool.self, returning: [Bool].self) { group in
 			for _ in 0 ..< 2 {
 				group.addTask {
@@ -130,7 +130,7 @@ struct RunManifestStoreTests {
 	func 기록_실패_뒤_같은_run_ID를_다시_저장할_수_있다() throws {
 		let outputDirectoryURL = try makeOutputDirectoryURL()
 		defer { try? FileManager.default.removeItem(at: outputDirectoryURL) }
-		let manifest = manifest()
+		let manifest = try manifest()
 		let store = RunManifestStore(fileManager: OneTimeFailingRunManifestFileManager())
 
 		#expect(throws: RunManifestStoreError.self) {
@@ -146,7 +146,7 @@ struct RunManifestStoreTests {
 	func 중단_뒤_남은_lock_파일이_있어도_같은_run_ID를_저장할_수_있다() throws {
 		let outputDirectoryURL = try makeOutputDirectoryURL()
 		defer { try? FileManager.default.removeItem(at: outputDirectoryURL) }
-		let manifest = manifest()
+		let manifest = try manifest()
 		let runDirectoryURL = outputDirectoryURL
 			.appendingPathComponent(manifest.id.uuidString, isDirectory: true)
 		let lockURL = runDirectoryURL.appendingPathComponent(".manifest.lock", isDirectory: false)
@@ -160,11 +160,11 @@ struct RunManifestStoreTests {
 
 	// output 디렉터리 생성 오류를 저장 오류로 분류하는지 검증합니다.
 	@Test
-	func output_디렉터리_생성_오류를_저장_오류로_분류한다() {
+	func output_디렉터리_생성_오류를_저장_오류로_분류한다() throws {
 		let store = RunManifestStore(fileManager: DirectoryFailingRunManifestFileManager())
 
 		do {
-			_ = try store.store(manifest(), in: URL(fileURLWithPath: "/tmp/QALenz/Runs", isDirectory: true))
+			_ = try store.store(try manifest(), in: URL(fileURLWithPath: "/tmp/QALenz/Runs", isDirectory: true))
 			#expect(Bool(false))
 		} catch let error as RunManifestStoreError {
 			#expect(error == .storageFailed)
@@ -183,12 +183,12 @@ struct RunManifestStoreTests {
 	}
 
 	// 저장할 최소 manifest를 반환합니다.
-	private func manifest() -> RunManifest {
-		.init(
+	private func manifest() throws -> RunManifest {
+		try .init(
 			id: UUID(uuidString: "5D1A1E6B-5B08-4C4A-9E87-0B6D6B061601")!,
 			createdAt: Date(timeIntervalSince1970: 0),
 			scenario: .init(id: "todo-completion", profile: "default"),
-			result: .passed,
+			result: .failed,
 			targets: []
 		)
 	}
