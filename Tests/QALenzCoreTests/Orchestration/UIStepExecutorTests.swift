@@ -137,6 +137,89 @@ struct UIStepExecutorTests {
 		#expect(spy.waitCount == 0)
 	}
 
+	// scroll parameter를 adapter 요청으로 빠짐없이 전달하는지 검증합니다.
+	@Test
+	func scroll_parameter를_adapter_요청으로_전달한다() async {
+		let spy = UIAutomationSpy()
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .scroll, parameters: [
+				"direction": .string("left"),
+				"durationMilliseconds": .number("750"),
+				"distance": .number("0.8"),
+				"timeoutMilliseconds": .number("1234")
+			]),
+			profile: "fixture-profile"
+		)
+
+		#expect(execution.result == .passed)
+		#expect(spy.scrollCalls == [.init(
+			profile: "fixture-profile",
+			elementReference: .init(rawValue: "e1"),
+			request: .init(
+				direction: .leftward,
+				durationMilliseconds: 750,
+				distance: 0.8,
+				timeoutMilliseconds: 1_234
+			)
+		)])
+	}
+
+	// scroll이 지원하는 네 방향을 공통 값으로 변환하는지 검증합니다.
+	@Test(arguments: ["up", "down", "left", "right"])
+	func scroll_direction을_공통_값으로_변환한다(direction: String) throws {
+		let expected = switch direction {
+		case "up": UIScrollDirection.upward
+		case "down": UIScrollDirection.downward
+		case "left": UIScrollDirection.leftward
+		case "right": UIScrollDirection.rightward
+		default: fatalError("지원하지 않는 fixture 방향")
+		}
+		let configuration = try UIStepConfiguration(step: step(
+			action: .scroll,
+			parameters: ["direction": .string(direction)]
+		))
+
+		#expect(configuration.scrollDirection == expected)
+	}
+
+	// scroll direction이 누락되거나 지원하지 않으면 실행 전에 거부하는지 검증합니다.
+	@Test(arguments: [nil, "diagonal"])
+	func scroll_direction_오류를_거부한다(direction: String?) async throws {
+		let parameters = direction.map { ["direction": ExecutionPlanParameter.string($0)] } ?? [:]
+		let spy = UIAutomationSpy()
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .scroll, parameters: parameters),
+			profile: "fixture"
+		)
+		let error = try #require(execution.result.error)
+
+		#expect(error.context.keyPath == "parameters.direction")
+		#expect(spy.waitCount == 0)
+	}
+
+	// scroll distance의 허용 범위를 실행 전에 검증하는지 확인합니다.
+	@Test(arguments: [("1", true), ("0", false), ("1.01", false)])
+	func scroll_distance_범위를_검증한다(rawValue: String, isValid: Bool) throws {
+		let step = step(action: .scroll, parameters: [
+			"direction": .string("up"),
+			"distance": .number(rawValue)
+		])
+
+		if isValid {
+			let configuration = try UIStepConfiguration(step: step)
+			#expect(configuration.distance == 1)
+		} else {
+			let error = try #require(throws: RunError.self) {
+				try UIStepConfiguration(step: step)
+			}
+			#expect(error.context.keyPath == "parameters.distance")
+		}
+	}
+
 	// action과 선택 parameter로 execution plan step을 구성합니다.
 	private func step(
 		action: ScenarioStepAction,
@@ -158,6 +241,7 @@ private final class UIAutomationSpy: UIAutomationExecuting, @unchecked Sendable 
 	private var actionResults: [Result<UIAutomationActionResult, RunError>]
 	private var waitResults: [Result<UIAutomationWaitResult, RunError>]
 	private var references = [String]()
+	private var scrollCallsStorage = [UIAutomationScrollCall]()
 	private var waitCountStorage = 0
 
 	// action 결과 순서로 시험 대역을 구성합니다.
@@ -181,6 +265,13 @@ private final class UIAutomationSpy: UIAutomationExecuting, @unchecked Sendable 
 		lock.lock()
 		defer { lock.unlock() }
 		return references
+	}
+
+	// scroll에 전달한 요청을 반환합니다.
+	var scrollCalls: [UIAutomationScrollCall] {
+		lock.lock()
+		defer { lock.unlock() }
+		return scrollCallsStorage
 	}
 
 	// 고정된 snapshot을 반환합니다.
@@ -239,7 +330,14 @@ private final class UIAutomationSpy: UIAutomationExecuting, @unchecked Sendable 
 		elementReference: UIElementReference,
 		request: UIAutomationScrollRequest
 	) async -> Result<UIAutomationActionResult, RunError> {
-		.success(.init())
+		lock.withLock {
+			scrollCallsStorage.append(.init(
+				profile: profile,
+				elementReference: elementReference,
+				request: request
+			))
+		}
+		return .success(.init())
 	}
 
 	// type text에 대한 고정 성공 결과를 반환합니다.
@@ -252,6 +350,13 @@ private final class UIAutomationSpy: UIAutomationExecuting, @unchecked Sendable 
 	) async -> Result<UIAutomationActionResult, RunError> {
 		.success(.init())
 	}
+}
+
+// scroll adapter 호출에 전달한 값을 보관합니다.
+private struct UIAutomationScrollCall: Equatable {
+	let profile: String
+	let elementReference: UIElementReference
+	let request: UIAutomationScrollRequest
 }
 
 // errored 실행 결과의 오류를 반환합니다.
