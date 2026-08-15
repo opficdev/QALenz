@@ -65,6 +65,7 @@ extension XcodeBuildMCPCLIAdapter {
 				code: "adapter.xcodebuildmcp.process.failed"
 			)
 		}
+		outcome.finish()
 		for event in try decoder.finish(operation: request.operation) {
 			outcome.didReceiveEvent = true
 			continuation.yield(.event(event))
@@ -119,6 +120,16 @@ private struct BuildAndRunOutcome {
 			buffer.removeSubrange(...newline)
 			recordPhase(in: Data(line))
 		}
+	}
+
+	// EOF에 남은 마지막 phase 기록을 실패 분류에 반영합니다.
+	mutating func finish() {
+		guard !buffer.isEmpty else {
+			return
+		}
+
+		recordPhase(in: buffer)
+		buffer.removeAll(keepingCapacity: false)
 	}
 
 	private mutating func recordPhase(in data: Data) {

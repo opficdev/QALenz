@@ -81,7 +81,8 @@ struct XcodeBuildMCPCLIAdapterEventTests {
 	// JSONL process 종료 상태와 phase로 build 실패와 launch 실패를 구분하는지 검증합니다.
 	@Test(arguments: [
 		("build-failure", "execution.build.failed"),
-		("launch-failure", "execution.launch.failed")
+		("launch-failure", "execution.launch.failed"),
+		("launch-failure-without-newline", "execution.launch.failed")
 	])
 	func buildAndRun_실패_종류를_구분한다(
 		profile: String,

@@ -81,6 +81,10 @@ case "$workflow:$tool:$output" in
 		if [ "$profile" = "build-failure" ]; then
 			exit 1
 		fi
+		if [ "$profile" = "launch-failure-without-newline" ]; then
+			printf '%s' '{"event":"build-run-result.phase","phase":"launch-app","status":"started"}'
+			exit 1
+		fi
 		printf '%s\n' '{"event":"build-run-result.phase","phase":"launch-app","status":"started"}'
 		if [ "$profile" = "launch-failure" ]; then
 			exit 1
