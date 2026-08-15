@@ -92,7 +92,7 @@ package enum ScenarioStepAction: String, CaseIterable, Codable, Sendable, Equata
 	case snapshotUI
 	case tap
 	case longPress
-	case swipe
+	case scroll
 	case typeText
 	case screenshot
 	case recordVideo
@@ -100,7 +100,7 @@ package enum ScenarioStepAction: String, CaseIterable, Codable, Sendable, Equata
 	// element selector가 필요한 action인지 반환합니다.
 	package var requiresSelector: Bool {
 		switch self {
-		case .waitForUI, .tap, .longPress, .swipe, .typeText:
+		case .waitForUI, .tap, .longPress, .scroll, .typeText:
 			true
 		case .buildAndRun, .snapshotUI, .screenshot, .recordVideo:
 			false
@@ -110,7 +110,7 @@ package enum ScenarioStepAction: String, CaseIterable, Codable, Sendable, Equata
 	// XcodeBuildMCP UI automation으로 실행할 action인지 반환합니다.
 	package var isUIAutomationAction: Bool {
 		switch self {
-		case .waitForUI, .snapshotUI, .tap, .longPress, .swipe, .typeText:
+		case .waitForUI, .snapshotUI, .tap, .longPress, .scroll, .typeText:
 			true
 		case .buildAndRun, .screenshot, .recordVideo:
 			false

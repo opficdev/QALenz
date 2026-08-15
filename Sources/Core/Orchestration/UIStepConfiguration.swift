@@ -165,7 +165,7 @@ struct UIStepConfiguration {
 		switch action {
 		case .longPress:
 			actionKeys = ["durationMilliseconds"]
-		case .swipe:
+		case .scroll:
 			actionKeys = ["durationMilliseconds", "direction", "distance"]
 			guard configuration.swipeDirection != nil else {
 				throw failure(step: step, keyPath: "parameters.direction")

@@ -31,7 +31,7 @@ struct ScenarioDecoderTests {
 				.snapshotUI,
 				.tap,
 				.longPress,
-				.swipe,
+				.scroll,
 				.typeText,
 				.screenshot,
 				.recordVideo

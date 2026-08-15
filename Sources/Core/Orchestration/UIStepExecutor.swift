@@ -141,7 +141,7 @@ package struct UIStepExecutor: Sendable {
 				timeoutMilliseconds: configuration.timeoutMilliseconds
 			)
 			return wait(result, step: step, lastSnapshot: &lastSnapshot)
-		case .tap, .longPress, .swipe, .typeText:
+		case .tap, .longPress, .scroll, .typeText:
 			return await executeInteraction(
 				step,
 				profile: profile,
@@ -213,7 +213,7 @@ package struct UIStepExecutor: Sendable {
 				durationMilliseconds: configuration.durationMilliseconds,
 				timeoutMilliseconds: configuration.timeoutMilliseconds
 			)
-		case .swipe:
+		case .scroll:
 			guard let direction = configuration.swipeDirection else {
 				return .failure(failure(step: nil, code: "execution.ui.step.parameters.invalid"))
 			}

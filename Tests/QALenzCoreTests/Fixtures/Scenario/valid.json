@@ -42,8 +42,8 @@
 			}
 		},
 		{
-			"id": "swipe-list",
-			"action": "swipe",
+			"id": "scroll-list",
+			"action": "scroll",
 			"selector": {
 				"identifier": "todo-list"
 			},
