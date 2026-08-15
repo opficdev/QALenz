@@ -14,9 +14,15 @@ import QALenzCLI
 enum CLIExecutable {
 	// CLI 인수를 실행하고 출력과 종료 상태를 전달합니다.
 	static func main() async {
-		let result = await CLIApplication.execute(
+		signal(SIGINT, SIG_IGN)
+		let task = Task { await CLIApplication.execute(
 			arguments: Array(CommandLine.arguments.dropFirst())
-		)
+		) }
+		let signalSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
+		signalSource.setEventHandler { task.cancel() }
+		signalSource.resume()
+		let result = await task.value
+		signalSource.cancel()
 
 		write(result.standardOutput, to: .standardOutput)
 		write(result.standardError, to: .standardError)

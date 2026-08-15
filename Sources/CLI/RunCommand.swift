@@ -8,6 +8,7 @@
 import ArgumentParser
 import Foundation
 import QALenzCore
+import QALenzXcodeBuildMCP
 
 // scenario의 실행 없는 dry-run 계획을 출력하는 명령을 정의합니다.
 package struct RunCommand: ParsableCommand {
@@ -27,24 +28,26 @@ package struct RunCommand: ParsableCommand {
 	// 기본 인수와 출력 옵션으로 초기화합니다.
 	package init() {}
 
-	// 실제 실행을 아직 제공하지 않으므로 dry-run 명시를 요구합니다.
-	package func validate() throws {
-		guard dryRun else {
-			throw ValidationError("--dry-run을 지정해야 합니다.")
-		}
-	}
-
-	// 현재 환경에서 dry-run 계획을 출력합니다.
+	// 현재 환경에서 dry-run 또는 단일 target 실행 결과를 출력합니다.
 	package func execute() async -> CLIProcessResult {
 		await execute(format: options.output)
 	}
 
 	// 요청한 출력 형식과 현재 환경에서 dry-run 계획을 출력합니다.
 	package func execute(format: CLIOutputFormat) async -> CLIProcessResult {
-		await execute(
+		let currentDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+		let adapter = XcodeBuildMCPCLIAdapter(
+			workingDirectoryURL: currentDirectoryURL,
+			environment: ProcessInfo.processInfo.environment,
+			timeout: .seconds(300)
+		)
+		let executor = SingleTargetRunExecutor(adapter: adapter)
+
+		return await execute(
 			format: format,
 			loader: ExecutionPlanLoader(),
-			currentDirectoryURL: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+			executor: executor,
+			currentDirectoryURL: currentDirectoryURL
 		)
 	}
 
@@ -52,6 +55,7 @@ package struct RunCommand: ParsableCommand {
 	package func execute(
 		format: CLIOutputFormat,
 		loader: any ExecutionPlanLoading,
+		executor: (any SingleTargetRunExecuting)? = nil,
 		currentDirectoryURL: URL
 	) async -> CLIProcessResult {
 		let configurationURL = currentDirectoryURL.standardizedFileURL
@@ -59,15 +63,29 @@ package struct RunCommand: ParsableCommand {
 			.appendingPathComponent("config.json", isDirectory: false)
 
 		do {
-			return CLIApplication.result(
-				for: try loader.load(
+			let plan = try loader.load(
 					scenarioID: scenarioID,
 					at: configurationURL,
 					outputDirectoryOverridePath: outputDirectory,
 					currentDirectoryURL: currentDirectoryURL
-				),
-				format: format
-			)
+				)
+			guard !dryRun else {
+				return CLIApplication.result(for: plan, format: format)
+			}
+			guard let executor else {
+				return CLIApplication.result(for: runError(for: RunError(
+					kind: .execution,
+					code: .init(rawValue: "execution.runner.unavailable"),
+					context: .init(command: "run")
+				)), format: format)
+			}
+
+			switch await executor.execute(plan) {
+			case let .success(execution):
+				return CLIApplication.result(for: execution, format: format)
+			case let .failure(error):
+				return CLIApplication.result(for: error, format: format)
+			}
 		} catch is TargetValidationError {
 			return CLIApplication.result(
 				for: .init(errors: [.init(
