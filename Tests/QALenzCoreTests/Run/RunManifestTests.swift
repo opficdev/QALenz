@@ -21,6 +21,17 @@ struct RunManifestTests {
 		#expect(try RunManifestCodec().decode(data) == manifest)
 	}
 
+	// manifest 날짜를 사람이 읽을 수 있는 UTC ISO 8601 문자열로 기록하는지 검증합니다.
+	@Test
+	func manifest_날짜를_UTC_ISO_8601_문자열로_기록한다() throws {
+		let data = try RunManifestCodec().encode(manifest())
+		let document = try #require(
+			JSONSerialization.jsonObject(with: data) as? [String: Any]
+		)
+
+		#expect(document["createdAt"] as? String == "2024-08-15T10:35:23Z")
+	}
+
 	// failed target을 포함한 passed manifest를 거부하는지 검증합니다.
 	@Test
 	func failed_target을_포함한_passed_manifest를_거부한다() {
@@ -44,7 +55,7 @@ struct RunManifestTests {
 			"""
 			{
 			  "id": "5D1A1E6B-5B08-4C4A-9E87-0B6D6B061600",
-			  "createdAt": 0,
+			  "createdAt": "1970-01-01T00:00:00Z",
 			  "qalenzVersion": "0.1.0",
 			  "scenario": {"id": "todo-completion", "profile": "default"},
 			  "result": {"status": "passed"},
@@ -69,10 +80,12 @@ struct RunManifestTests {
 	}
 
 	// manifest 시험값을 반환합니다.
-	private func manifest() throws -> RunManifest {
+	private func manifest(
+		createdAt: Date = Date(timeIntervalSince1970: 1_723_718_123)
+	) throws -> RunManifest {
 		try .init(
 			id: UUID(uuidString: "5D1A1E6B-5B08-4C4A-9E87-0B6D6B061600")!,
-			createdAt: Date(timeIntervalSince1970: 1_723_718_123.123_456),
+			createdAt: createdAt,
 			qalenzVersion: "0.1.0",
 			scenario: .init(id: "todo-completion", profile: "default"),
 			result: .failed,

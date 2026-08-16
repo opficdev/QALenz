@@ -216,24 +216,24 @@ package struct RunStepResult: Codable, Sendable, Equatable {
 	}
 }
 
-// manifest JSON의 날짜 정밀도와 key 순서를 고정합니다.
+// manifest JSON의 날짜 형식과 key 순서를 고정합니다.
 package struct RunManifestCodec: Sendable {
 	// 기본 codec을 구성합니다.
 	package init() {}
 
-	// manifest를 고정 JSON 형식으로 인코딩합니다.
+	// manifest를 UTC ISO 8601 날짜 문자열과 정렬된 key로 인코딩합니다.
 	package func encode(_ manifest: RunManifest) throws -> Data {
 		let encoder = JSONEncoder()
-		encoder.dateEncodingStrategy = .secondsSince1970
+		encoder.dateEncodingStrategy = .iso8601
 		encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
 		return try encoder.encode(manifest)
 	}
 
-	// 고정 JSON 형식의 manifest를 복원합니다.
+	// UTC ISO 8601 날짜 문자열을 manifest로 복원합니다.
 	package func decode(_ data: Data) throws -> RunManifest {
 		let decoder = JSONDecoder()
-		decoder.dateDecodingStrategy = .secondsSince1970
+		decoder.dateDecodingStrategy = .iso8601
 
 		return try decoder.decode(RunManifest.self, from: data)
 	}
