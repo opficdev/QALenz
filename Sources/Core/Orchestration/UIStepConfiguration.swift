@@ -22,7 +22,7 @@ struct UIStepConfiguration {
 	// action별 parameter를 검증하고 실행 정책 값으로 구성합니다.
 	init(step: ExecutionPlanStep) throws {
 		let values = try Self.values(from: step)
-		timeoutMilliseconds = try Self.integer("timeoutMilliseconds", in: values, default: 5_000, minimum: 0, step: step)
+		timeoutMilliseconds = try Self.integer("timeoutMilliseconds", in: values, default: 5_000, minimum: 1, step: step)
 		retryCount = try Self.integer(
 			"retryCount",
 			in: values,

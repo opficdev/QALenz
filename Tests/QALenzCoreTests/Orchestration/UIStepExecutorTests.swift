@@ -137,6 +137,22 @@ struct UIStepExecutorTests {
 		#expect(spy.waitCount == 0)
 	}
 
+	// process 시간 제한으로 전달하는 timeout의 최소값을 검증합니다.
+	@Test(arguments: [("0", false), ("1", true)])
+	func timeoutMilliseconds_하한을_검증한다(rawValue: String, isValid: Bool) throws {
+		let fixture = step(action: .tap, parameters: ["timeoutMilliseconds": .number(rawValue)])
+
+		if isValid {
+			let configuration = try UIStepConfiguration(step: fixture)
+			#expect(configuration.timeoutMilliseconds == 1)
+		} else {
+			let error = try #require(throws: RunError.self) {
+				try UIStepConfiguration(step: fixture)
+			}
+			#expect(error.context.keyPath == "parameters.timeoutMilliseconds")
+		}
+	}
+
 	// scroll parameter를 adapter 요청으로 빠짐없이 전달하는지 검증합니다.
 	@Test
 	func scroll_parameter를_adapter_요청으로_전달한다() async {
