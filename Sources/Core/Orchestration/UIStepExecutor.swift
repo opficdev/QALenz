@@ -264,7 +264,7 @@ private extension UIStepExecutor {
 				result: .errored(contextual(error, step: step)),
 				attempts: 1,
 				snapshot: snapshot,
-				isRetryable: error.code.rawValue != "execution.cancelled"
+				isRetryable: isRetryable(error)
 			)
 		}
 	}
@@ -286,7 +286,7 @@ private extension UIStepExecutor {
 				result: .errored(contextual(error, step: step)),
 				attempts: 1,
 				snapshot: snapshot,
-				isRetryable: error.code.rawValue != "execution.cancelled"
+				isRetryable: isRetryable(error)
 			)
 		}
 	}
@@ -334,6 +334,11 @@ private extension UIStepExecutor {
 			attempts: 1,
 			snapshot: snapshot
 		)
+	}
+
+	// 새 UI 요청으로 회복할 수 있는 시간 제한 오류만 재시도 대상으로 분류합니다.
+	private func isRetryable(_ error: RunError) -> Bool {
+		error.code.rawValue == "execution.timeout"
 	}
 
 	// adapter 오류에 현재 step 식별자를 보강합니다.

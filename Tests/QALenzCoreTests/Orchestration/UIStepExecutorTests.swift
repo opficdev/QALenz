@@ -15,7 +15,7 @@ struct UIStepExecutorTests {
 	// selector 조회 실패 뒤 새 element 참조로 재시도하는지 검증합니다.
 	@Test
 	func selector_조회_실패_뒤_새_element_참조로_재시도한다() async {
-		let error = RunError(kind: .adapter, code: .init(rawValue: "adapter.action.failed"))
+		let error = RunError(kind: .execution, code: .init(rawValue: "execution.timeout"))
 		let spy = UIAutomationSpy(waitResults: [.failure(error), .success(.init(
 			snapshot: .init(screenHash: "screen", sequence: 2),
 			elementReference: .init(rawValue: "e2")
@@ -31,6 +31,44 @@ struct UIStepExecutorTests {
 		#expect(execution.attempts == 2)
 		#expect(spy.waitCount == 2)
 		#expect(spy.tapReferences == ["e2"])
+	}
+
+	// 영구 adapter 오류가 나면 retryCount와 관계없이 즉시 종료하는지 검증합니다.
+	@Test
+	func 영구_adapter_오류가_나면_재시도하지_않는다() async {
+		let error = RunError(kind: .adapter, code: .init(rawValue: "adapter.xcodebuildmcp.unavailable"))
+		let spy = UIAutomationSpy(waitResults: [.failure(error)])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .waitForUI, parameters: ["retryCount": .number("1")]),
+			profile: "fixture"
+		)
+		let resultError = execution.result.error
+
+		#expect(resultError?.code == error.code)
+		#expect(execution.attempts == 1)
+		#expect(spy.waitCount == 1)
+	}
+
+	// snapshot 시간 제한 오류가 새 요청으로 재시도되는지 검증합니다.
+	@Test
+	func snapshot_시간_제한_오류를_재시도한다() async {
+		let error = RunError(kind: .execution, code: .init(rawValue: "execution.timeout"))
+		let spy = UIAutomationSpy(snapshotResults: [.failure(error), .success(.init(
+			screenHash: "screen",
+			sequence: 2
+		))])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .snapshotUI, parameters: ["retryCount": .number("1")]),
+			profile: "fixture"
+		)
+
+		#expect(execution.result == .passed)
+		#expect(execution.attempts == 2)
+		#expect(spy.snapshotCount == 2)
 	}
 
 	// interaction 요청 뒤 오류가 나면 동작 중복을 막기 위해 재시도하지 않는지 검증합니다.
@@ -254,19 +292,30 @@ struct UIStepExecutorTests {
 // UI automation 호출 횟수와 element 참조를 기록하는 시험 대역입니다.
 private final class UIAutomationSpy: UIAutomationExecuting, @unchecked Sendable {
 	private let lock = NSLock()
+	private var snapshotResults: [Result<UIAutomationSnapshot, RunError>]
 	private var actionResults: [Result<UIAutomationActionResult, RunError>]
 	private var waitResults: [Result<UIAutomationWaitResult, RunError>]
 	private var references = [String]()
 	private var scrollCallsStorage = [UIAutomationScrollCall]()
+	private var snapshotCountStorage = 0
 	private var waitCountStorage = 0
 
 	// action 결과 순서로 시험 대역을 구성합니다.
 	init(
+		snapshotResults: [Result<UIAutomationSnapshot, RunError>] = [],
 		actionResults: [Result<UIAutomationActionResult, RunError>] = [],
 		waitResults: [Result<UIAutomationWaitResult, RunError>] = []
 	) {
+		self.snapshotResults = snapshotResults
 		self.actionResults = actionResults
 		self.waitResults = waitResults
+	}
+
+	// 기록한 snapshot 요청 횟수를 반환합니다.
+	var snapshotCount: Int {
+		lock.lock()
+		defer { lock.unlock() }
+		return snapshotCountStorage
 	}
 
 	// 기록한 selector 대기 횟수를 반환합니다.
@@ -295,7 +344,12 @@ private final class UIAutomationSpy: UIAutomationExecuting, @unchecked Sendable 
 		profile: String,
 		timeoutMilliseconds: Int
 	) async -> Result<UIAutomationSnapshot, RunError> {
-		.success(.init(screenHash: "screen", sequence: 1))
+		lock.withLock {
+			snapshotCountStorage += 1
+			return snapshotResults.isEmpty
+				? .success(.init(screenHash: "screen", sequence: snapshotCountStorage))
+				: snapshotResults.removeFirst()
+		}
 	}
 
 	// 호출 순서에 따라 새로운 element 참조를 반환합니다.

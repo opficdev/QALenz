@@ -256,16 +256,23 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 
 	// UI 오류 payload의 코드와 snapshot을 정규화된 오류 문맥에 보존합니다.
 	private func contextual(_ error: RunError, payload: XcodeBuildMCPPayload?) -> RunError {
-		let code = payload?
+		let uiErrorCode = payload?
 			.objectValue(for: "uiError")?
 			.stringValue(for: "code")
+		let code = if uiErrorCode == "WAIT_TIMEOUT" {
+			"execution.timeout"
+		} else if let uiErrorCode {
+			"adapter.xcodebuildmcp.ui.\(uiErrorCode)"
+		} else {
+			error.code.rawValue
+		}
 		let snapshot = payload?
 			.objectValue(for: "capture")
 			.flatMap(snapshot)
 
 		return .init(
 			kind: error.kind,
-			code: .init(rawValue: code.map { "adapter.xcodebuildmcp.ui.\($0)" } ?? error.code.rawValue),
+			code: .init(rawValue: code),
 			context: .init(
 				command: error.context.command,
 				target: error.context.target,

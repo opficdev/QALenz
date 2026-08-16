@@ -104,7 +104,7 @@ struct XcodeBuildMCPUIAutomationAdapterTests {
 		).failure
 		let error = try #require(failure)
 
-		#expect(error.code.rawValue == "adapter.xcodebuildmcp.ui.WAIT_TIMEOUT")
+		#expect(error.code.rawValue == "execution.timeout")
 		#expect(error.context.uiSnapshot == .init(screenHash: "screen-hash", sequence: 4))
 	}
 
