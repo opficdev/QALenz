@@ -77,6 +77,39 @@ struct SingleTargetRunExecutorTests {
 		))
 	}
 
+	// 잘못된 UI step 설정을 build-and-run 전에 거부하는지 검증합니다.
+	@Test
+	func 잘못된_UI_step_설정을_build_and_run_전에_거부한다() async {
+		let adapter = ExecutionAdapterSpy(updates: [.completed(result: .passed)])
+		let store = RunManifestStoreSpy()
+		let steps = [
+			ExecutionPlanStep(
+				id: "build-and-run",
+				action: .buildAndRun,
+				selector: nil,
+				sideEffects: [.appLaunch, .simulatorUse]
+			),
+			.init(
+				id: "type-title",
+				action: .typeText,
+				selector: .init(identifier: "title-field"),
+				sideEffects: [.simulatorUse]
+			)
+		]
+
+		let result = await makeExecutor(adapter: adapter, store: store).execute(plan(steps: steps))
+
+		guard case let .failure(error) = result else {
+			Issue.record("실행 전 UI step 설정 오류가 반환되지 않음")
+			return
+		}
+		#expect(error.code.rawValue == "execution.ui.step.parameters.invalid")
+		#expect(error.context.step == "type-title")
+		#expect(error.context.keyPath == "parameters.text")
+		#expect(adapter.requests.isEmpty)
+		#expect(store.manifests.isEmpty)
+	}
+
 	// build, launch, timeout 오류에서도 완료 manifest를 저장하는지 검증합니다.
 	@Test(arguments: [
 		"execution.build.failed",

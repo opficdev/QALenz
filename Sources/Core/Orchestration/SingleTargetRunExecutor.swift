@@ -122,6 +122,9 @@ package struct SingleTargetRunExecutor: SingleTargetRunExecuting {
 		guard uiSteps.allSatisfy(\.action.isUIAutomationAction) else {
 			throw failure(code: "execution.step.unsupported")
 		}
+		for step in uiSteps {
+			_ = try UIStepConfiguration(step: step)
+		}
 
 		return .init(target: target, buildStep: buildStep, uiSteps: uiSteps)
 	}
