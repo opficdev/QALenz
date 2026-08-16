@@ -277,10 +277,11 @@ package struct XcodeBuildMCPUIAutomationAdapter: UIAutomationExecuting, Sendable
 				command: error.context.command,
 				target: error.context.target,
 				step: error.context.step,
-				assertion: error.context.assertion,
-				filePath: error.context.filePath,
-				keyPath: error.context.keyPath,
-				uiSnapshot: snapshot ?? error.context.uiSnapshot
+			assertion: error.context.assertion,
+			filePath: error.context.filePath,
+			keyPath: error.context.keyPath,
+			underlyingCode: uiErrorCode ?? error.context.underlyingCode,
+			uiSnapshot: snapshot ?? error.context.uiSnapshot
 			)
 		)
 	}

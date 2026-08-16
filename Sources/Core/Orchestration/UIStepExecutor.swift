@@ -350,6 +350,7 @@ private extension UIStepExecutor {
 			assertion: error.context.assertion,
 			filePath: error.context.filePath,
 			keyPath: error.context.keyPath,
+			underlyingCode: error.context.underlyingCode,
 			uiSnapshot: error.context.uiSnapshot
 		))
 	}
