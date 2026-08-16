@@ -230,11 +230,28 @@ package struct RunManifestCodec: Sendable {
 		return try encoder.encode(manifest)
 	}
 
-	// UTC ISO 8601 날짜 문자열을 manifest로 복원합니다.
+	// UTC ISO 8601 날짜 문자열과 이전 숫자형 날짜를 manifest로 복원합니다.
 	package func decode(_ data: Data) throws -> RunManifest {
 		let decoder = JSONDecoder()
-		decoder.dateDecodingStrategy = .iso8601
+		decoder.dateDecodingStrategy = .custom(Self.date)
 
 		return try decoder.decode(RunManifest.self, from: data)
+	}
+
+	// ISO 8601 문자열을 우선 읽고 이전 Unix timestamp 표현을 함께 허용합니다.
+	private static func date(from decoder: Decoder) throws -> Date {
+		let container = try decoder.singleValueContainer()
+		if let string = try? container.decode(String.self) {
+			guard let date = ISO8601DateFormatter().date(from: string) else {
+				throw DecodingError.dataCorruptedError(
+					in: container,
+					debugDescription: "ISO 8601 날짜 문자열이 필요합니다."
+				)
+			}
+
+			return date
+		}
+
+		return Date(timeIntervalSince1970: try container.decode(Double.self))
 	}
 }

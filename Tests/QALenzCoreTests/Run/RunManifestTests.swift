@@ -32,6 +32,16 @@ struct RunManifestTests {
 		#expect(document["createdAt"] as? String == "2024-08-15T10:35:23Z")
 	}
 
+	// 이전 숫자형 날짜를 기록한 manifest를 계속 복원하는지 검증합니다.
+	@Test
+	func 이전_숫자형_manifest_날짜를_복원한다() throws {
+		let expected = try manifest()
+		let encoder = JSONEncoder()
+		encoder.dateEncodingStrategy = .secondsSince1970
+
+		#expect(try RunManifestCodec().decode(encoder.encode(expected)) == expected)
+	}
+
 	// failed target을 포함한 passed manifest를 거부하는지 검증합니다.
 	@Test
 	func failed_target을_포함한_passed_manifest를_거부한다() {
