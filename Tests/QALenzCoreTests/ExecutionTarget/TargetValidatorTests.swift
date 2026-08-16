@@ -25,7 +25,6 @@ struct TargetValidatorTests {
 
 		#expect(resolved.devices == ["iPhone 17"])
 		#expect(resolved.operatingSystems == ["iOS 26.0"])
-		#expect(resolved.appearances == ["light"])
 	}
 
 	// 지원하지 않는 dimension key를 명확한 오류로 거부하는지 검증합니다.
@@ -38,7 +37,7 @@ struct TargetValidatorTests {
 		}
 	}
 
-	// 배열이 아닌 dimension 값과 빈 배열을 구분해 거부하는지 검증합니다.
+	// 잘못된 dimension 형식, 빈 배열과 지원하지 않는 dimension을 구분해 거부하는지 검증합니다.
 	@Test
 	func 잘못된_dimension_형식과_빈_배열을_거부한다() {
 		#expect(throws: TargetValidationError.dimensionInvalid(.operatingSystems)) {
@@ -46,7 +45,12 @@ struct TargetValidatorTests {
 				"operatingSystems": .string("iOS 26.0")
 			]))
 		}
-		#expect(throws: TargetValidationError.dimensionEmpty(.appearances)) {
+		#expect(throws: TargetValidationError.dimensionEmpty(.devices)) {
+			try TargetSelectionDecoder().decode(.object([
+				"devices": .array([])
+			]))
+		}
+		#expect(throws: TargetValidationError.unsupportedDimension("appearances")) {
 			try TargetSelectionDecoder().decode(.object([
 				"appearances": .array([])
 			]))
@@ -112,8 +116,7 @@ struct TargetValidatorTests {
 	private func defaults() -> TargetDefaults {
 		.init(
 			devices: ["iPhone 16"],
-			operatingSystems: ["iOS 26.0"],
-			appearances: ["light"]
+			operatingSystems: ["iOS 26.0"]
 		)
 	}
 

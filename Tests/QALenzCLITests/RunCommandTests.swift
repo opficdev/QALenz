@@ -223,8 +223,7 @@ struct RunCommandTests {
 			  "outputDirectory": "../outputs",
 			  "targetDefaults": {
 				"devices": ["iPhone 16"],
-				"operatingSystems": ["iOS 26.0"],
-				"appearances": ["light"]
+				"operatingSystems": ["iOS 26.0"]
 			  },
 			  "maximumTargetCount": 12
 			}
@@ -266,10 +265,9 @@ struct RunCommandTests {
 			outputDirectoryPath: "/tmp/QALenz/Runs",
 			testDataRequirements: [.init(operation: .create, resource: "todo:incomplete")],
 			targets: [.init(
-				target: .init(
+			target: .init(
 					device: "iPhone 16",
-					operatingSystem: "iOS 26.0",
-					appearance: "light"
+					operatingSystem: "iOS 26.0"
 				),
 				outputDirectoryPath: "/tmp/QALenz/Runs/device=9:iPhone 16",
 				steps: [.init(

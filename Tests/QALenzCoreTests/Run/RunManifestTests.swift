@@ -63,8 +63,7 @@ struct RunManifestTests {
 				"target": {
 				  "device": "iPhone 17",
 				  "operatingSystem": "iOS 26.0",
-				  "appearance": "light",
-				  "identifier": "device=9:iPhone 17|operatingSystem=8:iOS 26.0|appearance=5:light"
+				  "identifier": "device=9:iPhone 17|operatingSystem=8:iOS 26.0"
 				},
 				"result": {"status": "failed"},
 				"stepResults": [],
@@ -92,8 +91,7 @@ struct RunManifestTests {
 			targets: [try .init(
 				target: .init(
 					device: "iPhone 17",
-					operatingSystem: "iOS 26.0",
-					appearance: "light"
+					operatingSystem: "iOS 26.0"
 				),
 				result: .failed,
 				stepResults: [
@@ -127,8 +125,7 @@ struct RunManifestTests {
 			targets: [try .init(
 				target: .init(
 					device: "iPhone 17",
-					operatingSystem: "iOS 26.0",
-					appearance: "light"
+					operatingSystem: "iOS 26.0"
 				),
 				result: .failed,
 				stepResults: [],
@@ -142,8 +139,7 @@ struct RunManifestTests {
 		try .init(
 			target: .init(
 				device: "iPhone 17",
-				operatingSystem: "iOS 26.0",
-				appearance: "light"
+				operatingSystem: "iOS 26.0"
 			),
 			result: .passed,
 			stepResults: [.init(stepID: "launch", result: .failed)],

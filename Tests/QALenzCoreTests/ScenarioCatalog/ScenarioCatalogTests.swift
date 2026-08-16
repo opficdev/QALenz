@@ -130,8 +130,7 @@ struct ScenarioCatalogTests {
 			  "scenariosDirectory": "../scenarios",
 			  "targetDefaults": {
 				"devices": ["iPhone 16"],
-				"operatingSystems": ["iOS 26.0"],
-				"appearances": ["light"]
+				"operatingSystems": ["iOS 26.0"]
 			  },
 			  "maximumTargetCount": 12
 			}

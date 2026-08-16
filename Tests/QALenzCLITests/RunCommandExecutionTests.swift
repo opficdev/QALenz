@@ -82,10 +82,9 @@ struct RunCommandExecutionTests {
 			scenario: .init(id: "todo-completion", profile: "default"),
 			result: result,
 			targets: [try .init(
-				target: .init(
+			target: .init(
 					device: "iPhone 16",
-					operatingSystem: "iOS 26.0",
-					appearance: "light"
+					operatingSystem: "iOS 26.0"
 				),
 				result: result,
 				stepResults: [.init(stepID: "launch", result: result)],

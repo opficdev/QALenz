@@ -153,8 +153,7 @@ struct SingleTargetRunExecutorTests {
 			targets: [.init(
 				target: .init(
 					device: "Fixture Phone",
-					operatingSystem: "iOS 26.0",
-					appearance: "light"
+					operatingSystem: "iOS 26.0"
 				),
 				outputDirectoryPath: "/tmp/runs/fixture",
 				steps: steps ?? [.init(
