@@ -50,16 +50,22 @@ package struct XcodeBuildMCPOutputDecoder: Sendable {
 			)
 		}
 
-		guard !envelope.didError else {
-			return failure(
+		if envelope.didError {
+			let payload = try? definition.payload.projected(envelope.data)
+
+			return .init(
 				operation: operation,
-				code: "adapter.xcodebuildmcp.command.failed"
+				result: .errored(.init(
+					kind: .adapter,
+					code: .init(rawValue: "adapter.xcodebuildmcp.command.failed"),
+					context: .init(command: operation.rawValue)
+				)),
+				payload: payload
 			)
 		}
 
 		do {
 			let payload = try definition.payload.projected(envelope.data)
-
 			return .init(
 				operation: operation,
 				result: try definition.result.normalizedResult(from: payload),

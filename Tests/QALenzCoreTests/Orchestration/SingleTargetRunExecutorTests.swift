@@ -36,6 +36,80 @@ struct SingleTargetRunExecutorTests {
 		#expect(store.manifests == [execution.manifest])
 	}
 
+	// build-and-run 뒤 UI step을 순서대로 실행하고 snapshot metadata를 보존하는지 검증합니다.
+	@Test
+	func build_and_run_뒤_UI_step_결과를_manifest로_보존한다() async {
+		let adapter = ExecutionAdapterSpy(updates: [.completed(result: .passed)])
+		let store = RunManifestStoreSpy()
+		let uiAdapter = SnapshotUIAdapterSpy()
+		let executor = makeExecutor(
+			adapter: adapter,
+			store: store,
+			uiStepExecutor: .init(adapter: uiAdapter, sleep: { _ in })
+		)
+		let steps = [
+			ExecutionPlanStep(
+				id: "build-and-run",
+				action: .buildAndRun,
+				selector: nil,
+				sideEffects: [.appLaunch, .simulatorUse]
+			),
+			.init(
+				id: "snapshot",
+				action: .snapshotUI,
+				selector: nil,
+				sideEffects: [.simulatorUse]
+			)
+		]
+
+		let result = await executor.execute(plan(steps: steps))
+
+		guard case let .success(execution) = result else {
+			Issue.record("UI step 실행 결과가 반환되지 않음")
+			return
+		}
+		#expect(execution.manifest.result == .passed)
+		#expect(execution.manifest.targets[0].stepResults.map(\.stepID) == ["build-and-run", "snapshot"])
+		#expect(execution.manifest.targets[0].stepResults[1].attempts == 1)
+		#expect(execution.manifest.targets[0].stepResults[1].uiSnapshot == .init(
+			screenHash: "snapshot-hash",
+			sequence: 2
+		))
+	}
+
+	// 잘못된 UI step 설정을 build-and-run 전에 거부하는지 검증합니다.
+	@Test
+	func 잘못된_UI_step_설정을_build_and_run_전에_거부한다() async {
+		let adapter = ExecutionAdapterSpy(updates: [.completed(result: .passed)])
+		let store = RunManifestStoreSpy()
+		let steps = [
+			ExecutionPlanStep(
+				id: "build-and-run",
+				action: .buildAndRun,
+				selector: nil,
+				sideEffects: [.appLaunch, .simulatorUse]
+			),
+			.init(
+				id: "type-title",
+				action: .typeText,
+				selector: .init(identifier: "title-field"),
+				sideEffects: [.simulatorUse]
+			)
+		]
+
+		let result = await makeExecutor(adapter: adapter, store: store).execute(plan(steps: steps))
+
+		guard case let .failure(error) = result else {
+			Issue.record("실행 전 UI step 설정 오류가 반환되지 않음")
+			return
+		}
+		#expect(error.code.rawValue == "execution.ui.step.parameters.invalid")
+		#expect(error.context.step == "type-title")
+		#expect(error.context.keyPath == "parameters.text")
+		#expect(adapter.requests.isEmpty)
+		#expect(store.manifests.isEmpty)
+	}
+
 	// build, launch, timeout 오류에서도 완료 manifest를 저장하는지 검증합니다.
 	@Test(arguments: [
 		"execution.build.failed",
@@ -89,10 +163,12 @@ struct SingleTargetRunExecutorTests {
 	// 시험용 단일 target 실행기를 구성합니다.
 	private func makeExecutor(
 		adapter: any XcodeBuildMCPExecutionStreaming,
-		store: any RunManifestStoring
+		store: any RunManifestStoring,
+		uiStepExecutor: UIStepExecutor? = nil
 	) -> SingleTargetRunExecutor {
 		.init(
 			adapter: adapter,
+			uiStepExecutor: uiStepExecutor,
 			manifestStore: store,
 			now: { Date(timeIntervalSince1970: 1_723_718_123) },
 			makeID: { UUID(uuidString: "5D1A1E6B-5B08-4C4A-9E87-0B6D6B061600")! }
@@ -100,7 +176,7 @@ struct SingleTargetRunExecutorTests {
 	}
 
 	// 시험용 단일 target 실행 계획을 구성합니다.
-	private func plan() -> ExecutionPlan {
+	private func plan(steps: [ExecutionPlanStep]? = nil) -> ExecutionPlan {
 		.init(
 			scenarioID: "fixture",
 			profile: "default",
@@ -110,11 +186,10 @@ struct SingleTargetRunExecutorTests {
 			targets: [.init(
 				target: .init(
 					device: "Fixture Phone",
-					operatingSystem: "iOS 26.0",
-					appearance: "light"
+					operatingSystem: "iOS 26.0"
 				),
 				outputDirectoryPath: "/tmp/runs/fixture",
-				steps: [.init(
+				steps: steps ?? [.init(
 					id: "build-and-run",
 					action: .buildAndRun,
 					selector: nil,
@@ -206,6 +281,70 @@ private final class RunManifestStoreSpy: RunManifestStoring, @unchecked Sendable
 		manifestsStorage.append(manifest)
 		lock.unlock()
 		return outputURL.appendingPathComponent("manifest.json")
+	}
+}
+
+// snapshot UI 요청에 정해진 metadata를 반환하는 시험 대역입니다.
+private struct SnapshotUIAdapterSpy: UIAutomationExecuting {
+	// 고정된 UI snapshot을 반환합니다.
+	func snapshotUI(
+		profile: String,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationSnapshot, RunError> {
+		.success(.init(screenHash: "snapshot-hash", sequence: 2))
+	}
+
+	// 지원하지 않는 UI 대기 오류를 반환합니다.
+	func waitForUI(
+		profile: String,
+		selector: ScenarioSelector,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationWaitResult, RunError> {
+		.failure(error)
+	}
+
+	// 지원하지 않는 tap 오류를 반환합니다.
+	func tap(
+		profile: String,
+		elementReference: UIElementReference,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationActionResult, RunError> {
+		.failure(error)
+	}
+
+	// 지원하지 않는 long press 오류를 반환합니다.
+	func longPress(
+		profile: String,
+		elementReference: UIElementReference,
+		durationMilliseconds: Int?,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationActionResult, RunError> {
+		.failure(error)
+	}
+
+	// 지원하지 않는 scroll 오류를 반환합니다.
+	func scroll(
+		profile: String,
+		elementReference: UIElementReference,
+		request: UIAutomationScrollRequest
+	) async -> Result<UIAutomationActionResult, RunError> {
+		.failure(error)
+	}
+
+	// 지원하지 않는 type text 오류를 반환합니다.
+	func typeText(
+		profile: String,
+		elementReference: UIElementReference,
+		text: String,
+		replaceExisting: Bool,
+		timeoutMilliseconds: Int
+	) async -> Result<UIAutomationActionResult, RunError> {
+		.failure(error)
+	}
+
+	// 시험 대역의 지원하지 않는 동작 오류를 반환합니다.
+	private var error: RunError {
+		.init(kind: .adapter, code: .init(rawValue: "fixture.unsupported"))
 	}
 }
 

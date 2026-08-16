@@ -146,7 +146,8 @@ struct XcodeBuildMCPCLIAdapterTests {
 		let adapter = makeAdapter(processRunner: runner)
 		let request = XcodeBuildMCPRequest(
 			operation: operation,
-			arguments: [.init(name: "project.root", value: "/tmp/Fixture.xcodeproj")]
+			arguments: [.init(name: "project.root", value: "/tmp/Fixture.xcodeproj")],
+			timeout: .milliseconds(400)
 		)
 
 		let result = await adapter.execute(request)
@@ -168,6 +169,7 @@ struct XcodeBuildMCPCLIAdapterTests {
 			"PATH": "/usr/bin:/bin",
 			"DEVELOPER_DIR": "/Applications/Xcode.app"
 		])
+		#expect(processRequest?.timeout == .milliseconds(400))
 	}
 
 	// JSONL 출력이 공통 진행 사건 stream으로 변환되는지 검증합니다.

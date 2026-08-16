@@ -96,6 +96,13 @@
 					{
 						"properties": {
 							"action": {
+								"const": "snapshotUI"
+							}
+						}
+					},
+					{
+						"properties": {
+							"action": {
 								"const": "tap"
 							}
 						},
@@ -116,9 +123,12 @@
 					{
 						"properties": {
 							"action": {
-								"const": "swipe"
+								"const": "scroll"
 							}
-						}
+						},
+						"required": [
+							"selector"
+						]
 					},
 					{
 						"properties": {

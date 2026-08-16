@@ -20,13 +20,11 @@ package struct TargetValidator: Sendable {
 	) throws -> ResolvedTargetSelection {
 		let resolved = ResolvedTargetSelection(
 			devices: definition.devices ?? defaults.devices,
-			operatingSystems: definition.operatingSystems ?? defaults.operatingSystems,
-			appearances: definition.appearances ?? defaults.appearances
+			operatingSystems: definition.operatingSystems ?? defaults.operatingSystems
 		)
 
 		try validate(resolved.devices, for: .devices)
 		try validate(resolved.operatingSystems, for: .operatingSystems)
-		try validate(resolved.appearances, for: .appearances)
 		try validateDeviceOperatingSystems(resolved, policy: policy)
 
 		return resolved

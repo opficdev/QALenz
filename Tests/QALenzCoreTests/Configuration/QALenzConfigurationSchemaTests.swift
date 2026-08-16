@@ -42,7 +42,7 @@ struct QALenzConfigurationSchemaTests {
 
 		#expect(targetDefaultsProperty["type"] as? String == "object")
 		#expect(targetDefaultsProperty["additionalProperties"] as? Bool == false)
-		#expect(Set(targetDefaultProperties.keys) == ["devices", "operatingSystems", "appearances"])
+		#expect(Set(targetDefaultProperties.keys) == ["devices", "operatingSystems"])
 		for property in targetDefaultProperties.values {
 			let items = try #require(property["items"] as? [String: Any])
 

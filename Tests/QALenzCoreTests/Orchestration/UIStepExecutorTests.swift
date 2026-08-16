@@ -1,0 +1,290 @@
+//
+//  UIStepExecutorTests.swift
+//  QALenz
+//
+//  Created by opfic on 8/16/26.
+//
+
+import Foundation
+import Testing
+@testable import QALenzCore
+
+// UI step 실행 정책을 검증합니다.
+@Suite
+struct UIStepExecutorTests {
+	// selector 조회 실패 뒤 새 element 참조로 재시도하는지 검증합니다.
+	@Test
+	func selector_조회_실패_뒤_새_element_참조로_재시도한다() async {
+		let error = RunError(kind: .execution, code: .init(rawValue: "execution.timeout"))
+		let spy = UIAutomationSpy(waitResults: [.failure(error), .success(.init(
+			snapshot: .init(screenHash: "screen", sequence: 2),
+			elementReference: .init(rawValue: "e2")
+		))])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .tap, parameters: ["retryCount": .number("1")]),
+			profile: "fixture"
+		)
+
+		#expect(execution.result == .passed)
+		#expect(execution.attempts == 2)
+		#expect(spy.waitCount == 2)
+		#expect(spy.tapReferences == ["e2"])
+	}
+
+	// 영구 adapter 오류가 나면 retryCount와 관계없이 즉시 종료하는지 검증합니다.
+	@Test
+	func 영구_adapter_오류가_나면_재시도하지_않는다() async {
+		let error = RunError(kind: .adapter, code: .init(rawValue: "adapter.xcodebuildmcp.unavailable"))
+		let spy = UIAutomationSpy(waitResults: [.failure(error)])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .waitForUI, parameters: ["retryCount": .number("1")]),
+			profile: "fixture"
+		)
+		let resultError = execution.result.error
+
+		#expect(resultError?.code == error.code)
+		#expect(execution.attempts == 1)
+		#expect(spy.waitCount == 1)
+	}
+
+	// snapshot 시간 제한 오류가 새 요청으로 재시도되는지 검증합니다.
+	@Test
+	func snapshot_시간_제한_오류를_재시도한다() async {
+		let error = RunError(kind: .execution, code: .init(rawValue: "execution.timeout"))
+		let spy = UIAutomationSpy(snapshotResults: [.failure(error), .success(.init(
+			screenHash: "screen",
+			sequence: 2
+		))])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .snapshotUI, parameters: ["retryCount": .number("1")]),
+			profile: "fixture"
+		)
+
+		#expect(execution.result == .passed)
+		#expect(execution.attempts == 2)
+		#expect(spy.snapshotCount == 2)
+	}
+
+	// interaction 요청 뒤 오류가 나면 동작 중복을 막기 위해 재시도하지 않는지 검증합니다.
+	@Test
+	func interaction_요청_뒤_오류가_나면_재시도하지_않는다() async {
+		let error = RunError(kind: .execution, code: .init(rawValue: "execution.timeout"))
+		let spy = UIAutomationSpy(actionResults: [.failure(error), .success(.init())])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .tap, parameters: ["retryCount": .number("1")]),
+			profile: "fixture"
+		)
+		let resultError = execution.result.error
+
+		#expect(resultError?.code == error.code)
+		#expect(execution.attempts == 1)
+		#expect(spy.waitCount == 1)
+		#expect(spy.tapReferences == ["e1"])
+	}
+
+	// 취소 오류가 나면 retryCount와 관계없이 즉시 종료하는지 검증합니다.
+	@Test
+	func 취소_오류가_나면_재시도하지_않는다() async {
+		let error = RunError(kind: .execution, code: .init(rawValue: "execution.cancelled"))
+		let spy = UIAutomationSpy(waitResults: [.failure(error)])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .waitForUI, parameters: ["retryCount": .number("1")]),
+			profile: "fixture"
+		)
+		let resultError = execution.result.error
+
+		#expect(resultError?.code == error.code)
+		#expect(execution.attempts == 1)
+		#expect(spy.waitCount == 1)
+	}
+
+	// action별 필수 parameter가 없으면 adapter 호출 전에 구조화 오류를 반환하는지 검증합니다.
+	@Test
+	func typeText_text가_없으면_구조화_오류를_반환한다() async throws {
+		let spy = UIAutomationSpy()
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(step(action: .typeText), profile: "fixture")
+		let error = try #require(execution.result.error)
+
+		#expect(error.code.rawValue == "execution.ui.step.parameters.invalid")
+		#expect(error.context.step == "fixture-step")
+		#expect(error.context.keyPath == "parameters.text")
+		#expect(spy.waitCount == 0)
+	}
+
+	// 복수 매치가 존재 대기에는 성공하지만 interaction에서는 오류인지 검증합니다.
+	@Test
+	func interaction이_복수_selector_매치를_거부한다() async throws {
+		let spy = UIAutomationSpy(waitResults: [.success(.init(
+			snapshot: .init(screenHash: "screen", sequence: 1)
+		))])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(step(action: .tap), profile: "fixture")
+		let error = try #require(execution.result.error)
+
+		#expect(error.code.rawValue == "execution.ui.selector.ambiguous")
+		#expect(execution.snapshot == .init(screenHash: "screen", sequence: 1))
+		#expect(spy.tapReferences.isEmpty)
+	}
+
+	// adapter 오류의 마지막 snapshot을 step 결과와 오류 문맥에 보존하는지 검증합니다.
+	@Test
+	func 대기_실패의_마지막_snapshot을_보존한다() async throws {
+		let snapshot = UIAutomationSnapshot(screenHash: "screen", sequence: 3)
+		let error = RunError(
+			kind: .adapter,
+			code: .init(rawValue: "adapter.xcodebuildmcp.ui.WAIT_TIMEOUT"),
+			context: .init(uiSnapshot: snapshot)
+		)
+		let spy = UIAutomationSpy(waitResults: [.failure(error)])
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(step(action: .waitForUI), profile: "fixture")
+		let resultError = try #require(execution.result.error)
+
+		#expect(execution.snapshot == snapshot)
+		#expect(resultError.context.uiSnapshot == snapshot)
+	}
+
+	// retryCount 상한을 넘는 parameter가 adapter 호출 전에 거부되는지 검증합니다.
+	@Test
+	func retryCount_상한을_넘으면_구조화_오류를_반환한다() async throws {
+		let spy = UIAutomationSpy()
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .tap, parameters: ["retryCount": .number("101")]),
+			profile: "fixture"
+		)
+		let error = try #require(execution.result.error)
+
+		#expect(error.code.rawValue == "execution.ui.step.parameters.invalid")
+		#expect(error.context.keyPath == "parameters.retryCount")
+		#expect(spy.waitCount == 0)
+	}
+
+	// process 시간 제한으로 전달하는 timeout의 최소값을 검증합니다.
+	@Test(arguments: [("0", false), ("1", true)])
+	func timeoutMilliseconds_하한을_검증한다(rawValue: String, isValid: Bool) throws {
+		let fixture = step(action: .tap, parameters: ["timeoutMilliseconds": .number(rawValue)])
+
+		if isValid {
+			let configuration = try UIStepConfiguration(step: fixture)
+			#expect(configuration.timeoutMilliseconds == 1)
+		} else {
+			let error = try #require(throws: RunError.self) {
+				try UIStepConfiguration(step: fixture)
+			}
+			#expect(error.context.keyPath == "parameters.timeoutMilliseconds")
+		}
+	}
+
+	// scroll parameter를 adapter 요청으로 빠짐없이 전달하는지 검증합니다.
+	@Test
+	func scroll_parameter를_adapter_요청으로_전달한다() async {
+		let spy = UIAutomationSpy()
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .scroll, parameters: [
+				"direction": .string("left"),
+				"durationMilliseconds": .number("750"),
+				"distance": .number("0.8"),
+				"timeoutMilliseconds": .number("1234")
+			]),
+			profile: "fixture-profile"
+		)
+
+		#expect(execution.result == .passed)
+		#expect(spy.scrollCalls == [.init(
+			profile: "fixture-profile",
+			elementReference: .init(rawValue: "e1"),
+			request: .init(
+				direction: .leftward,
+				durationMilliseconds: 750,
+				distance: 0.8,
+				timeoutMilliseconds: 1_234
+			)
+		)])
+	}
+
+	// scroll이 지원하는 네 방향을 공통 값으로 변환하는지 검증합니다.
+	@Test(arguments: ["up", "down", "left", "right"])
+	func scroll_direction을_공통_값으로_변환한다(direction: String) throws {
+		let expected = switch direction {
+		case "up": UIScrollDirection.upward
+		case "down": UIScrollDirection.downward
+		case "left": UIScrollDirection.leftward
+		case "right": UIScrollDirection.rightward
+		default: fatalError("지원하지 않는 fixture 방향")
+		}
+		let configuration = try UIStepConfiguration(step: step(
+			action: .scroll,
+			parameters: ["direction": .string(direction)]
+		))
+
+		#expect(configuration.scrollDirection == expected)
+	}
+
+	// scroll direction이 누락되거나 지원하지 않으면 실행 전에 거부하는지 검증합니다.
+	@Test(arguments: [nil, "diagonal"])
+	func scroll_direction_오류를_거부한다(direction: String?) async throws {
+		let parameters = direction.map { ["direction": ExecutionPlanParameter.string($0)] } ?? [:]
+		let spy = UIAutomationSpy()
+		let executor = UIStepExecutor(adapter: spy, sleep: { _ in })
+
+		let execution = await executor.execute(
+			step(action: .scroll, parameters: parameters),
+			profile: "fixture"
+		)
+		let error = try #require(execution.result.error)
+
+		#expect(error.context.keyPath == "parameters.direction")
+		#expect(spy.waitCount == 0)
+	}
+
+	// scroll distance의 허용 범위를 실행 전에 검증하는지 확인합니다.
+	@Test(arguments: [("1", true), ("0", false), ("1.01", false)])
+	func scroll_distance_범위를_검증한다(rawValue: String, isValid: Bool) throws {
+		let step = step(action: .scroll, parameters: [
+			"direction": .string("up"),
+			"distance": .number(rawValue)
+		])
+
+		if isValid {
+			let configuration = try UIStepConfiguration(step: step)
+			#expect(configuration.distance == 1)
+		} else {
+			let error = try #require(throws: RunError.self) {
+				try UIStepConfiguration(step: step)
+			}
+			#expect(error.context.keyPath == "parameters.distance")
+		}
+	}
+
+	// action과 선택 parameter로 execution plan step을 구성합니다.
+	private func step(
+		action: ScenarioStepAction,
+		parameters: [String: ExecutionPlanParameter] = [:]
+	) -> ExecutionPlanStep {
+		.init(
+			id: "fixture-step",
+			action: action,
+			selector: .init(identifier: "fixture"),
+			parameters: .object(parameters),
+			sideEffects: [.simulatorUse]
+		)
+	}
+}

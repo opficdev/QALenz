@@ -35,8 +35,7 @@ struct QALenzConfigurationDecoderTests {
 			.standardizedFileURL)
 		#expect(configuration.targetDefaults == .init(
 			devices: ["iPhone 16"],
-			operatingSystems: ["iOS 26.0"],
-			appearances: ["light"]
+			operatingSystems: ["iOS 26.0"]
 		))
 		#expect(configuration.targetPolicy.maximumTargetCount == 12)
 	}
@@ -149,7 +148,7 @@ struct QALenzConfigurationDecoderTests {
 			("\"maximumTargetCount\": 0", "$.maximumTargetCount"),
 			(
 				"\"targetDefaults\": {\"devices\": [\"iPhone 16\"], \"operatingSystems\": [\"iOS 26.0\"], " +
-					"\"appearances\": [\"light\"], \"unknown\": []}",
+					"\"unknown\": []}",
 				"$.targetDefaults.unknown"
 			)
 		]
@@ -193,14 +192,14 @@ struct QALenzConfigurationDecoderTests {
 	// target 설정 일부를 치환한 유효 config JSON을 반환합니다.
 	private func configurationJSON(replacing replacement: String) -> String {
 		let defaults = "\"targetDefaults\": {\"devices\": [\"iPhone 16\"], " +
-			"\"operatingSystems\": [\"iOS 26.0\"], \"appearances\": [\"light\"]}"
+			"\"operatingSystems\": [\"iOS 26.0\"]}"
 		let maximum = "\"maximumTargetCount\": 12"
 		let values = if replacement.hasPrefix("\"maximumTargetCount\"") {
 			"\(defaults), \(replacement)"
 		} else if replacement.hasPrefix("\"targetDefaults\"") {
 			"\(replacement), \(maximum)"
 		} else {
-			"\"targetDefaults\": {\(replacement), \"operatingSystems\": [\"iOS 26.0\"], \"appearances\": [\"light\"]}, \(maximum)"
+			"\"targetDefaults\": {\(replacement), \"operatingSystems\": [\"iOS 26.0\"]}, \(maximum)"
 		}
 
 		return """

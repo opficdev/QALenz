@@ -4,6 +4,6 @@
   "xcodeBuildMCPProfile": "default",
 	"scenariosDirectory": "scenarios",
 	"outputDirectory": "outputs",
-	"targetDefaults": {"devices": ["iPhone 16"], "operatingSystems": ["iOS 26.0"], "appearances": ["light"]},
+	"targetDefaults": {"devices": ["iPhone 16"], "operatingSystems": ["iOS 26.0"]},
 	"maximumTargetCount": 12
 }

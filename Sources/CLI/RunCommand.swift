@@ -41,7 +41,10 @@ package struct RunCommand: ParsableCommand {
 			environment: ProcessInfo.processInfo.environment,
 			timeout: .seconds(300)
 		)
-		let executor = SingleTargetRunExecutor(adapter: adapter)
+		let executor = SingleTargetRunExecutor(
+			adapter: adapter,
+			uiStepExecutor: .init(adapter: XcodeBuildMCPUIAutomationAdapter(adapter: adapter))
+		)
 
 		return await execute(
 			format: format,

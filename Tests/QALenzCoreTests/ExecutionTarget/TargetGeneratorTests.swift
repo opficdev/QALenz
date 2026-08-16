@@ -11,26 +11,24 @@ import Testing
 // 실행 target 조합과 재현 가능한 identifier 계약을 검증합니다.
 @Suite
 struct TargetGeneratorTests {
-	// 모든 dimension의 Cartesian product를 고정 순서로 생성하는지 검증합니다.
+	// device와 operatingSystem의 Cartesian product를 고정 순서로 생성하는지 검증합니다.
 	@Test
 	func 모든_dimension의_Cartesian_product를_고정_순서로_생성한다() throws {
 		let targets = try TargetGenerator().generate(
 			.init(
 				devices: ["iPhone 17", "iPhone 16"],
-				operatingSystems: ["iOS 26.0"],
-				appearances: ["dark", "light"]
+				operatingSystems: ["iOS 26.0", "iOS 25.0"]
 			),
 			defaults: defaults(),
 			policy: .init(maximumTargetCount: 12)
 		)
 
 		#expect(targets.map(\.device) == ["iPhone 17", "iPhone 17", "iPhone 16", "iPhone 16"])
-		#expect(targets.map(\.appearance) == ["dark", "light", "dark", "light"])
 		#expect(targets.map(\.identifier) == [
-			"device=9:iPhone 17|operatingSystem=8:iOS 26.0|appearance=4:dark",
-			"device=9:iPhone 17|operatingSystem=8:iOS 26.0|appearance=5:light",
-			"device=9:iPhone 16|operatingSystem=8:iOS 26.0|appearance=4:dark",
-			"device=9:iPhone 16|operatingSystem=8:iOS 26.0|appearance=5:light"
+			"device=9:iPhone 17|operatingSystem=8:iOS 26.0",
+			"device=9:iPhone 17|operatingSystem=8:iOS 25.0",
+			"device=9:iPhone 16|operatingSystem=8:iOS 26.0",
+			"device=9:iPhone 16|operatingSystem=8:iOS 25.0"
 		])
 	}
 
@@ -38,8 +36,7 @@ struct TargetGeneratorTests {
 	@Test
 	func 중복_dimension을_제거하고_재현_가능한_target을_생성한다() throws {
 		let definition = TargetSelection(
-			devices: ["iPhone 17", "iPhone 16", "iPhone 17"],
-			appearances: ["dark", "light", "dark"]
+			devices: ["iPhone 17", "iPhone 16", "iPhone 17"]
 		)
 		let generator = TargetGenerator()
 		let first = try generator.generate(
@@ -54,18 +51,17 @@ struct TargetGeneratorTests {
 		)
 
 		#expect(first == second)
-		#expect(first.map(\.device) == ["iPhone 17", "iPhone 17", "iPhone 16", "iPhone 16"])
-		#expect(first.map(\.appearance) == ["dark", "light", "dark", "light"])
+		#expect(first.map(\.device) == ["iPhone 17", "iPhone 16"])
 	}
 
 	// target 수 상한과 곱셈 overflow를 생성 전에 거부하는지 검증합니다.
 	@Test
 	func target_수_상한과_overflow를_생성_전에_거부한다() {
-		#expect(throws: TargetValidationError.targetCountExceeded(maximum: 3)) {
+		#expect(throws: TargetValidationError.targetCountExceeded(maximum: 1)) {
 			try TargetGenerator().generate(
-				.init(devices: ["iPhone 17", "iPhone 16"], appearances: ["dark", "light"]),
+				.init(devices: ["iPhone 17", "iPhone 16"]),
 				defaults: defaults(),
-				policy: .init(maximumTargetCount: 3)
+				policy: .init(maximumTargetCount: 1)
 			)
 		}
 		#expect(throws: TargetValidationError.targetCountExceeded(maximum: .max)) {
@@ -80,8 +76,7 @@ struct TargetGeneratorTests {
 	private func defaults() -> TargetDefaults {
 		.init(
 			devices: ["iPhone 16"],
-			operatingSystems: ["iOS 26.0"],
-			appearances: ["light"]
+			operatingSystems: ["iOS 26.0"]
 		)
 	}
 }

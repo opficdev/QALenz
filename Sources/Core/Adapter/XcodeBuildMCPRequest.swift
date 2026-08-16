@@ -9,14 +9,17 @@
 package struct XcodeBuildMCPRequest: Sendable, Equatable {
 	package let operation: XcodeBuildMCPOperation
 	package let arguments: [XcodeBuildMCPArgument]
+	package let timeout: Duration?
 
-	// operation과 의미 기반 argument로 요청을 구성합니다.
+	// operation, 의미 기반 argument와 선택적인 시간 제한으로 요청을 구성합니다.
 	package init(
 		operation: XcodeBuildMCPOperation,
-		arguments: [XcodeBuildMCPArgument] = []
+		arguments: [XcodeBuildMCPArgument] = [],
+		timeout: Duration? = nil
 	) {
 		self.operation = operation
 		self.arguments = arguments
+		self.timeout = timeout
 	}
 }
 

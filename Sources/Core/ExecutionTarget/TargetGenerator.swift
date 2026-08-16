@@ -23,26 +23,21 @@ package struct TargetGenerator: Sendable {
 		)
 		let devices = uniqueValues(in: resolved.devices)
 		let operatingSystems = uniqueValues(in: resolved.operatingSystems)
-		let appearances = uniqueValues(in: resolved.appearances)
 
 		_ = try TargetCountCalculator().calculate(
 			dimensionCounts: [
 				devices.count,
-				operatingSystems.count,
-				appearances.count
+				operatingSystems.count
 			],
 			maximumTargetCount: policy.maximumTargetCount
 		)
 
 		return devices.flatMap { device in
-			operatingSystems.flatMap { operatingSystem in
-				appearances.map { appearance in
-					Target(
-						device: device,
-						operatingSystem: operatingSystem,
-						appearance: appearance
-					)
-				}
+			operatingSystems.map { operatingSystem in
+				Target(
+					device: device,
+					operatingSystem: operatingSystem
+				)
 			}
 		}
 	}

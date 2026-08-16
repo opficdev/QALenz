@@ -61,6 +61,63 @@ struct XcodeBuildMCPOutputDecoderTests {
 		#expect(!String(describing: error).contains("secret-token-value"))
 	}
 
+	// UI 도구 실패가 허용한 오류 코드와 마지막 snapshot만 보존하는지 검증합니다.
+	@Test
+	func UI_도구_실패가_구조화_오류_코드와_snapshot을_보존한다() throws {
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.capture-result",
+			"schemaVersion": "2",
+			"didError": true,
+			"error": "secret-token-value",
+			"data": {
+				"capture": {"type": "runtime-snapshot", "screenHash": "screen-hash", "seq": 4},
+				"uiError": {"code": "WAIT_TIMEOUT", "message": "secret-message"}
+			}
+		}
+		"""
+
+		let result = XcodeBuildMCPV2.outputDecoder.decode(
+			Data(json.utf8),
+			operation: .wait
+		)
+		let error = try #require(result.error)
+
+		#expect(error.code.rawValue == "adapter.xcodebuildmcp.command.failed")
+		#expect(result.payload == .object([
+			"capture": .object([
+				"type": .string("runtime-snapshot"),
+				"screenHash": .string("screen-hash"),
+				"seq": .integer(4)
+			]),
+			"uiError": .object(["code": .string("WAIT_TIMEOUT")])
+		]))
+		#expect(!String(describing: result).contains("secret-message"))
+	}
+
+	// capture가 없는 UI 도구 실패도 구조화 오류 코드를 보존하는지 검증합니다.
+	@Test
+	func capture가_없는_UI_도구_실패가_구조화_오류_코드를_보존한다() throws {
+		let json = """
+		{
+			"schema": "xcodebuildmcp.output.capture-result",
+			"schemaVersion": "2",
+			"didError": true,
+			"error": "secret-token-value",
+			"data": {"uiError": {"code": "SNAPSHOT_CAPTURE_FAILED"}}
+		}
+		"""
+
+		let result = XcodeBuildMCPV2.outputDecoder.decode(
+			Data(json.utf8),
+			operation: .snapshot
+		)
+
+		#expect(result.payload == .object([
+			"uiError": .object(["code": .string("SNAPSHOT_CAPTURE_FAILED")])
+		]))
+	}
+
 	// 잘못된 JSON이 구조화된 출력 오류로 변환되는지 검증합니다.
 	@Test
 	func 잘못된_JSON이_구조화된_출력_오류로_변환된다() throws {

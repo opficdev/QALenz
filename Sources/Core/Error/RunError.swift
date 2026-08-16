@@ -67,6 +67,8 @@ extension RunError {
 		package let assertion: String?
 		package let filePath: String?
 		package let keyPath: String?
+		package let underlyingCode: String?
+		package let uiSnapshot: UIAutomationSnapshot?
 
 		// 선택 문맥 값으로 초기화합니다.
 		package init(
@@ -75,7 +77,9 @@ extension RunError {
 			step: String? = nil,
 			assertion: String? = nil,
 			filePath: String? = nil,
-			keyPath: String? = nil
+			keyPath: String? = nil,
+			underlyingCode: String? = nil,
+			uiSnapshot: UIAutomationSnapshot? = nil
 		) {
 			self.command = command
 			self.target = target
@@ -83,6 +87,8 @@ extension RunError {
 			self.assertion = assertion
 			self.filePath = filePath
 			self.keyPath = keyPath
+			self.underlyingCode = underlyingCode
+			self.uiSnapshot = uiSnapshot
 		}
 	}
 }

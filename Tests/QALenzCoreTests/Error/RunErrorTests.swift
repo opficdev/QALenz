@@ -50,6 +50,24 @@ struct RunErrorTests {
 		#expect(context["keyPath"] as? String == "$.xcodeBuildMCPProfile")
 	}
 
+	// 정규화 전 adapter 오류 코드를 구조화 문맥에 보존하는지 검증합니다.
+	@Test
+	func 오류_문맥은_원본_코드를_포함한다() throws {
+		let error = RunError(
+			kind: .adapter,
+			code: .init(rawValue: "execution.timeout"),
+			context: .init(underlyingCode: "WAIT_TIMEOUT")
+		)
+
+		let data = try JSONEncoder().encode(error)
+		let object = try #require(
+			JSONSerialization.jsonObject(with: data) as? [String: Any]
+		)
+		let context = try #require(object["context"] as? [String: Any])
+
+		#expect(context["underlyingCode"] as? String == "WAIT_TIMEOUT")
+	}
+
 	@Test
 	func RunError_값을_JSON_형식으로_인코딩하면_구조화된_필드만_포함한다() throws {
 		let error = RunError(

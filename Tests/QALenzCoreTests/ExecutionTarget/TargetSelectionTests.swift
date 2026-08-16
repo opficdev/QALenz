@@ -16,21 +16,17 @@ struct TargetSelectionTests {
 	func dimension_계약이_입력_순서와_기본값을_보존한다() {
 		let definition = TargetSelection(
 			devices: ["iPhone 17 Pro", "iPhone 17"],
-			operatingSystems: ["iOS 26.0"],
-			appearances: ["dark", "light"]
+			operatingSystems: ["iOS 26.0"]
 		)
 		let defaults = TargetDefaults(
 			devices: ["iPhone 16"],
-			operatingSystems: ["iOS 25.0"],
-			appearances: ["light"]
+			operatingSystems: ["iOS 25.0"]
 		)
 
 		#expect(definition.devices == ["iPhone 17 Pro", "iPhone 17"])
 		#expect(definition.operatingSystems == ["iOS 26.0"])
-		#expect(definition.appearances == ["dark", "light"])
 		#expect(defaults.devices == ["iPhone 16"])
 		#expect(defaults.operatingSystems == ["iOS 25.0"])
-		#expect(defaults.appearances == ["light"])
 	}
 
 	// 지원 가능한 device와 operatingSystem 쌍 및 target 상한을 정책으로 보존하는지 검증합니다.

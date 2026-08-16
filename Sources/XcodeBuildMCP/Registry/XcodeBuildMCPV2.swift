@@ -14,7 +14,12 @@ enum XcodeBuildMCPV2 {
 		version.wholeMatch(of: /v?2\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?/) != nil
 	}
 
-	static let commandBuilder = CommandBuilder(descriptors: [
+	static let commandBuilder = CommandBuilder(descriptors: commandDescriptors.merging(
+		XcodeBuildMCPV2UIAutomation.commandDescriptors,
+		uniquingKeysWith: { _, uiDescriptor in uiDescriptor }
+	))
+
+	private static let commandDescriptors: [XcodeBuildMCPOperation: CommandDescriptor] = [
 		XcodeBuildMCPOperation.discoverSimulators: .init(
 			workflow: "simulator",
 			tool: "list",
@@ -58,9 +63,14 @@ enum XcodeBuildMCPV2 {
 				"simulator.name": "--simulator-name"
 			]
 		)
-	])
+	]
 
-	static let outputDecoder = XcodeBuildMCPOutputDecoder(outputDefinitions: [
+	static let outputDecoder = XcodeBuildMCPOutputDecoder(outputDefinitions: outputDefinitions.merging(
+		XcodeBuildMCPV2UIAutomation.outputDefinitions,
+		uniquingKeysWith: { _, uiDefinition in uiDefinition }
+	))
+
+	private static let outputDefinitions: [XcodeBuildMCPOperation: [String: OutputDefinition]] = [
 		XcodeBuildMCPOperation.discoverSimulators: [
 			"xcodebuildmcp.output.simulator-list": .init(
 				versions: ["1", "2"],
@@ -159,7 +169,7 @@ enum XcodeBuildMCPV2 {
 				result: .summaryStatus
 			)
 		]
-	])
+	]
 
 	static let eventDescriptors: [XcodeBuildMCPOperation: EventDescriptor] = [
 		XcodeBuildMCPOperation.buildSimulator: .init(

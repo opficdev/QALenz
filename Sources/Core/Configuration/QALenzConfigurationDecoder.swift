@@ -159,8 +159,7 @@ package struct QALenzConfigurationDecoder: Sendable {
 	) throws {
 		for (name, values) in [
 			("devices", document.targetDefaults.devices),
-			("operatingSystems", document.targetDefaults.operatingSystems),
-			("appearances", document.targetDefaults.appearances)
+			("operatingSystems", document.targetDefaults.operatingSystems)
 		] {
 			guard !values.isEmpty else {
 				throw configurationError(
@@ -288,7 +287,7 @@ private struct ConfigurationValidationError: Error {
 
 // targetDefaults의 허용 key를 확인하는 동적 JSON key를 정의합니다.
 private struct TargetDefaultsCodingKey: CodingKey {
-	static let allowedNames = ["devices", "operatingSystems", "appearances"]
+	static let allowedNames = ["devices", "operatingSystems"]
 
 	let stringValue: String
 	let intValue: Int?

@@ -30,12 +30,7 @@ struct ExecutionPlanBuilderTests {
 			operation: .create,
 			resource: "todo:incomplete"
 		)])
-		#expect(plan.targets.map(\.target.device) == [
-			"iPhone 17", "iPhone 17", "iPhone 16", "iPhone 16"
-		])
-		#expect(plan.targets.map(\.target.appearance) == [
-			"dark", "light", "dark", "light"
-		])
+		#expect(plan.targets.map(\.target.device) == ["iPhone 17", "iPhone 16"])
 		#expect(plan.targets.allSatisfy { target in
 			target.outputDirectoryPath.hasPrefix(outputDirectoryURL.path)
 		})
@@ -89,8 +84,7 @@ struct ExecutionPlanBuilderTests {
 			name: "Todo completion",
 			profile: "default",
 			matrix: .object([
-				"devices": .array([.string("iPhone 17"), .string("iPhone 16")]),
-				"appearances": .array([.string("dark"), .string("light")])
+				"devices": .array([.string("iPhone 17"), .string("iPhone 16")])
 			]),
 			steps: [
 				.init(id: "launch", action: .buildAndRun),
@@ -125,8 +119,7 @@ struct ExecutionPlanBuilderTests {
 			outputDirectoryURL: outputDirectoryURL,
 			targetDefaults: .init(
 				devices: ["iPhone 16"],
-				operatingSystems: ["iOS 26.0"],
-				appearances: ["light"]
+				operatingSystems: ["iOS 26.0"]
 			),
 			targetPolicy: .init(maximumTargetCount: 12)
 		)

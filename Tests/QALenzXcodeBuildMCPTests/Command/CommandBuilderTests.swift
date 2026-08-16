@@ -125,6 +125,41 @@ struct CommandBuilderTests {
 		#expect(arguments.suffix(2) == ["--output", "jsonl"])
 	}
 
+	// UI automation 요청이 XcodeBuildMCP CLI argument로 변환되는지 검증합니다.
+	@Test
+	func UI_automation_요청이_CLI_인자로_변환된다() throws {
+		let arguments = try XcodeBuildMCPV2.commandBuilder.arguments(
+			for: .init(
+				operation: .swipe,
+				arguments: [
+					.init(name: "profile", value: "fixture"),
+					.init(name: "element.reference", value: "e4"),
+					.init(name: "direction", value: "down"),
+					.init(name: "duration.seconds", value: "0.5"),
+					.init(name: "distance", value: "0.8")
+				]
+			),
+			output: .json
+		)
+
+		#expect(arguments == [
+			"ui-automation",
+			"swipe",
+			"--profile",
+			"fixture",
+			"--within-element-ref",
+			"e4",
+			"--direction",
+			"down",
+			"--duration",
+			"0.5",
+			"--distance",
+			"0.8",
+			"--output",
+			"json"
+		])
+	}
+
 	// 지원하지 않는 operation이 구조화된 오류로 거부되는지 검증합니다.
 	@Test
 	func 지원하지_않는_작업이_명령_정보_노출_없이_거부된다() {
